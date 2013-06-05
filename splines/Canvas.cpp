@@ -11,6 +11,7 @@ Canvas::Canvas() :
 	registerOutput(_painter, "painter");
 
 	_painter.registerForwardSlot(_contentChanged);
+	_painter.registerForwardCallback(&Canvas::onKeyDown, this);
 	_painter.registerForwardCallback(&Canvas::onPenDown, this);
 	_painter.registerForwardCallback(&Canvas::onPenMove, this);
 	_painter.registerForwardCallback(&Canvas::onPenUp, this);
@@ -20,6 +21,18 @@ void
 Canvas::updateOutputs() {
 
 	_painter->setStrokes(_strokes);
+}
+
+void
+Canvas::onKeyDown(const gui::KeyDown& signal) {
+
+	if (signal.key == gui::keys::U) {
+
+		LOG_DEBUG(canvaslog) << "requesting painter refresh" << std::endl;
+
+		_painter->refresh();
+		setDirty(_painter);
+	}
 }
 
 void

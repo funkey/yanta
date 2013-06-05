@@ -2,6 +2,7 @@
 #define CANVAS_H__
 
 #include <gui/PenSignals.h>
+#include <gui/KeySignals.h>
 #include <pipeline/all.h>
 #include "CanvasPainter.h"
 
@@ -14,6 +15,8 @@ public:
 private:
 
 	void updateOutputs();
+
+	void onKeyDown(const gui::KeyDown& signal);
 
 	void onPenDown(const gui::PenDown& signal);
 	void onPenUp(const gui::PenUp& signal);
