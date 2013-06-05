@@ -8,6 +8,10 @@ logger::LogChannel canvaspainterlog("canvaspainterlog", "[CanvasPainter] ");
 
 CanvasPainter::CanvasPainter() :
 	_canvasTexture(0),
+	_canvasBufferX(0),
+	_canvasBufferY(0),
+	_bufferWidth(50),
+	_bufferHeight(100),
 	_prefetchLeft(100),
 	_prefetchRight(100),
 	_prefetchTop(500),
@@ -41,19 +45,8 @@ CanvasPainter::draw(
 
 	LOG_ALL(canvaspainterlog) << "canvas texture has to be of size: " << textureWidth << ", " << textureHeight << std::endl;
 
-	if (_canvasTexture != 0 && (_canvasTexture->width() != textureWidth || _canvasTexture->height() != textureHeight)) {
-
-		LOG_ALL(canvaspainterlog) << "canvas texture is of different size, create a new one" << std::endl;
-
-		delete _canvasTexture;
-		_canvasTexture = 0;
-	}
-
-	if (_canvasTexture == 0) {
-
-		_canvasTexture = new gui::Texture(textureWidth, textureHeight, GL_RGBA /* TODO: should this be the format value of the opengl tratis for cairo_pixel_t? */);
+	if (prepareTexture(textureWidth, textureHeight))
 		initiateFullRedraw(roi, resolution);
-	}
 
 	// roi did not change
 	if (roi == _previousRoi) {
@@ -77,15 +70,45 @@ CanvasPainter::draw(
 
 		// show a different part of the canvas texture
 		shiftTexture(roi.upperLeft() - _previousRoi.upperLeft());
-		updateStrokes(*_strokes, roi, true);
+		//updateStrokes(*_strokes, roi, true);
 	}
-
-	drawTexture(roi);
 
 	// TODO: do this in a separate thread
 	cleanDirtyAreas();
 
+	drawTexture(roi);
+
 	_previousRoi = roi;
+}
+
+bool
+CanvasPainter::prepareTexture(int textureWidth, int textureHeight) {
+
+	if (_canvasTexture != 0 && (_canvasTexture->width() != textureWidth || _canvasTexture->height() != textureHeight)) {
+
+		LOG_ALL(canvaspainterlog) << "canvas texture is of different size, create a new one" << std::endl;
+
+		delete _canvasTexture;
+		delete _canvasBufferX;
+		delete _canvasBufferY;
+		_canvasTexture = 0;
+		_canvasBufferX = 0;
+		_canvasBufferY = 0;
+	}
+
+	if (_canvasTexture == 0) {
+
+		GLenum format = gui::detail::pixel_format_traits<gui::cairo_pixel_t>::gl_format;
+		GLenum type   = gui::detail::pixel_format_traits<gui::cairo_pixel_t>::gl_type;
+
+		_canvasTexture = new gui::Texture(textureWidth, textureHeight, GL_RGBA);
+		_canvasBufferX = new gui::Buffer(_bufferWidth, textureHeight, format, type);
+		_canvasBufferY = new gui::Buffer(textureWidth, _bufferHeight, format, type);
+
+		return true;
+	}
+
+	return false;
 }
 
 void
@@ -109,7 +132,15 @@ CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<double>& r
 	// map the texture memory
 	gui::cairo_pixel_t* data = _canvasTexture->map<gui::cairo_pixel_t>();
 
-	drawStrokes(data, strokes, roi, incremental);
+	drawStrokes(
+			data,
+			_canvasTexture->width(),
+			_canvasTexture->height(),
+			strokes,
+			roi,
+			_textureArea,
+			_splitCenter,
+			incremental);
 
 	// unmap the texture memory
 	_canvasTexture->unmap<gui::cairo_pixel_t>();
@@ -118,14 +149,15 @@ CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<double>& r
 void
 CanvasPainter::drawStrokes(
 		gui::cairo_pixel_t* data,
+		unsigned int width,
+		unsigned int height,
 		const Strokes& strokes,
 		const util::rect<double>& roi,
+		const util::rect<double>& dataArea,
+		const util::point<double>& splitCenter,
 		bool incremental) {
 
 	LOG_ALL(canvaspainterlog) << "drawing strokes with roi " << roi << std::endl;
-
-	GLdouble  width  = _canvasTexture->width();
-	GLdouble  height = _canvasTexture->height();
 
 	// wrap the buffer in a cairo surface
 	// TODO: free surface?
@@ -142,6 +174,7 @@ CanvasPainter::drawStrokes(
 	_context = cairo_create(_surface);
 
 	// prepare the background, if we do not draw incrementally
+	// TODO: remove, as soon as we use CairoCanvasPainter
 	if (!incremental || (_drawnUntilStroke == 0 && _drawnUntilStrokePoint == 0))
 		clearSurface();
 
@@ -151,26 +184,26 @@ CanvasPainter::drawStrokes(
 
 	// Now, we have a surface of width x height, with (0,0) being the upper left 
 	// corner and (width-1,height-1) the lower right. Scale and translate 
-	// operations, such that the upper left is _textureArea.upperLeft() and 
-	// lower right is _textureArea.lowerRight().
+	// operations, such that the upper left is dataArea.upperLeft() and 
+	// lower right is dataArea.lowerRight().
 
 	// scale the texture area diagonal to (width, height)
-	util::point<double> scale = _textureArea.lowerRight() - _textureArea.upperLeft();
+	util::point<double> scale = dataArea.lowerRight() - dataArea.upperLeft();
 	scale.x = width/scale.x;
 	scale.y = height/scale.y;
 	cairo_scale(_context, scale.x, scale.y);
 
-	// translate _textureArea.upperLeft() to (0,0)
-	util::point<double> translate = -_textureArea.upperLeft();
+	// translate dataArea.upperLeft() to (0,0)
+	util::point<double> translate = -dataArea.upperLeft();
 	cairo_translate(_context, translate.x, translate.y);
 
 	LOG_ALL(canvaspainterlog) << "cairo scale    : " << scale << std::endl;
 	LOG_ALL(canvaspainterlog) << "cairo translate: " << translate << std::endl;
 
-	// Now we could start drawing onto the surface, if the _textureRoi is 
-	// perfectly centered.  However, in general, there is an additional shift 
-	// with wrap-around that we have to compensate for. This gives four parts of 
-	// the texture that have to be drawn individually.
+	// Now we could start drawing onto the surface, if the ROI is perfectly 
+	// centered.  However, in general, there is an additional shift with 
+	// wrap-around that we have to compensate for. This gives four parts of the 
+	// data that have to be drawn individually.
 
 	// a rectangle used to clip the cairo operations
 	util::rect<double> clip;
@@ -182,45 +215,45 @@ CanvasPainter::drawStrokes(
 			// upper left
 			case 0:
 
-				clip.minX = _splitCenter.x;
-				clip.minY = _splitCenter.y;
-				clip.maxX = _textureArea.maxX;
-				clip.maxY = _textureArea.maxY;
+				clip.minX = splitCenter.x;
+				clip.minY = splitCenter.y;
+				clip.maxX = dataArea.maxX;
+				clip.maxY = dataArea.maxY;
 
-				translate = _textureArea.upperLeft() - _splitCenter;
+				translate = dataArea.upperLeft() - splitCenter;
 				break;
 
 			// upper right
 			case 1:
 
-				clip.minX = _textureArea.minX;
-				clip.minY = _splitCenter.y;
-				clip.maxX = _splitCenter.x;
-				clip.maxY = _textureArea.maxY;
+				clip.minX = dataArea.minX;
+				clip.minY = splitCenter.y;
+				clip.maxX = splitCenter.x;
+				clip.maxY = dataArea.maxY;
 
-				translate = _textureArea.upperRight() - _splitCenter;
+				translate = dataArea.upperRight() - splitCenter;
 				break;
 
 			// lower left
 			case 2:
 
-				clip.minX = _splitCenter.x;
-				clip.minY = _textureArea.minY;
-				clip.maxX = _textureArea.maxX;
-				clip.maxY = _splitCenter.y;
+				clip.minX = splitCenter.x;
+				clip.minY = dataArea.minY;
+				clip.maxX = dataArea.maxX;
+				clip.maxY = splitCenter.y;
 
-				translate = _textureArea.lowerLeft() - _splitCenter;
+				translate = dataArea.lowerLeft() - splitCenter;
 				break;
 
 			// lower right
 			case 3:
 
-				clip.minX = _textureArea.minX;
-				clip.minY = _textureArea.minY;
-				clip.maxX = _splitCenter.x;
-				clip.maxY = _splitCenter.y;
+				clip.minX = dataArea.minX;
+				clip.minY = dataArea.minY;
+				clip.maxX = splitCenter.x;
+				clip.maxY = splitCenter.y;
 
-				translate = _textureArea.lowerRight() - _splitCenter;
+				translate = dataArea.lowerRight() - splitCenter;
 				break;
 		}
 
@@ -234,6 +267,7 @@ CanvasPainter::drawStrokes(
 		cairo_clip(_context);
 
 		// draw the new strokes in the current part
+		// TODO: replace with call to CairoCanvasPainter
 		for (unsigned int i = (incremental ? _drawnUntilStroke : 0); i < strokes.size(); i++)
 			drawStroke(_context, strokes[i], incremental);
 
@@ -248,6 +282,7 @@ CanvasPainter::drawStrokes(
 	}
 }
 
+// TODO: remove, as soon as we use CairoCanvasPainter
 void
 CanvasPainter::drawStroke(cairo_t* context, const Stroke& stroke, bool incremental) {
 
@@ -377,20 +412,6 @@ CanvasPainter::drawTexture(const util::rect<double>& roi) {
 		LOG_ALL(canvaspainterlog) << "\ttexture coordinates are " << texCoords << std::endl;
 		LOG_ALL(canvaspainterlog) << "\tposition is " << position << std::endl;
 
-		// DEBUG
-		glDisable(GL_TEXTURE_2D);
-		glDisable(GL_BLEND);
-		glBegin(GL_QUADS);
-		glColor4f(1.0f/(part+1), 1.0f/(4-part+1), 1.0f, 0.1f);
-		glVertex2d(position.minX, position.minY);
-		glVertex2d(position.maxX, position.minY);
-		glVertex2d(position.maxX, position.maxY);
-		glVertex2d(position.minX, position.maxY);
-		glEnd();
-		glEnable(GL_TEXTURE_2D);
-		glEnable(GL_BLEND);
-		// END DEBUG
-
 		glColor3f(1.0f, 1.0f, 1.0f);
 		glBegin(GL_QUADS);
 		glTexCoord2d(texCoords.minX, texCoords.minY); glVertex2d(position.minX, position.minY);
@@ -399,6 +420,17 @@ CanvasPainter::drawTexture(const util::rect<double>& roi) {
 		glTexCoord2d(texCoords.minX, texCoords.maxY); glVertex2d(position.minX, position.maxY);
 		glEnd();
 	}
+
+	// DEBUG
+	util::rect<double> debug = roi*0.25;
+	debug += roi.upperLeft() - debug.upperLeft();
+	glBegin(GL_QUADS);
+	glTexCoord2d(0, 0); glVertex2d(debug.minX, debug.minY);
+	glTexCoord2d(1, 0); glVertex2d(debug.maxX, debug.minY);
+	glTexCoord2d(1, 1); glVertex2d(debug.maxX, debug.maxY);
+	glTexCoord2d(0, 1); glVertex2d(debug.minX, debug.maxY);
+	glEnd();
+	// END DEBUG
 
 	glDisable(GL_BLEND);
 }
@@ -443,14 +475,91 @@ CanvasPainter::shiftTexture(const util::point<double>& shift) {
 void
 CanvasPainter::markDirty(const util::rect<double>& area) {
 
+	LOG_ALL(canvaspainterlog) << "area  " << area << " is dirty, now" << std::endl;
+
 	_dirtyAreas.push_back(area);
 }
 
 void
 CanvasPainter::cleanDirtyAreas() {
 
-	for (unsigned int i = 0; i < _dirtyAreas.size(); i++)
-		updateStrokes(*_strokes, _dirtyAreas[i], false);
+	int textureWidth  = _canvasTexture->width();
+	int textureHeight = _canvasTexture->height();
+
+	// the buffer's width and height in device units
+	double bufferWidth  = (static_cast<double>(_bufferWidth)/textureWidth)*_textureArea.width();
+	//double bufferHeight = (static_cast<double>(_bufferHeight)/textureHeight)*_textureArea.height();
+
+	for (unsigned int i = 0; i < _dirtyAreas.size(); i++) {
+
+		util::rect<double>& area = _dirtyAreas[i];
+
+		LOG_ALL(canvaspainterlog) << "cleaning area " << area << std::endl;
+
+		if (area.width() < area.height()) {
+
+			// should be handled by x-buffer
+			LOG_ALL(canvaspainterlog) << "cleaning it with x-buffer" << std::endl;
+
+			// process in stripes
+			while (area.width() > 0) {
+
+				// put buffer area at left side of dirty area
+				util::rect<double> bufferArea;
+				bufferArea.minX = area.minX;
+				bufferArea.maxX = area.minX + bufferWidth;
+				bufferArea.minY = _textureArea.minY;
+				bufferArea.maxY = _textureArea.maxY;
+
+				// move it left, if it leaves the texture area
+				if (bufferArea.maxX >= _textureArea.maxX)
+					bufferArea += util::point<double>(_textureArea.maxX - bufferArea.maxX, 0.0);
+
+				LOG_ALL(canvaspainterlog) << "will clean it with stripe at " << bufferArea << std::endl;
+
+				// map buffer
+				gui::cairo_pixel_t* data = _canvasBufferX->map<gui::cairo_pixel_t>();
+
+				util::point<double> splitCenter = _splitCenter;
+				if (splitCenter.x < bufferArea.minX)
+					splitCenter.x = bufferArea.minX;
+				if (splitCenter.x > bufferArea.maxX)
+					splitCenter.x = bufferArea.maxX;
+
+				drawStrokes(
+						data,
+						_bufferWidth,
+						textureHeight,
+						*_strokes,
+						bufferArea, // we have to draw everywhere, since we don't know the previous contents
+						bufferArea,
+						splitCenter,
+						false);
+
+				// unmap buffer
+				_canvasBufferX->unmap();
+
+				// update texture
+				double offset = bufferArea.minX - _splitCenter.x;
+				if (offset < 0)
+					offset += _textureArea.width();
+
+				unsigned int pixelOffset = (offset*textureWidth)/_textureArea.width();
+				LOG_ALL(canvaspainterlog) << "pixel offset for this stripe is " << pixelOffset << std::endl;
+
+				if (pixelOffset > textureWidth - _bufferWidth) {
+
+					LOG_ERROR(canvaspainterlog) << "pixel offset for x-buffer stripe is too big: " << pixelOffset << std::endl;
+					pixelOffset = textureWidth - _bufferWidth;
+				}
+
+				_canvasTexture->loadData(*_canvasBufferX, pixelOffset, 0);
+
+				// remove updated part from dirty area
+				area.minX += bufferWidth;
+			}
+		}
+	}
 
 	_dirtyAreas.clear();
 }
@@ -462,7 +571,7 @@ CanvasPainter::initiateFullRedraw(const util::rect<double>& roi, const util::poi
 	_drawnUntilStroke = 0;
 	_drawnUntilStrokePoint = 0;
 
-	// recompute are represented by canvas texture
+	// recompute area represented by canvas texture and buffers
 	_textureArea.minX = roi.minX - _prefetchLeft*(1.0/resolution.x);
 	_textureArea.minY = roi.minY - _prefetchTop*(1.0/resolution.y);
 	_textureArea.maxX = roi.maxX + _prefetchRight*(1.0/resolution.x);
@@ -494,6 +603,7 @@ CanvasPainter::sizeChanged(const util::rect<double>& roi, const util::rect<doubl
 	return false;
 }
 
+// TODO: remove, as soon as we are using CairoCanvasPainter
 double
 CanvasPainter::widthPressureCurve(double pressure) {
 
@@ -505,6 +615,7 @@ CanvasPainter::widthPressureCurve(double pressure) {
 	return minPressure + pressure*(maxPressure - minPressure);
 }
 
+// TODO: remove, as soon as we are using CairoCanvasPainter
 double
 CanvasPainter::alphaPressureCurve(double pressure) {
 

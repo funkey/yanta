@@ -32,8 +32,12 @@ private:
 
 	void drawStrokes(
 			gui::cairo_pixel_t* data,
+			unsigned int width,
+			unsigned int height,
 			const Strokes& strokes,
 			const util::rect<double>& roi,
+			const util::rect<double>& dataArea,
+			const util::point<double>& splitCenter,
 			bool incremental);
 
 	void drawStroke(
@@ -65,6 +69,11 @@ private:
 	 ******************/
 
 	/**
+	 * Prepare the texture and buffers of the respective sizes.
+	 */
+	bool prepareTexture(int textureWidth, int textureHeight);
+
+	/**
 	 * Shift the area represented by the canvas texture. Invalidates prefetched 
 	 * areas accordingly to the previous ROI.
 	 */
@@ -92,6 +101,13 @@ private:
 
 	// the OpenGl texture to draw to
 	gui::Texture* _canvasTexture;
+
+	// OpenGl buffers to relead dirty parts of the texture
+	gui::Buffer* _canvasBufferX;
+	gui::Buffer* _canvasBufferY;
+
+	unsigned int _bufferWidth;
+	unsigned int _bufferHeight;
 
 	// the screen resolution
 	unsigned int _screenWidth;
