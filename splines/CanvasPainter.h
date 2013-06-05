@@ -36,6 +36,8 @@ private:
 
 	void initiateFullRedraw();
 
+	void clearSurface();
+
 	/**
 	 * Get the width multiplier for a pressure value.
 	 */

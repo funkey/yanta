@@ -61,6 +61,8 @@ CanvasPainter::draw(
 
 	// draw the texture
 	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	_canvasTexture->bind();
 
@@ -71,6 +73,8 @@ CanvasPainter::draw(
 	glTexCoord2d(1.0, 1.0); glVertex2d(roi.maxX, roi.maxY); 
 	glTexCoord2d(0.0, 1.0); glVertex2d(roi.minX, roi.maxY); 
 	glEnd();
+
+	glDisable(GL_BLEND);
 }
 
 void
@@ -112,12 +116,8 @@ CanvasPainter::drawStrokes(
 	LOG_ALL(canvaspainterlog) << "cairo scale    : " << scale << std::endl;
 	LOG_ALL(canvaspainterlog) << "cairo translate: " << translate << std::endl;
 
-	if (_drawnUntilStroke == 0 && _drawnUntilStrokePoint == 0) {
-
-		// clear surface
-		cairo_set_source_rgba(_context, 1.0, 1.0, 1.0, 1.0);
-		cairo_paint(_context);
-	}
+	if (_drawnUntilStroke == 0 && _drawnUntilStrokePoint == 0)
+		clearSurface();
 
 	if (strokes.size() == 0)
 		return;
@@ -166,11 +166,20 @@ CanvasPainter::initiateFullRedraw() {
 	_drawnUntilStrokePoint = 0;
 }
 
+void
+CanvasPainter::clearSurface() {
+
+	// clear surface
+	cairo_set_operator(_context, CAIRO_OPERATOR_CLEAR);
+	cairo_paint(_context);
+	cairo_set_operator(_context, CAIRO_OPERATOR_OVER);
+}
+
 double
 CanvasPainter::widthPressureCurve(double pressure) {
 
-	const double minPressure = 0.3;
-	const double maxPressure = 1;
+	const double minPressure = 0.0;
+	const double maxPressure = 1.5;
 
 	pressure /= 2048.0;
 

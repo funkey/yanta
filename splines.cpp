@@ -71,7 +71,9 @@ int main(int optionc, char** optionv) {
 		// init signal handler
 		util::SignalHandler::init();
 
-		pipeline::Process<gui::Window>   window("splines");
+		gui::WindowMode mode;
+		//mode.fullscreen = true;
+		pipeline::Process<gui::Window>   window("splines", mode);
 		pipeline::Process<gui::ZoomView> zoomView;
 		pipeline::Process<Canvas>        canvas;
 
