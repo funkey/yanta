@@ -6,6 +6,7 @@
 #include <gui/Painter.h>
 #include <gui/Texture.h>
 
+#include "CairoCanvasPainter.h"
 #include "Strokes.h"
 
 class CanvasPainter : public gui::Painter {
@@ -17,6 +18,7 @@ public:
 	void setStrokes(boost::shared_ptr<Strokes> strokes) {
 
 		_strokes = strokes;
+		_cairoPainter.setStrokes(strokes);
 	}
 
 	void draw(
@@ -40,31 +42,17 @@ private:
 			const util::point<double>& splitCenter,
 			bool incremental);
 
-	void drawStroke(
-			cairo_t* context,
-			const Stroke& stroke,
-			bool incremental);
-
 	void resetIncrementalDrawing();
 
 	void initiateFullRedraw(const util::rect<double>& roi, const util::point<double>& resolution);
-
-	void clearSurface();
-
-	/**
-	 * Get the width multiplier for a pressure value.
-	 */
-	double widthPressureCurve(double pressure);
-
-	/**
-	 * Get the alpha multiplier for a pressure value.
-	 */
-	double alphaPressureCurve(double pressure);
 
 	bool sizeChanged(const util::rect<double>& roi, const util::rect<double>& previousRoi);
 
 	// the strokes to draw
 	boost::shared_ptr<Strokes> _strokes;
+
+	// the cairo painter for the strokes
+	CairoCanvasPainter _cairoPainter;
 
 	/******************
 	 * CANVAS TEXTURE *

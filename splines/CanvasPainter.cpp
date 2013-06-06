@@ -125,8 +125,7 @@ void
 CanvasPainter::refresh() {
 
 	LOG_ALL(canvaspainterlog) << "refresh requested" << std::endl;
-	_drawnUntilStroke = 0;
-	_drawnUntilStrokePoint = 0;
+	resetIncrementalDrawing();
 }
 
 void
@@ -167,7 +166,6 @@ CanvasPainter::drawStrokes(
 	LOG_ALL(canvaspainterlog) << "drawing strokes with roi " << roi << std::endl;
 
 	// wrap the buffer in a cairo surface
-	// TODO: free surface?
 	_surface =
 			cairo_image_surface_create_for_data(
 					(unsigned char*)data,
@@ -177,17 +175,7 @@ CanvasPainter::drawStrokes(
 					cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width));
 
 	// create a context for the surface
-	// TODO: free context?
 	_context = cairo_create(_surface);
-
-	// prepare the background, if we do not draw incrementally
-	// TODO: remove, as soon as we use CairoCanvasPainter
-	if (!incremental || (_drawnUntilStroke == 0 && _drawnUntilStrokePoint == 0))
-		clearSurface();
-
-	// if there is nothing to draw, we are done here
-	if (strokes.size() == 0)
-		return;
 
 	// Now, we have a surface of width x height, with (0,0) being the upper left 
 	// corner and (width-1,height-1) the lower right. Scale and translate 
@@ -269,14 +257,11 @@ CanvasPainter::drawStrokes(
 		// draw to texture part
 		cairo_translate(_context, translate.x, translate.y);
 
-		// clip outside our responsibility
-		cairo_rectangle(_context, clip.minX, clip.minY, clip.width(), clip.height());
-		cairo_clip(_context);
-
-		// draw the new strokes in the current part
-		// TODO: replace with call to CairoCanvasPainter
-		for (unsigned int i = (incremental ? _drawnUntilStroke : 0); i < strokes.size(); i++)
-			drawStroke(_context, strokes[i], incremental);
+		// draw the (new) strokes in the current part
+		if (incremental)
+			_cairoPainter.draw(_context, clip, _drawnUntilStroke, _drawnUntilStrokePoint);
+		else
+			_cairoPainter.draw(_context, clip);
 
 		cairo_restore(_context);
 	}
@@ -284,39 +269,17 @@ CanvasPainter::drawStrokes(
 	if (incremental) {
 
 		// remember what we drew already
-		_drawnUntilStroke = strokes.size() - 1;
-		_drawnUntilStrokePoint = strokes[_drawnUntilStroke].size() - 1;
+		_drawnUntilStroke = std::max(0, static_cast<int>(strokes.size()) - 1);
+
+		if (strokes.size() > 0)
+			_drawnUntilStrokePoint = std::max(0, static_cast<int>(strokes[_drawnUntilStroke].size()) - 1);
+		else
+			_drawnUntilStrokePoint = 0;
 	}
-}
 
-// TODO: remove, as soon as we use CairoCanvasPainter
-void
-CanvasPainter::drawStroke(cairo_t* context, const Stroke& stroke, bool incremental) {
-
-	if (stroke.size() == 0)
-		return;
-
-	// TODO: read this from stroke data structure
-	double penWidth = 2.0;
-	double penColorRed   = 0;
-	double penColorGreen = 0;
-	double penColorBlue  = 0;
-
-	cairo_set_line_cap(context, CAIRO_LINE_CAP_ROUND);
-	cairo_set_line_join(context, CAIRO_LINE_JOIN_ROUND);
-
-	for (unsigned int i = (incremental ? _drawnUntilStrokePoint : 0) + 1; i < stroke.size(); i++) {
-
-		double alpha = alphaPressureCurve(stroke[i].pressure);
-		double width = widthPressureCurve(stroke[i].pressure);
-
-		cairo_set_source_rgba(context, penColorRed, penColorGreen, penColorBlue, alpha);
-		cairo_set_line_width(context, width*penWidth);
-
-		cairo_move_to(context, stroke[i-1].position.x, stroke[i-1].position.y);
-		cairo_line_to(context, stroke[i  ].position.x, stroke[i  ].position.y);
-		cairo_stroke(context);
-	}
+	// cleanup
+	cairo_destroy(_context);
+	cairo_surface_destroy(_surface);
 }
 
 void
@@ -594,15 +557,6 @@ CanvasPainter::initiateFullRedraw(const util::rect<double>& roi, const util::poi
 	_splitCenter = _textureArea.upperLeft();
 }
 
-void
-CanvasPainter::clearSurface() {
-
-	// clear surface
-	cairo_set_operator(_context, CAIRO_OPERATOR_CLEAR);
-	cairo_paint(_context);
-	cairo_set_operator(_context, CAIRO_OPERATOR_OVER);
-}
-
 bool
 CanvasPainter::sizeChanged(const util::rect<double>& roi, const util::rect<double>& previousRoi) {
 
@@ -616,26 +570,3 @@ CanvasPainter::sizeChanged(const util::rect<double>& roi, const util::rect<doubl
 	return false;
 }
 
-// TODO: remove, as soon as we are using CairoCanvasPainter
-double
-CanvasPainter::widthPressureCurve(double pressure) {
-
-	const double minPressure = 0.0;
-	const double maxPressure = 1.5;
-
-	pressure /= 2048.0;
-
-	return minPressure + pressure*(maxPressure - minPressure);
-}
-
-// TODO: remove, as soon as we are using CairoCanvasPainter
-double
-CanvasPainter::alphaPressureCurve(double pressure) {
-
-	const double minPressure = 1;
-	const double maxPressure = 1;
-
-	pressure /= 2048.0;
-
-	return minPressure + pressure*(maxPressure - minPressure);
-}
