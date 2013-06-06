@@ -10,7 +10,21 @@ class CairoCanvasPainter {
 
 public:
 
+	CairoCanvasPainter();
+
 	void setStrokes(boost::shared_ptr<Strokes> strokes) { _strokes = strokes; }
+
+	/**
+	 * Set the transformation to map from canvas pixel coordinates to device 
+	 * units.
+	 */
+	void setDeviceTransformation(
+			const util::point<double>& pixelsPerDeviceUnit,
+			const util::point<double>& pixelOffset) {
+
+		_pixelsPerDeviceUnit = pixelsPerDeviceUnit;
+		_pixelOffset         = pixelOffset;
+	}
 
 	/**
 	 * Draw the whole canvas on the provided context.
@@ -43,6 +57,9 @@ private:
 	double alphaPressureCurve(double pressure);
 
 	boost::shared_ptr<Strokes> _strokes;
+
+	util::point<double> _pixelsPerDeviceUnit;
+	util::point<double> _pixelOffset;
 };
 
 #endif // SPLINES_CAIRO_CANVAS_PAINTER_H__

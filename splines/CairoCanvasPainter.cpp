@@ -1,5 +1,8 @@
 #include "CairoCanvasPainter.h"
 
+CairoCanvasPainter::CairoCanvasPainter() :
+	_pixelsPerDeviceUnit(1.0, 1.0),
+	_pixelOffset(0, 0) {}
 
 void
 CairoCanvasPainter::draw(cairo_t* context) {
@@ -21,6 +24,15 @@ CairoCanvasPainter::draw(
 	cairo_rectangle(context, roi.minX, roi.minY, roi.width(), roi.height());
 	cairo_clip(context);
 
+	cairo_save(context);
+
+	// apply the given transformation
+
+	// translate should be performed...
+	cairo_translate(context, _pixelOffset.x, _pixelOffset.y);
+	// ...after the scaling
+	cairo_scale(context, _pixelsPerDeviceUnit.x, _pixelsPerDeviceUnit.y);
+
 	// prepare the background, if we do not draw incrementally
 	if (drawnUntilStroke == 0 && drawnUntilStrokePoint == 0)
 		clearSurface(context);
@@ -31,6 +43,8 @@ CairoCanvasPainter::draw(
 		drawStroke(context, (*_strokes)[i], roi, drawnUntilStrokePoint);
 		drawnUntilStrokePoint = 0;
 	}
+
+	cairo_restore(context);
 }
 
 void

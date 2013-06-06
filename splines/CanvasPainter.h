@@ -7,6 +7,7 @@
 #include <gui/Texture.h>
 
 #include "CairoCanvasPainter.h"
+#include "PrefetchTexture.h"
 #include "Strokes.h"
 
 class CanvasPainter : public gui::Painter {
@@ -57,20 +58,10 @@ private:
 	// the cairo painter for the strokes
 	CairoCanvasPainter _cairoPainter;
 
-	/******************
-	 * CANVAS TEXTURE *
-	 ******************/
-
 	/**
 	 * Prepare the texture and buffers of the respective sizes.
 	 */
-	bool prepareTexture(int textureWidth, int textureHeight);
-
-	/**
-	 * Shift the area represented by the canvas texture. Invalidates prefetched 
-	 * areas accordingly to the previous ROI.
-	 */
-	void shiftTexture(const util::point<int>& shift);
+	bool prepareTexture(const util::rect<int>& canvasPixelRoi);
 
 	/**
 	 * Draw the texture content that corresponds to roi into roi.
@@ -82,44 +73,13 @@ private:
 	 */
 	void updateStrokes(const Strokes& strokes, const util::rect<int>& roi);
 
-	/**
-	 * Mark an area within the texture as dirty.
-	 */
-	void markDirty(const util::rect<int>& area);
-
-	/**
-	 * Process all dirty areas and clean them.
-	 */
-	void cleanDirtyAreas();
-
-	// the OpenGl texture to draw to
-	gui::Texture* _canvasTexture;
-
-	// OpenGl buffers to relead dirty parts of the texture
-	gui::Buffer* _canvasBufferX;
-	gui::Buffer* _canvasBufferY;
-
-	unsigned int _bufferWidth;
-	unsigned int _bufferHeight;
-
-	// the screen resolution
-	unsigned int _screenWidth;
-	unsigned int _screenHeight;
+	PrefetchTexture* _canvasTexture;
 
 	// the number of pixels to add to the visible region for prefetching
 	unsigned int _prefetchLeft;
 	unsigned int _prefetchRight;
 	unsigned int _prefetchTop;
 	unsigned int _prefetchBottom;
-
-	// the area covered by the canvas texture in canvas pixel units
-	util::rect<int> _textureArea;
-
-	// the split center of the texture (where all four corners meet)
-	util::point<int> _splitCenter;
-
-	// dirty areas of the texture
-	std::vector<util::rect<int> > _dirtyAreas;
 
 	// Mapping from integer texture coordinates to device units:
 	//
