@@ -10,12 +10,12 @@ CanvasPainter::CanvasPainter() :
 	_canvasTexture(0),
 	_canvasBufferX(0),
 	_canvasBufferY(0),
-	_bufferWidth(50),
+	_bufferWidth(100),
 	_bufferHeight(100),
 	_prefetchLeft(100),
 	_prefetchRight(100),
-	_prefetchTop(500),
-	_prefetchBottom(500),
+	_prefetchTop(100),
+	_prefetchBottom(100),
 	_state(Moving),
 	_drawnUntilStroke(0),
 	_drawnUntilStrokePoint(0) {}
@@ -25,70 +25,91 @@ CanvasPainter::draw(
 		const util::rect<double>&  roi,
 		const util::point<double>& resolution) {
 
-	LOG_ALL(canvaspainterlog) << "redrawing in " << roi << " with resolution " << resolution << std::endl;
-
 	if (!_strokes) {
 
 		LOG_DEBUG(canvaspainterlog) << "no strokes to paint (yet)" << std::endl;
 		return;
 	}
 
+	//LOG_ALL(canvaspainterlog) << "redrawing in " << roi << " with resolution " << resolution << std::endl;
+
+	// Compute the closest canvas pixel roi to the desired roi in device units.  
+	// Later, we are only using our discrete pixel roi for drawing the texture 
+	// and displaying the texture. Just the transformation of canvas pixels to 
+	// device units will depend on the roi the texture was aligned with 
+	// initially (with a call to initiateFullRedraw()).
+	util::rect<int> canvasPixelRoi = snapToPixelGrid(roi, resolution);
+
+	//LOG_ALL(canvaspainterlog) << "snapped to pixel grid gives " << canvasPixelRoi << std::endl;
+
 	gui::OpenGl::Guard guard;
 
-	// estimate screen size in pixels
-	_screenWidth  = (unsigned int)round(roi.width()*resolution.x);
-	_screenHeight = (unsigned int)round(roi.height()*resolution.y);
+	int textureWidth  = canvasPixelRoi.width()  + _prefetchLeft + _prefetchRight;
+	int textureHeight = canvasPixelRoi.height() + _prefetchTop  + _prefetchBottom;
 
-	LOG_ALL(canvaspainterlog) << "estimated screen resolution: " << _screenWidth << ", " << _screenHeight << std::endl;
-
-	int textureWidth  = _screenWidth  + _prefetchLeft + _prefetchRight;
-	int textureHeight = _screenHeight + _prefetchTop  + _prefetchBottom;
-
-	LOG_ALL(canvaspainterlog) << "canvas texture has to be of size: " << textureWidth << ", " << textureHeight << std::endl;
+	//LOG_ALL(canvaspainterlog) << "with pre-fetch buffers, canvas texture has to be of size " << textureWidth << "x" << textureHeight << std::endl;
 
 	if (prepareTexture(textureWidth, textureHeight))
-		initiateFullRedraw(roi, resolution);
+		initiateFullRedraw(canvasPixelRoi, roi, resolution);
 
-	// roi did not change
-	if (roi == _previousRoi) {
+	// canvasPixelRoi did not change
+	if (canvasPixelRoi == _previousCanvasPixelRoi) {
 
-		LOG_ALL(canvaspainterlog) << "roi did not change -- I just quickly update the strokes" << std::endl;
+		LOG_ALL(canvaspainterlog) << "canvas pixel roi did not change -- I just quickly update the strokes" << std::endl;
 
+		// if we were moving previously, the texture buffer got state -- need to 
+		// redraw everythin
 		if (_state == Moving) {
 
-			initiateFullRedraw(roi, resolution);
+			initiateFullRedraw(canvasPixelRoi, roi, resolution);
 			_state = IncrementalDrawing;
 		}
 
-		updateStrokes(*_strokes, roi);
+		updateStrokes(*_strokes, canvasPixelRoi);
 
-	// size of roi changed -- texture needs to be redrawn completely
-	} else if (sizeChanged(roi, _previousRoi)) {
+	// size of canvas pixel roi changed -- texture needs to be redrawn 
+	// completely
+	} else if (sizeChanged(resolution, _previousResolution)) {
 
-		LOG_ALL(canvaspainterlog) << "roi changed in size" << std::endl;
+		LOG_ALL(canvaspainterlog) << "canvas pixel roi changed in size" << std::endl;
 
 		_state = Moving;
 
-		initiateFullRedraw(roi, resolution);
-		updateStrokes(*_strokes, roi);
+		initiateFullRedraw(canvasPixelRoi, roi, resolution);
+		updateStrokes(*_strokes, canvasPixelRoi);
 
-	// roi was moved
+	// canvas pixel roi was moved
 	} else {
 
-		LOG_ALL(canvaspainterlog) << "roi was moved by " << (roi.upperLeft() - _previousRoi.upperLeft()) << std::endl;
+		LOG_ALL(canvaspainterlog) << "canvas pixel roi was moved by " << (canvasPixelRoi.upperLeft() - _previousCanvasPixelRoi.upperLeft()) << std::endl;
 
 		_state = Moving;
 
 		// show a different part of the canvas texture
-		shiftTexture(roi.upperLeft() - _previousRoi.upperLeft());
+		shiftTexture(canvasPixelRoi.upperLeft() - _previousCanvasPixelRoi.upperLeft());
 	}
 
 	// TODO: do this in a separate thread
 	cleanDirtyAreas();
 
-	drawTexture(roi);
+	drawTexture(canvasPixelRoi);
 
-	_previousRoi = roi;
+	_previousCanvasPixelRoi = canvasPixelRoi;
+	_previousResolution     = resolution;
+}
+
+util::rect<int>
+CanvasPainter::snapToPixelGrid(const util::rect<double>& roi, const util::point<double>& resolution) {
+
+	// estimate width of roi in pixels
+	unsigned int width  = (unsigned int)round(roi.width()*resolution.x);
+	unsigned int height = (unsigned int)round(roi.height()*resolution.y);
+
+	// estimate pixel coordinates of upper left corner of roi
+	int x = (int)round(roi.minX*resolution.x);
+	int y = (int)round(roi.minY*resolution.y);
+
+	return util::rect<int>(x, y, x + width, y + height);
 }
 
 bool
@@ -96,7 +117,7 @@ CanvasPainter::prepareTexture(int textureWidth, int textureHeight) {
 
 	if (_canvasTexture != 0 && (_canvasTexture->width() != textureWidth || _canvasTexture->height() != textureHeight)) {
 
-		LOG_ALL(canvaspainterlog) << "canvas texture is of different size, create a new one" << std::endl;
+		//LOG_ALL(canvaspainterlog) << "canvas texture is of different size, create a new one" << std::endl;
 
 		delete _canvasTexture;
 		delete _canvasBufferX;
@@ -129,7 +150,7 @@ CanvasPainter::refresh() {
 }
 
 void
-CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<double>& roi) {
+CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<int>& roi) {
 
 	// is it necessary to draw something?
 	if (_drawnUntilStroke > 1 && _drawnUntilStroke == strokes.size() && _drawnUntilStrokePoint == strokes[_drawnUntilStroke - 1].size())
@@ -140,12 +161,10 @@ CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<double>& r
 
 	drawStrokes(
 			data,
-			_canvasTexture->width(),
-			_canvasTexture->height(),
 			strokes,
-			roi,
 			_textureArea,
 			_splitCenter,
+			roi,
 			true);
 
 	// unmap the texture memory
@@ -154,16 +173,17 @@ CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<double>& r
 
 void
 CanvasPainter::drawStrokes(
-		gui::cairo_pixel_t* data,
-		unsigned int width,
-		unsigned int height,
-		const Strokes& strokes,
-		const util::rect<double>& roi,
-		const util::rect<double>& dataArea,
-		const util::point<double>& splitCenter,
-		bool incremental) {
+		gui::cairo_pixel_t*     data,
+		const Strokes&          strokes,
+		const util::rect<int>&  dataArea,
+		const util::point<int>& splitCenter,
+		const util::rect<int>&  /*roi*/,
+		bool                    incremental) {
 
-	LOG_ALL(canvaspainterlog) << "drawing strokes with roi " << roi << std::endl;
+	//LOG_ALL(canvaspainterlog) << "drawing strokes with roi " << roi << std::endl;
+
+	unsigned int width  = dataArea.width();
+	unsigned int height = dataArea.height();
 
 	// wrap the buffer in a cairo surface
 	_surface =
@@ -177,23 +197,16 @@ CanvasPainter::drawStrokes(
 	// create a context for the surface
 	_context = cairo_create(_surface);
 
-	// Now, we have a surface of width x height, with (0,0) being the upper left 
-	// corner and (width-1,height-1) the lower right. Scale and translate 
-	// operations, such that the upper left is dataArea.upperLeft() and 
-	// lower right is dataArea.lowerRight().
-
-	// scale the texture area diagonal to (width, height)
-	util::point<double> scale = dataArea.lowerRight() - dataArea.upperLeft();
-	scale.x = width/scale.x;
-	scale.y = height/scale.y;
-	cairo_scale(_context, scale.x, scale.y);
+	// Now, we have a surface of widthxheight, with (0,0) being the upper left 
+	// corner and (width-1,height-1) the lower right. Translate operations, such 
+	// that the upper left is dataArea.upperLeft() and lower right is 
+	// dataArea.lowerRight().
 
 	// translate dataArea.upperLeft() to (0,0)
-	util::point<double> translate = -dataArea.upperLeft();
+	util::point<int> translate = -dataArea.upperLeft();
 	cairo_translate(_context, translate.x, translate.y);
 
-	LOG_ALL(canvaspainterlog) << "cairo scale    : " << scale << std::endl;
-	LOG_ALL(canvaspainterlog) << "cairo translate: " << translate << std::endl;
+	//LOG_ALL(canvaspainterlog) << "cairo translate (texture to canvas pixels): " << translate << std::endl;
 
 	// Now we could start drawing onto the surface, if the ROI is perfectly 
 	// centered.  However, in general, there is an additional shift with 
@@ -201,7 +214,7 @@ CanvasPainter::drawStrokes(
 	// data that have to be drawn individually.
 
 	// a rectangle used to clip the cairo operations
-	util::rect<double> clip;
+	util::rect<int>  clip;
 
 	for (int part = 0; part < 4; part++) {
 
@@ -254,14 +267,40 @@ CanvasPainter::drawStrokes(
 
 		cairo_save(_context);
 
-		// draw to texture part
+		// move operations to correct texture part
 		cairo_translate(_context, translate.x, translate.y);
+
+		//LOG_ALL(canvaspainterlog) << "split center translate for part " << part << ": " << translate << std::endl;
+
+		// clip, such that we don't draw outside of our responsibility
+		// TODO: check if clip is not one pixel to big
+		cairo_rectangle(_context, clip.minX, clip.minY, clip.width(), clip.height());
+		cairo_clip(_context);
+
+		//LOG_ALL(canvaspainterlog) << "clip for part " << part << ": " << clip << std::endl;
+
+		// Currently, we are still in canvas pixel coordinates. Transform them 
+		// to device units.
+
+		// translate should be performed...
+		cairo_translate(_context, _pixelOffset.x, _pixelOffset.y);
+		// ...after the scaling
+		cairo_scale(_context, _pixelsPerDeviceUnit.x, _pixelsPerDeviceUnit.y);
+
+		//LOG_ALL(canvaspainterlog) << "cairo translate (device units to canvas pixels): " << _pixelOffset         << std::endl;
+		//LOG_ALL(canvaspainterlog) << "cairo scale     (device units to canvas pixels): " << _pixelsPerDeviceUnit << std::endl;
+
+		// transfrom the clip accordingly (here we have to use the inverse 
+		// mapping)
+		util::rect<double> deviceRoi = clip*_deviceUnitsPerPixel + _deviceOffset;
+
+		//LOG_ALL(canvaspainterlog) << "clip in device units: " << deviceRoi << std::endl;
 
 		// draw the (new) strokes in the current part
 		if (incremental)
-			_cairoPainter.draw(_context, clip, _drawnUntilStroke, _drawnUntilStrokePoint);
+			_cairoPainter.draw(_context, deviceRoi, _drawnUntilStroke, _drawnUntilStrokePoint);
 		else
-			_cairoPainter.draw(_context, clip);
+			_cairoPainter.draw(_context, deviceRoi);
 
 		cairo_restore(_context);
 	}
@@ -283,7 +322,7 @@ CanvasPainter::drawStrokes(
 }
 
 void
-CanvasPainter::drawTexture(const util::rect<double>& roi) {
+CanvasPainter::drawTexture(const util::rect<int>& roi) {
 
 	// draw the texture
 	glEnable(GL_TEXTURE_2D);
@@ -296,17 +335,17 @@ CanvasPainter::drawTexture(const util::rect<double>& roi) {
 	// draw individually.
 
 	// the position of the rectangle to draw
-	util::rect<double>  position;
+	util::rect<int>  position;
 
-	// the translation for the texCoords
-	util::point<double> translate;
+	// the canvas pixel translation for the texCoords
+	util::point<int> translate;
 
 	// the texCoords
-	util::rect<double>  texCoords;
+	util::rect<double> texCoords;
 
 	for (int part = 0; part < 4; part++) {
 
-		LOG_ALL(canvaspainterlog) << "drawing texture part " << part << std::endl;
+		//LOG_ALL(canvaspainterlog) << "drawing texture part " << part << std::endl;
 
 		switch (part) {
 
@@ -371,7 +410,7 @@ CanvasPainter::drawTexture(const util::rect<double>& roi) {
 				break;
 		}
 
-		// translate is in device units, use it with position to determine the 
+		// translate is in canvas pixels, use it with position to determine the 
 		// texCoords
 		texCoords = position - translate - _textureArea.upperLeft();
 		texCoords.minX /= _textureArea.width();
@@ -379,21 +418,51 @@ CanvasPainter::drawTexture(const util::rect<double>& roi) {
 		texCoords.minY /= _textureArea.height();
 		texCoords.maxY /= _textureArea.height();
 
-		LOG_ALL(canvaspainterlog) << "\ttexture coordinates are " << texCoords << std::endl;
-		LOG_ALL(canvaspainterlog) << "\tposition is " << position << std::endl;
+		//LOG_ALL(canvaspainterlog) << "\ttexture coordinates are " << texCoords << std::endl;
+		//LOG_ALL(canvaspainterlog) << "\tposition is " << position << std::endl;
+
+		// position is in canvas pixels, map it to device units
+
+		// first scale position to device untis
+		util::rect<double> devicePosition = position;
+		devicePosition *= _deviceUnitsPerPixel;
+
+		// now, translate it
+		devicePosition += _deviceOffset;
+
+		// DEBUG
+		glDisable(GL_TEXTURE_2D);
+		glColor3f(1.0/(part+1), 1.0/(4-part+1), 1.0);
+		glBegin(GL_QUADS);
+		glVertex2d(devicePosition.minX, devicePosition.minY);
+		glVertex2d(devicePosition.maxX, devicePosition.minY);
+		glVertex2d(devicePosition.maxX, devicePosition.maxY);
+		glVertex2d(devicePosition.minX, devicePosition.maxY);
+		glEnd();
+		glEnable(GL_TEXTURE_2D);
+		// END DEBUG
 
 		glColor3f(1.0f, 1.0f, 1.0f);
 		glBegin(GL_QUADS);
-		glTexCoord2d(texCoords.minX, texCoords.minY); glVertex2d(position.minX, position.minY);
-		glTexCoord2d(texCoords.maxX, texCoords.minY); glVertex2d(position.maxX, position.minY);
-		glTexCoord2d(texCoords.maxX, texCoords.maxY); glVertex2d(position.maxX, position.maxY);
-		glTexCoord2d(texCoords.minX, texCoords.maxY); glVertex2d(position.minX, position.maxY);
+		glTexCoord2d(texCoords.minX, texCoords.minY); glVertex2d(devicePosition.minX, devicePosition.minY);
+		glTexCoord2d(texCoords.maxX, texCoords.minY); glVertex2d(devicePosition.maxX, devicePosition.minY);
+		glTexCoord2d(texCoords.maxX, texCoords.maxY); glVertex2d(devicePosition.maxX, devicePosition.maxY);
+		glTexCoord2d(texCoords.minX, texCoords.maxY); glVertex2d(devicePosition.minX, devicePosition.maxY);
 		glEnd();
 	}
 
 	// DEBUG
-	util::rect<double> debug = roi*0.25;
+	util::rect<double> debug = 0.25*roi;
 	debug += roi.upperLeft() - debug.upperLeft();
+	glDisable(GL_TEXTURE_2D);
+	glColor3f(1.0, 1.0, 1.0);
+	glBegin(GL_QUADS);
+	glVertex2d(debug.minX, debug.minY);
+	glVertex2d(debug.maxX, debug.minY);
+	glVertex2d(debug.maxX, debug.maxY);
+	glVertex2d(debug.minX, debug.maxY);
+	glEnd();
+	glEnable(GL_TEXTURE_2D);
 	glBegin(GL_QUADS);
 	glTexCoord2d(0, 0); glVertex2d(debug.minX, debug.minY);
 	glTexCoord2d(1, 0); glVertex2d(debug.maxX, debug.minY);
@@ -406,7 +475,7 @@ CanvasPainter::drawTexture(const util::rect<double>& roi) {
 }
 
 void
-CanvasPainter::shiftTexture(const util::point<double>& shift) {
+CanvasPainter::shiftTexture(const util::point<int>& shift) {
 
 	// shift the are represented by the texture
 	_textureArea += shift;
@@ -423,8 +492,8 @@ CanvasPainter::shiftTexture(const util::point<double>& shift) {
 
 	// whatever is in front of us is dirty, now
 
-	util::rect<double> dirtyX;
-	util::rect<double> dirtyY;
+	util::rect<int> dirtyX;
+	util::rect<int> dirtyY;
 
 	dirtyX.minY = _textureArea.minY;
 	dirtyX.maxY = _textureArea.maxY;
@@ -439,13 +508,13 @@ CanvasPainter::shiftTexture(const util::point<double>& shift) {
 	markDirty(dirtyX);
 	markDirty(dirtyY);
 
-	LOG_ALL(canvaspainterlog) << "texture area is now " << _textureArea << ", split center is at " << _splitCenter << std::endl;
+	//LOG_ALL(canvaspainterlog) << "texture area is now " << _textureArea << ", split center is at " << _splitCenter << std::endl;
 }
 
 void
-CanvasPainter::markDirty(const util::rect<double>& area) {
+CanvasPainter::markDirty(const util::rect<int>& area) {
 
-	LOG_ALL(canvaspainterlog) << "area  " << area << " is dirty, now" << std::endl;
+	//LOG_ALL(canvaspainterlog) << "area  " << area << " is dirty, now" << std::endl;
 
 	_dirtyAreas.push_back(area);
 }
@@ -454,43 +523,39 @@ void
 CanvasPainter::cleanDirtyAreas() {
 
 	int textureWidth  = _canvasTexture->width();
-	int textureHeight = _canvasTexture->height();
-
-	// the buffer's width and height in device units
-	double bufferWidth  = (static_cast<double>(_bufferWidth)/textureWidth)*_textureArea.width();
-	//double bufferHeight = (static_cast<double>(_bufferHeight)/textureHeight)*_textureArea.height();
+	//int textureHeight = _canvasTexture->height();
 
 	for (unsigned int i = 0; i < _dirtyAreas.size(); i++) {
 
-		util::rect<double>& area = _dirtyAreas[i];
+		util::rect<int>& area = _dirtyAreas[i];
 
-		LOG_ALL(canvaspainterlog) << "cleaning area " << area << std::endl;
+		//LOG_ALL(canvaspainterlog) << "cleaning area " << area << std::endl;
 
 		if (area.width() < area.height()) {
 
 			// should be handled by x-buffer
-			LOG_ALL(canvaspainterlog) << "cleaning it with x-buffer" << std::endl;
+			//LOG_ALL(canvaspainterlog) << "cleaning it with x-buffer" << std::endl;
 
 			// process in stripes
 			while (area.width() > 0) {
 
-				// put buffer area at left side of dirty area
-				util::rect<double> bufferArea;
+				// align buffer area with left side of dirty area
+				util::rect<int> bufferArea;
 				bufferArea.minX = area.minX;
-				bufferArea.maxX = area.minX + bufferWidth;
+				bufferArea.maxX = area.minX + _bufferWidth;
 				bufferArea.minY = _textureArea.minY;
 				bufferArea.maxY = _textureArea.maxY;
 
-				// move it left, if it leaves the texture area
+				// move it left, if it leaves the texture area on the right
 				if (bufferArea.maxX >= _textureArea.maxX)
-					bufferArea += util::point<double>(_textureArea.maxX - bufferArea.maxX, 0.0);
+					bufferArea += util::point<int>(_textureArea.maxX - bufferArea.maxX, 0);
 
-				LOG_ALL(canvaspainterlog) << "will clean it with stripe at " << bufferArea << std::endl;
+				//LOG_ALL(canvaspainterlog) << "will clean it with stripe at " << bufferArea << std::endl;
 
 				// map buffer
 				gui::cairo_pixel_t* data = _canvasBufferX->map<gui::cairo_pixel_t>();
 
-				util::point<double> splitCenter = _splitCenter;
+				util::point<int> splitCenter = _splitCenter;
 				if (splitCenter.x < bufferArea.minX)
 					splitCenter.x = bufferArea.minX;
 				if (splitCenter.x > bufferArea.maxX)
@@ -498,35 +563,33 @@ CanvasPainter::cleanDirtyAreas() {
 
 				drawStrokes(
 						data,
-						_bufferWidth,
-						textureHeight,
 						*_strokes,
-						bufferArea, // we have to draw everywhere, since we don't know the previous contents
 						bufferArea,
 						splitCenter,
+						bufferArea, // we have to draw everywhere, since we don't know the previous contents
 						false);
 
 				// unmap buffer
 				_canvasBufferX->unmap();
 
 				// update texture
-				double offset = bufferArea.minX - _splitCenter.x;
+				int offset = bufferArea.minX - _splitCenter.x;
 				if (offset < 0)
 					offset += _textureArea.width();
 
-				unsigned int pixelOffset = (offset*textureWidth)/_textureArea.width();
-				LOG_ALL(canvaspainterlog) << "pixel offset for this stripe is " << pixelOffset << std::endl;
+				//unsigned int pixelOffset = (offset*textureWidth)/_textureArea.width();
+				//LOG_ALL(canvaspainterlog) << "pixel offset for this stripe is " << pixelOffset << std::endl;
 
-				if (pixelOffset > textureWidth - _bufferWidth) {
+				if (offset > textureWidth - (int)_bufferWidth) {
 
-					LOG_ERROR(canvaspainterlog) << "pixel offset for x-buffer stripe is too big: " << pixelOffset << std::endl;
-					pixelOffset = textureWidth - _bufferWidth;
+					LOG_ERROR(canvaspainterlog) << "pixel offset for x-buffer stripe is too big: " << offset << std::endl;
+					offset = textureWidth - _bufferWidth;
 				}
 
-				_canvasTexture->loadData(*_canvasBufferX, pixelOffset, 0);
+				_canvasTexture->loadData(*_canvasBufferX, offset, 0);
 
 				// remove updated part from dirty area
-				area.minX += bufferWidth;
+				area.minX += _bufferWidth;
 			}
 		}
 	}
@@ -543,30 +606,32 @@ CanvasPainter::resetIncrementalDrawing() {
 }
 
 void
-CanvasPainter::initiateFullRedraw(const util::rect<double>& roi, const util::point<double>& resolution) {
+CanvasPainter::initiateFullRedraw(
+		const util::rect<int>&     canvasPixelRoi,
+		const util::rect<double>&  deviceRoi,
+		const util::point<double>& resolution) {
 
 	resetIncrementalDrawing();
 
 	// recompute area represented by canvas texture and buffers
-	_textureArea.minX = roi.minX - _prefetchLeft*(1.0/resolution.x);
-	_textureArea.minY = roi.minY - _prefetchTop*(1.0/resolution.y);
-	_textureArea.maxX = roi.maxX + _prefetchRight*(1.0/resolution.x);
-	_textureArea.maxY = roi.maxY + _prefetchBottom*(1.0/resolution.y);
+	_textureArea.minX = canvasPixelRoi.minX - _prefetchLeft;
+	_textureArea.minY = canvasPixelRoi.minY - _prefetchTop;
+	_textureArea.maxX = canvasPixelRoi.maxX + _prefetchRight;
+	_textureArea.maxY = canvasPixelRoi.maxY + _prefetchBottom;
 
 	// center the current roi in the texture
 	_splitCenter = _textureArea.upperLeft();
+
+	// remember the mapping from texture coordinates to device units
+	_deviceUnitsPerPixel = util::point<double>(1.0/resolution.x, 1.0/resolution.y);
+	_deviceOffset        = deviceRoi.upperLeft() - _deviceUnitsPerPixel*canvasPixelRoi.upperLeft();
+	_pixelsPerDeviceUnit = resolution;
+	_pixelOffset         = util::point<double>(-_deviceOffset.x*resolution.x, -_deviceOffset.y*resolution.y);
 }
 
 bool
-CanvasPainter::sizeChanged(const util::rect<double>& roi, const util::rect<double>& previousRoi) {
+CanvasPainter::sizeChanged(const util::point<double>& resolution, const util::point<double>& previousResolution) {
 
-	double relChangeWidth  = roi.width()/previousRoi.width();
-	double relChangeHeight = roi.height()/previousRoi.height();
-
-	// if either of the dimensions changed by at least 0.01%
-	if (std::max(std::abs(1.0 - relChangeWidth), std::abs(1.0 - relChangeHeight)) > 0.0001)
-		return true;
-
-	return false;
+	return (resolution != previousResolution);
 }
 
