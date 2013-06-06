@@ -45,6 +45,8 @@ private:
 			const Stroke& stroke,
 			bool incremental);
 
+	void resetIncrementalDrawing();
+
 	void initiateFullRedraw(const util::rect<double>& roi, const util::point<double>& resolution);
 
 	void clearSurface();
@@ -87,7 +89,7 @@ private:
 	/**
 	 * Update the texture strokes in the specified ROI.
 	 */
-	void updateStrokes(const Strokes& strokes, const util::rect<double>& roi, bool incremental);
+	void updateStrokes(const Strokes& strokes, const util::rect<double>& roi);
 
 	/**
 	 * Mark an area within the texture as dirty.
@@ -141,6 +143,14 @@ private:
 	/********
 	 * MISC *
 	 ********/
+
+	enum CanvasPainterState {
+
+		IncrementalDrawing,
+		Moving
+	};
+
+	CanvasPainterState _state;
 
 	// the roi of the last call to draw
 	util::rect<double>  _previousRoi;

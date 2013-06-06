@@ -16,6 +16,7 @@ CanvasPainter::CanvasPainter() :
 	_prefetchRight(100),
 	_prefetchTop(500),
 	_prefetchBottom(500),
+	_state(Moving),
 	_drawnUntilStroke(0),
 	_drawnUntilStrokePoint(0) {}
 
@@ -53,24 +54,33 @@ CanvasPainter::draw(
 
 		LOG_ALL(canvaspainterlog) << "roi did not change -- I just quickly update the strokes" << std::endl;
 
-		updateStrokes(*_strokes, roi, true);
+		if (_state == Moving) {
+
+			initiateFullRedraw(roi, resolution);
+			_state = IncrementalDrawing;
+		}
+
+		updateStrokes(*_strokes, roi);
 
 	// size of roi changed -- texture needs to be redrawn completely
 	} else if (sizeChanged(roi, _previousRoi)) {
 
 		LOG_ALL(canvaspainterlog) << "roi changed in size" << std::endl;
 
+		_state = Moving;
+
 		initiateFullRedraw(roi, resolution);
-		updateStrokes(*_strokes, roi, true);
+		updateStrokes(*_strokes, roi);
 
 	// roi was moved
 	} else {
 
 		LOG_ALL(canvaspainterlog) << "roi was moved by " << (roi.upperLeft() - _previousRoi.upperLeft()) << std::endl;
 
+		_state = Moving;
+
 		// show a different part of the canvas texture
 		shiftTexture(roi.upperLeft() - _previousRoi.upperLeft());
-		//updateStrokes(*_strokes, roi, true);
 	}
 
 	// TODO: do this in a separate thread
@@ -120,14 +130,11 @@ CanvasPainter::refresh() {
 }
 
 void
-CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<double>& roi, bool incremental) {
+CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<double>& roi) {
 
-	if (incremental) {
-
-		// is it necessary to draw something?
-		if (_drawnUntilStroke > 1 && _drawnUntilStroke == strokes.size() && _drawnUntilStrokePoint == strokes[_drawnUntilStroke - 1].size())
-			return;
-	}
+	// is it necessary to draw something?
+	if (_drawnUntilStroke > 1 && _drawnUntilStroke == strokes.size() && _drawnUntilStrokePoint == strokes[_drawnUntilStroke - 1].size())
+		return;
 
 	// map the texture memory
 	gui::cairo_pixel_t* data = _canvasTexture->map<gui::cairo_pixel_t>();
@@ -140,7 +147,7 @@ CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<double>& r
 			roi,
 			_textureArea,
 			_splitCenter,
-			incremental);
+			true);
 
 	// unmap the texture memory
 	_canvasTexture->unmap<gui::cairo_pixel_t>();
@@ -565,11 +572,17 @@ CanvasPainter::cleanDirtyAreas() {
 }
 
 void
-CanvasPainter::initiateFullRedraw(const util::rect<double>& roi, const util::point<double>& resolution) {
+CanvasPainter::resetIncrementalDrawing() {
 
 	// draw all strokes, the next time
 	_drawnUntilStroke = 0;
 	_drawnUntilStrokePoint = 0;
+}
+
+void
+CanvasPainter::initiateFullRedraw(const util::rect<double>& roi, const util::point<double>& resolution) {
+
+	resetIncrementalDrawing();
 
 	// recompute area represented by canvas texture and buffers
 	_textureArea.minX = roi.minX - _prefetchLeft*(1.0/resolution.x);
