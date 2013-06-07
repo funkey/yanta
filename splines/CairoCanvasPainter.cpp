@@ -1,28 +1,37 @@
+#include <util/Logger.h>
 #include "CairoCanvasPainter.h"
+
+logger::LogChannel cairocanvaspainterlog("cairocanvaspainterlog", "[CairoCanvasPainter] ");
 
 CairoCanvasPainter::CairoCanvasPainter() :
 	_pixelsPerDeviceUnit(1.0, 1.0),
-	_pixelOffset(0, 0) {}
+	_pixelOffset(0, 0),
+	_incremental(false),
+	_drawnUntilStroke(0),
+	_drawnUntilStrokePoint(0),
+	_drawnUntilStrokeTmp(0),
+	_drawnUntilStrokePointTmp(0) {}
 
 void
 CairoCanvasPainter::draw(cairo_t* context) {
 
-	// TODO: get Strokes bounding box
-	util::rect<double> roi(0, 0, 1, 1);
-
+	util::rect<double> roi(0, 0, 0, 0);
 	draw(context, roi);
 }
 
 void
 CairoCanvasPainter::draw(
 		cairo_t* context,
-		const util::rect<double>& roi,
-		unsigned int drawnUntilStroke,
-		unsigned int drawnUntilStrokePoint) {
+		const util::rect<double>& roi) {
 
-	// clip outside our responsibility
-	cairo_rectangle(context, roi.minX, roi.minY, roi.width(), roi.height());
-	cairo_clip(context);
+	LOG_ALL(cairocanvaspainterlog) << "drawing " << (_incremental ? "" : "non-") << "incrementally" << std::endl;
+
+	if (roi.area() != 0) {
+
+		// clip outside our responsibility
+		cairo_rectangle(context, roi.minX, roi.minY, roi.width(), roi.height());
+		cairo_clip(context);
+	}
 
 	cairo_save(context);
 
@@ -34,17 +43,30 @@ CairoCanvasPainter::draw(
 	cairo_scale(context, _pixelsPerDeviceUnit.x, _pixelsPerDeviceUnit.y);
 
 	// prepare the background, if we do not draw incrementally
-	if (drawnUntilStroke == 0 && drawnUntilStrokePoint == 0)
+	if (!_incremental || (_drawnUntilStroke == 0 && _drawnUntilStrokePoint == 0))
 		clearSurface(context);
 
 	// draw the (new) strokes in the current part
-	for (unsigned int i = drawnUntilStroke; i < _strokes->size(); i++) {
+	unsigned int drawnUntilStrokePoint = (_incremental ? _drawnUntilStrokePoint : 0);
+	for (unsigned int i = (_incremental ? _drawnUntilStroke : 0); i < _strokes->size(); i++) {
+
+		LOG_ALL(cairocanvaspainterlog)
+				<< "drawing stroke " << i << ", starting from point "
+				<< drawnUntilStrokePoint << std::endl;
 
 		drawStroke(context, (*_strokes)[i], roi, drawnUntilStrokePoint);
 		drawnUntilStrokePoint = 0;
 	}
 
 	cairo_restore(context);
+
+	// temporarilly remember what we drew already
+	_drawnUntilStrokeTmp = std::max(0, static_cast<int>(_strokes->size()) - 1);
+
+	if (_strokes->size() > 0)
+		_drawnUntilStrokePointTmp = std::max(0, static_cast<int>((*_strokes)[_drawnUntilStrokeTmp].size()) - 1);
+	else
+		_drawnUntilStrokePointTmp = 0;
 }
 
 void

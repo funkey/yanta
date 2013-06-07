@@ -19,10 +19,25 @@ PrefetchTexture::PrefetchTexture(
 	_bufferHeight(std::min(prefetchTop, prefetchBottom)),
 	_texture(0),
 	_reloadBufferX(0),
-	_reloadBufferY(0) {
+	_reloadBufferY(0),
+	_workingArea(0, 0, 0, 0) {
+
+	for (int i = 0; i < 4; i++)
+		_workingBuffers[i] = 0;
 
 	reset(area);
 	prepare();
+}
+
+PrefetchTexture::~PrefetchTexture() {
+
+	for (int i = 0; i < 4; i++)
+		deleteBuffer(&_workingBuffers[i]);
+	deleteBuffer(&_reloadBufferX);
+	deleteBuffer(&_reloadBufferY);
+
+	if (_texture)
+		delete _texture;
 }
 
 bool
@@ -58,136 +73,119 @@ PrefetchTexture::prepare() {
 	return false;
 }
 
+
 void
 PrefetchTexture::fill(
 		const util::rect<int>& subarea,
 		CairoCanvasPainter& painter) {
 
-	// TODO:
-	//
-	// • create buffer(s)
-	// • map them
-	// • call painter.draw() on them
-	// • unmap them
-	// • update texture
+	// get the up-to-four parts of the subarea
+	util::rect<int>  parts[4];
+	util::point<int> offsets[4];
 
-	// TODO workaround for now: slow but exact version
-	gui::cairo_pixel_t*    data     = _texture->map<gui::cairo_pixel_t>();
-	const util::rect<int>& dataArea = _textureArea;
+	split(subarea, parts, offsets);
 
-		//gui::cairo_pixel_t*     data,
-		//const Strokes&          strokes,
-		//const util::rect<int>&  dataArea,
-		//const util::point<int>& splitCenter,
-		//const util::rect<int>&  [>roi<],
-		//bool                    incremental) {
+	for (int i = 0; i < 4; i++) {
 
-	LOG_ALL(prefetchtexturelog) << "filling subarea " << subarea << std::endl;
+		if (parts[i].area() <= 0)
+			continue;
 
-	unsigned int width  = dataArea.width();
-	unsigned int height = dataArea.height();
+		LOG_ALL(prefetchtexturelog) << "filling part " << i << " " << parts[i] << std::endl;
 
-	// wrap the buffer in a cairo surface
-	cairo_surface_t* surface =
-			cairo_image_surface_create_for_data(
-					(unsigned char*)data,
-					CAIRO_FORMAT_ARGB32,
-					width,
-					height,
-					cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width));
+		unsigned int width  = parts[i].width();
+		unsigned int height = parts[i].height();
 
-	// create a context for the surface
-	cairo_t* context = cairo_create(surface);
+		gui::Buffer* buffer = 0;
 
-	// Now, we have a surface of widthxheight, with (0,0) being the upper left 
-	// corner and (width-1,height-1) the lower right. Translate operations, such 
-	// that the upper left is dataArea.upperLeft() and lower right is 
-	// dataArea.lowerRight().
+		// if we are fill the region specified by setWorkingArea(), we reuse the 
+		// already allocated buffers
+		if (subarea == _workingArea)
+			buffer = _workingBuffers[i];
+		else
+			createBuffer(width, height, &buffer);
 
-	// translate dataArea.upperLeft() to (0,0)
-	util::point<int> translate = -dataArea.upperLeft();
-	cairo_translate(context, translate.x, translate.y);
+		gui::cairo_pixel_t* data = buffer->map<gui::cairo_pixel_t>();
 
-	LOG_ALL(prefetchtexturelog) << "cairo translate (texture to canvas pixels): " << translate << std::endl;
+		// wrap the buffer in a cairo surface
+		cairo_surface_t* surface =
+				cairo_image_surface_create_for_data(
+						(unsigned char*)data,
+						CAIRO_FORMAT_ARGB32,
+						width,
+						height,
+						cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width));
 
-	// Now we could start drawing onto the surface, if the ROI is perfectly 
-	// centered.  However, in general, there is an additional shift with 
-	// wrap-around that we have to compensate for. This gives four parts of the 
-	// data that have to be drawn individually.
+		cairo_status_t status = cairo_surface_status(surface);
 
-	// a rectangle used to clip the cairo operations
-	util::rect<int>  clip;
+		if (status != CAIRO_STATUS_SUCCESS) {
 
-	for (int part = 0; part < 4; part++) {
+			if (status == CAIRO_STATUS_INVALID_STRIDE) {
 
-		switch (part) {
+				LOG_ERROR(prefetchtexturelog) << "stride for reload buffer is invalid!" << std::endl;
 
-			// upper left
-			case 0:
+			} else {
 
-				clip.minX = _splitCenter.x;
-				clip.minY = _splitCenter.y;
-				clip.maxX = dataArea.maxX;
-				clip.maxY = dataArea.maxY;
-
-				translate = dataArea.upperLeft() - _splitCenter;
-				break;
-
-			// upper right
-			case 1:
-
-				clip.minX = dataArea.minX;
-				clip.minY = _splitCenter.y;
-				clip.maxX = _splitCenter.x;
-				clip.maxY = dataArea.maxY;
-
-				translate = dataArea.upperRight() - _splitCenter;
-				break;
-
-			// lower left
-			case 2:
-
-				clip.minX = _splitCenter.x;
-				clip.minY = dataArea.minY;
-				clip.maxX = dataArea.maxX;
-				clip.maxY = _splitCenter.y;
-
-				translate = dataArea.lowerLeft() - _splitCenter;
-				break;
-
-			// lower right
-			case 3:
-
-				clip.minX = dataArea.minX;
-				clip.minY = dataArea.minY;
-				clip.maxX = _splitCenter.x;
-				clip.maxY = _splitCenter.y;
-
-				translate = dataArea.lowerRight() - _splitCenter;
-				break;
+				LOG_ERROR(prefetchtexturelog) << "encountered error status " << status << " for cairo_image_surface_create_for_data()" << std::endl;
+			}
 		}
 
-		cairo_save(context);
+		// create a context for the surface
+		cairo_t* context = cairo_create(surface);
 
-		// move operations to correct texture part
+		// Now, we have a surface of widthxheight, with (0,0) being the upper left 
+		// corner and (width-1,height-1) the lower right. Translate operations, 
+		// such that the upper left is parts[i].upperLeft() and lower right is 
+		// parts[i].lowerRight().
+
+		// translate parts[i].upperLeft() to (0,0)
+		util::point<int> translate = -parts[i].upperLeft();
 		cairo_translate(context, translate.x, translate.y);
 
-		LOG_ALL(prefetchtexturelog) << "split center translate for part " << part << ": " << translate << std::endl;
+		LOG_ALL(prefetchtexturelog) << "cairo translate (texture to canvas pixels): " << translate << std::endl;
 
-		LOG_ALL(prefetchtexturelog) << "clip for part " << part << ": " << clip << std::endl;
+		painter.draw(context);
 
-		// draw the content of the cairo painter
-		// TODO: check if clip is not one pixel to big
-		painter.draw(context, clip);
+		// cleanup
+		cairo_destroy(context);
+		cairo_surface_destroy(surface);
 
-		cairo_restore(context);
+		// unmap the buffer
+		buffer->unmap();
+
+		// update texture with buffer content
+		_texture->loadData(*buffer, offsets[i].x, offsets[i].y);
+
+		if (subarea != _workingArea)
+			deleteBuffer(&buffer);
+	}
+}
+
+void
+PrefetchTexture::setWorkingArea(const util::rect<int>& subarea) {
+
+	// get the up-to-four parts of the subarea
+	util::rect<int>  parts[4];
+	util::point<int> offsets[4];
+
+	split(subarea, parts, offsets);
+
+	for (int i = 0; i < 4; i++) {
+
+		if (parts[i].area() <= 0) {
+
+			deleteBuffer(&_workingBuffers[i]);
+			continue;
+		}
+
+		LOG_ALL(prefetchtexturelog) << "creating working buffer " << i << " for " << parts[i] << std::endl;
+
+		unsigned int width  = parts[i].width();
+		unsigned int height = parts[i].height();
+
+		createBuffer(width, height, &_workingBuffers[i]);
 	}
 
-	// cleanup
-	cairo_destroy(context);
-	cairo_surface_destroy(surface);
-
-	_texture->unmap<gui::cairo_pixel_t>();
+	_workingArea = subarea;
 }
 
 // TODO: use glTranslate and glScale instead of passing _device*
@@ -204,112 +202,51 @@ PrefetchTexture::render(const util::rect<int>& roi, const util::point<double>& _
 	// The texture's ROI is in general split into four parts that we have to 
 	// draw individually.
 
-	// the position of the rectangle to draw
-	util::rect<int> position;
-
-	// the canvas pixel translation for the texCoords
-	util::point<int> translate;
-
 	// the texCoords
 	util::rect<double> texCoords;
 
-	for (int part = 0; part < 4; part++) {
+	util::rect<int>  parts[4];
+	util::point<int> offsets[4];
 
-		LOG_ALL(prefetchtexturelog) << "drawing texture part " << part << std::endl;
+	split(roi, parts, offsets);
 
-		switch (part) {
+	for (int i = 0; i < 4; i++) {
 
-			// upper left
-			case 0:
+		if (parts[i].area() <= 0)
+			continue;
 
-				position.minX = std::max(_splitCenter.x, roi.minX);
-				position.minY = std::max(_splitCenter.y, roi.minY);
-				position.maxX = roi.maxX;
-				position.maxY = roi.maxY;
+		LOG_ALL(prefetchtexturelog) << "drawing texture part " << i << std::endl;
 
-				if (position.area() <= 0)
-					continue;
-
-				translate = _splitCenter - _textureArea.upperLeft();
-
-				break;
-
-			// upper right
-			case 1:
-
-				position.minX = roi.minX;
-				position.minY = std::max(_splitCenter.y, roi.minY);
-				position.maxX = std::min(_splitCenter.x, roi.maxX);
-				position.maxY = roi.maxY;
-
-				if (position.area() <= 0)
-					continue;
-
-				translate = _splitCenter - _textureArea.upperRight();
-
-				break;
-
-			// lower left
-			case 2:
-
-				position.minX = std::max(_splitCenter.x, roi.minX);
-				position.minY = roi.minY;
-				position.maxX = roi.maxX;
-				position.maxY = std::min(_splitCenter.y, roi.maxY);
-
-				if (position.area() <= 0)
-					continue;
-
-				translate = _splitCenter - _textureArea.lowerLeft();
-
-				break;
-
-			// lower right
-			case 3:
-
-				position.minX = roi.minX;
-				position.minY = roi.minY;
-				position.maxX = std::min(_splitCenter.x, roi.maxX);
-				position.maxY = std::min(_splitCenter.y, roi.maxY);
-
-				if (position.area() <= 0)
-					continue;
-
-				translate = _splitCenter - _textureArea.lowerRight();
-
-				break;
-		}
-
-		// translate is in canvas pixels, use it with position to determine the 
+		// offset is in canvas pixels, use it with parts[i] to determine the 
 		// texCoords
-		texCoords = position - translate - _textureArea.upperLeft();
+		texCoords = parts[i] - parts[i].upperLeft() + offsets[i];
 		texCoords.minX /= _textureArea.width();
 		texCoords.maxX /= _textureArea.width();
 		texCoords.minY /= _textureArea.height();
 		texCoords.maxY /= _textureArea.height();
 
 		LOG_ALL(prefetchtexturelog) << "\ttexture coordinates are " << texCoords << std::endl;
-		LOG_ALL(prefetchtexturelog) << "\tposition is " << position << std::endl;
+		LOG_ALL(prefetchtexturelog) << "\tpart is " << parts[i] << std::endl;
 
-		// position is in canvas pixels, map it to device units
+		// part[i] is in canvas pixels, map it to device units
 
-		// first scale position to device untis
-		util::rect<double> devicePosition = position;
+		// first scale parts[i] to device untis
+		util::rect<double> devicePosition = parts[i];
 		devicePosition *= _deviceUnitsPerPixel;
 
 		// now, translate it
 		devicePosition += _deviceOffset;
 
 		// DEBUG
-		glDisable(GL_TEXTURE_2D);
-		glColor3f(1.0/(part+1), 1.0/(4-part+1), 1.0);
-		glBegin(GL_QUADS);
-		glVertex2d(devicePosition.minX, devicePosition.minY);
-		glVertex2d(devicePosition.maxX, devicePosition.minY);
-		glVertex2d(devicePosition.maxX, devicePosition.maxY);
-		glVertex2d(devicePosition.minX, devicePosition.maxY);
-		glEnd();
-		glEnable(GL_TEXTURE_2D);
+		//glDisable(GL_TEXTURE_2D);
+		//glColor3f(1.0/(i+1), 1.0/(4-i+1), 1.0);
+		//glBegin(GL_QUADS);
+		//glVertex2d(devicePosition.minX, devicePosition.minY);
+		//glVertex2d(devicePosition.maxX, devicePosition.minY);
+		//glVertex2d(devicePosition.maxX, devicePosition.maxY);
+		//glVertex2d(devicePosition.minX, devicePosition.maxY);
+		//glEnd();
+		//glEnable(GL_TEXTURE_2D);
 		// END DEBUG
 
 		glColor3f(1.0f, 1.0f, 1.0f);
@@ -322,8 +259,11 @@ PrefetchTexture::render(const util::rect<int>& roi, const util::point<double>& _
 	}
 
 	// DEBUG
-	util::rect<double> debug = 0.25*roi;
-	debug += roi.upperLeft() - debug.upperLeft();
+	util::rect<double> devicePosition = roi;
+	devicePosition *= _deviceUnitsPerPixel;
+	devicePosition += _deviceOffset;
+	util::rect<double> debug = 0.25*devicePosition;
+	debug += devicePosition.upperLeft() - debug.upperLeft();
 	glDisable(GL_TEXTURE_2D);
 	glColor3f(1.0, 1.0, 1.0);
 	glBegin(GL_QUADS);
@@ -392,6 +332,10 @@ PrefetchTexture::markDirty(const util::rect<int>& area) {
 void
 PrefetchTexture::cleanDirtyAreas(CairoCanvasPainter& painter) {
 
+	// since we have to clean dirty areas, we should not attempt to draw 
+	// incrementally
+	painter.setIncremental(false);
+
 	for (unsigned int i = 0; i < _dirtyAreas.size(); i++)
 		fill(_dirtyAreas[i], painter);
 
@@ -409,4 +353,70 @@ PrefetchTexture::reset(const util::rect<int>& area) {
 
 	// center the current roi in the texture
 	_splitCenter = _textureArea.upperLeft();
+
+	markDirty(_textureArea);
+}
+
+void
+PrefetchTexture::split(const util::rect<int>& subarea, util::rect<int>* parts, util::point<int>* offsets) {
+
+	// upper left
+	parts[0].minX = std::max(_splitCenter.x, subarea.minX);
+	parts[0].minY = std::max(_splitCenter.y, subarea.minY);
+	parts[0].maxX = subarea.maxX;
+	parts[0].maxY = subarea.maxY;
+
+	// upper right
+	parts[1].minX = subarea.minX;
+	parts[1].minY = std::max(_splitCenter.y, subarea.minY);
+	parts[1].maxX = std::min(_splitCenter.x, subarea.maxX);
+	parts[1].maxY = subarea.maxY;
+
+	// lower left
+	parts[2].minX = std::max(_splitCenter.x, subarea.minX);
+	parts[2].minY = subarea.minY;
+	parts[2].maxX = subarea.maxX;
+	parts[2].maxY = std::min(_splitCenter.y, subarea.maxY);
+
+	// lower right
+	parts[3].minX = subarea.minX;
+	parts[3].minY = subarea.minY;
+	parts[3].maxX = std::min(_splitCenter.x, subarea.maxX);
+	parts[3].maxY = std::min(_splitCenter.y, subarea.maxY);
+
+	// the offsets are the positions of the upper left pixel of the parts in the 
+	// texture
+	for (int i = 0; i < 4; i++) {
+
+		if (parts[i].width() <= 0 || parts[i].height() <= 0) {
+
+			parts[i] = util::rect<int>(0, 0, 0, 0);
+			offsets[i] = util::point<int>(0, 0);
+			continue;
+		}
+
+		offsets[i] = parts[i].upperLeft() - _splitCenter;
+		if (offsets[i].x < 0) offsets[i].x += _textureArea.width();
+		if (offsets[i].y < 0) offsets[i].y += _textureArea.height();
+	}
+}
+
+void
+PrefetchTexture::createBuffer(unsigned int width, unsigned int height, gui::Buffer** buffer) {
+
+	deleteBuffer(buffer);
+
+	GLenum format = gui::detail::pixel_format_traits<gui::cairo_pixel_t>::gl_format;
+	GLenum type   = gui::detail::pixel_format_traits<gui::cairo_pixel_t>::gl_type;
+
+	*buffer = new gui::Buffer(width, height, format, type);
+}
+
+void
+PrefetchTexture::deleteBuffer(gui::Buffer** buffer) {
+
+	if (*buffer)
+		delete *buffer;
+
+	*buffer = 0;
 }

@@ -28,6 +28,8 @@ public:
 			unsigned int prefetchTop,
 			unsigned int prefetchBottom);
 
+	~PrefetchTexture();
+
 	/**
 	 * Shift the area represented by this prefetch texture. This method is 
 	 * lightweight -- it only remembers the new position and marks some subareas 
@@ -42,6 +44,13 @@ public:
 	void fill(
 			const util::rect<int>& subarea,
 			CairoCanvasPainter& painter);
+
+	/**
+	 * Specify an area as working area. Buffers for this area will be kept in 
+	 * memory and incremental drawing operations can be performed on it when 
+	 * fill() is called with exactly this subarea.
+	 */
+	void setWorkingArea(const util::rect<int>& subarea);
 
 	/**
 	 * Render the texture's content of subarea to subarea on the screen.
@@ -79,6 +88,16 @@ private:
 	 */
 	void markDirty(const util::rect<int>& area);
 
+	/**
+	 * Split an area into four parts, according to the split center.  
+	 * Additionally, the offset into the texture are returned.
+	 */
+	void split(const util::rect<int>& subarea, util::rect<int>* parts, util::point<int>* offsets);
+
+	void createBuffer(unsigned int width, unsigned int height, gui::Buffer** buffer);
+
+	void deleteBuffer(gui::Buffer** buffer);
+
 	// the whole area (including prefetch) covered by the texture in pixel units
 	util::rect<int> _textureArea;
 
@@ -104,6 +123,12 @@ private:
 
 	// dirty areas of the texture
 	std::vector<util::rect<int> > _dirtyAreas;
+
+	// an area who's content we should keep in memory
+	util::rect<int> _workingArea;
+
+	// the up-to-four buffers for the working area
+	gui::Buffer* _workingBuffers[4];
 };
 
 #endif // SPLINES_PREFETCH_TEXTURE_H__

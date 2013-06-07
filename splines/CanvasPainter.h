@@ -43,14 +43,12 @@ private:
 			const util::rect<int>&  roi,
 			bool                    incremental);
 
-	void resetIncrementalDrawing();
-
 	void initiateFullRedraw(
 			const util::rect<int>&     canvasPixelRoi,
 			const util::rect<double>&  roi,
 			const util::point<double>& resolution);
 
-	bool sizeChanged(const util::point<double>& resolution, const util::point<double>& previousResolution);
+	bool sizeChanged(const util::rect<int>& canvasPixelRoi, const util::point<double>& resolution);
 
 	// the strokes to draw
 	boost::shared_ptr<Strokes> _strokes;
@@ -122,11 +120,6 @@ private:
 	// the snapped pixel grid roi of the last call to draw
 	util::rect<int>     _previousCanvasPixelRoi;
 	util::point<double> _previousResolution;
-
-	// the number of the stroke until which all have been drawn already for the 
-	// current configuration
-	unsigned int _drawnUntilStroke;
-	unsigned int _drawnUntilStrokePoint;
 };
 
 #endif // CANVAS_PAINTER_H__

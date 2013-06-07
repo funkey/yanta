@@ -12,9 +12,7 @@ CanvasPainter::CanvasPainter() :
 	_prefetchRight(100),
 	_prefetchTop(100),
 	_prefetchBottom(100),
-	_state(Moving),
-	_drawnUntilStroke(0),
-	_drawnUntilStrokePoint(0) {}
+	_state(Moving) {}
 
 void
 CanvasPainter::draw(
@@ -48,19 +46,21 @@ CanvasPainter::draw(
 
 		LOG_ALL(canvaspainterlog) << "canvas pixel roi did not change -- I just quickly update the strokes" << std::endl;
 
-		// if we were moving previously, the texture buffer got state -- need to 
-		// redraw everythin
+		// when we are entering incremental mode, we have to tell the texture 
+		// that we have a working area, now
 		if (_state == Moving) {
 
-			initiateFullRedraw(canvasPixelRoi, roi, resolution);
-			_state = IncrementalDrawing;
+			_canvasTexture->setWorkingArea(canvasPixelRoi);
+			_cairoPainter.resetIncrementalMemory();
 		}
+
+		_state = IncrementalDrawing;
 
 		updateStrokes(*_strokes, canvasPixelRoi);
 
 	// size of canvas pixel roi changed -- texture needs to be redrawn 
 	// completely
-	} else if (sizeChanged(resolution, _previousResolution)) {
+	} else if (sizeChanged(canvasPixelRoi, resolution)) {
 
 		LOG_ALL(canvaspainterlog) << "canvas pixel roi changed in size" << std::endl;
 
@@ -133,29 +133,36 @@ void
 CanvasPainter::refresh() {
 
 	LOG_ALL(canvaspainterlog) << "refresh requested" << std::endl;
-	resetIncrementalDrawing();
+	_cairoPainter.resetIncrementalMemory();
 }
 
 void
 CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<int>& roi) {
 
 	// is it necessary to draw something?
-	if (_drawnUntilStroke > 1 && _drawnUntilStroke == strokes.size() && _drawnUntilStrokePoint == strokes[_drawnUntilStroke - 1].size())
+	if (_cairoPainter.drawnUntilStroke() > 1 &&
+	    _cairoPainter.drawnUntilStroke() == strokes.size() &&
+	    _cairoPainter.drawnUntilStrokePoint() == strokes[_cairoPainter.drawnUntilStroke() - 1].size()) {
+
+		LOG_ALL(canvaspainterlog) << "nothing changed, skipping redraw" << std::endl;
 		return;
+	}
 
-	// map the texture memory
+	if (_state == IncrementalDrawing) {
 
-	// TODO: tell cairo painter what we drew already
-	_cairoPainter.setDeviceTransformation(_pixelsPerDeviceUnit, _pixelOffset);
+		LOG_ALL(canvaspainterlog)
+				<< "drawing incrementally in " << roi << ", starting with stroke "
+				<< _cairoPainter.drawnUntilStroke() << ", point "
+				<< _cairoPainter.drawnUntilStrokePoint() << std::endl;
+	} else {
+
+		LOG_ALL(canvaspainterlog)
+				<< "drawing everything in " << roi << std::endl;
+	}
+
+	_cairoPainter.setIncremental(_state == IncrementalDrawing);
 	_canvasTexture->fill(roi, _cairoPainter);
-
-	// remember what we drew already
-	_drawnUntilStroke = std::max(0, static_cast<int>(strokes.size()) - 1);
-
-	if (strokes.size() > 0)
-		_drawnUntilStrokePoint = std::max(0, static_cast<int>(strokes[_drawnUntilStroke].size()) - 1);
-	else
-		_drawnUntilStrokePoint = 0;
+	_cairoPainter.rememberDrawnStrokes();
 }
 
 void
@@ -165,20 +172,10 @@ CanvasPainter::drawTexture(const util::rect<int>& roi) {
 }
 
 void
-CanvasPainter::resetIncrementalDrawing() {
-
-	// draw all strokes, the next time
-	_drawnUntilStroke = 0;
-	_drawnUntilStrokePoint = 0;
-}
-
-void
 CanvasPainter::initiateFullRedraw(
 		const util::rect<int>&     canvasPixelRoi,
 		const util::rect<double>&  deviceRoi,
 		const util::point<double>& resolution) {
-
-	resetIncrementalDrawing();
 
 	_canvasTexture->reset(canvasPixelRoi);
 
@@ -187,11 +184,17 @@ CanvasPainter::initiateFullRedraw(
 	_deviceOffset        = deviceRoi.upperLeft() - _deviceUnitsPerPixel*canvasPixelRoi.upperLeft();
 	_pixelsPerDeviceUnit = resolution;
 	_pixelOffset         = util::point<double>(-_deviceOffset.x*resolution.x, -_deviceOffset.y*resolution.y);
+
+	_cairoPainter.setDeviceTransformation(_pixelsPerDeviceUnit, _pixelOffset);
+	_cairoPainter.resetIncrementalMemory();
 }
 
 bool
-CanvasPainter::sizeChanged(const util::point<double>& resolution, const util::point<double>& previousResolution) {
+CanvasPainter::sizeChanged(const util::rect<int>& canvasPixelRoi, const util::point<double>& resolution) {
 
-	return (resolution != previousResolution);
+	return (
+			resolution != _previousResolution ||
+			canvasPixelRoi.width()  != _previousCanvasPixelRoi.width() ||
+			canvasPixelRoi.height() != _previousCanvasPixelRoi.height());
 }
 

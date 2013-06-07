@@ -27,6 +27,39 @@ public:
 	}
 
 	/**
+	 * Enable or disable incremental mode. In this mode, the painter remembers 
+	 * what it drew already and subsequent calls to draw() will only add what's 
+	 * new.
+	 */
+	void setIncremental(bool incremental) {
+
+		_incremental = incremental;
+	}
+
+	/**
+	 * Reset the memory about what has been drawn already. Call this method to 
+	 * re-initialize incremental drawing.
+	 */
+	void resetIncrementalMemory() {
+
+		_drawnUntilStroke      = 0;
+		_drawnUntilStrokePoint = 0;
+	}
+
+	void rememberDrawnStrokes() {
+
+		_drawnUntilStroke = _drawnUntilStrokeTmp;
+		_drawnUntilStrokePoint = _drawnUntilStrokePointTmp;
+	}
+
+	/**
+	 * Get the number of the stroke until which all previous strokes have been 
+	 * drawn already (excluding the stroke represented by the number).
+	 */
+	unsigned int drawnUntilStroke()      { return _drawnUntilStroke; }
+	unsigned int drawnUntilStrokePoint() { return _drawnUntilStrokePoint; }
+
+	/**
 	 * Draw the whole canvas on the provided context.
 	 */
 	void draw(cairo_t* context);
@@ -38,9 +71,7 @@ public:
 	 */
 	void draw(
 			cairo_t* context,
-			const util::rect<double>& roi,
-			unsigned int drawnUntilStroke = 0,
-			unsigned int drawnUntilStrokePoint = 0);
+			const util::rect<double>& roi);
 
 private:
 
@@ -60,6 +91,18 @@ private:
 
 	util::point<double> _pixelsPerDeviceUnit;
 	util::point<double> _pixelOffset;
+
+	// draw only updates
+	bool _incremental;
+
+	// the number of the stroke until which all have been drawn already
+	unsigned int _drawnUntilStroke;
+	unsigned int _drawnUntilStrokePoint;
+
+	// temporal memory of the number of the stroke until which all have been 
+	// drawn already
+	unsigned int _drawnUntilStrokeTmp;
+	unsigned int _drawnUntilStrokePointTmp;
 };
 
 #endif // SPLINES_CAIRO_CANVAS_PAINTER_H__
