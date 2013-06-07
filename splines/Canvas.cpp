@@ -5,13 +5,35 @@
 logger::LogChannel canvaslog("canvaslog", "[Canvas] ");
 
 Canvas::Canvas() :
-	_penDown(false) {
+	_penDown(false),
+	_initialStrokesModified(false) {
 
 	registerOutput(_strokes, "strokes");
+	registerInput(_initialStrokes, "initial strokes", pipeline::Optional);
 
 	_strokes.registerForwardCallback(&Canvas::onPenDown, this);
 	_strokes.registerForwardCallback(&Canvas::onPenMove, this);
 	_strokes.registerForwardCallback(&Canvas::onPenUp, this);
+
+	_initialStrokes.registerBackwardCallback(&Canvas::onModified, this);
+}
+
+void
+Canvas::updateOutputs() {
+
+	if (_initialStrokes && _initialStrokesModified) {
+
+		LOG_DEBUG(canvaslog) << "have initial strokes, loading them" << std::endl;
+		*_strokes = *_initialStrokes;
+
+		_initialStrokesModified = false;
+	}
+}
+
+void
+Canvas::onModified(const pipeline::Modified&) {
+
+	_initialStrokesModified = true;
 }
 
 void
