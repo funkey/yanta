@@ -258,28 +258,28 @@ PrefetchTexture::render(const util::rect<int>& roi, const util::point<double>& _
 		glEnd();
 	}
 
-	// DEBUG
-	util::rect<double> devicePosition = roi;
-	devicePosition *= _deviceUnitsPerPixel;
-	devicePosition += _deviceOffset;
-	util::rect<double> debug = 0.25*devicePosition;
-	debug += devicePosition.upperLeft() - debug.upperLeft();
-	glDisable(GL_TEXTURE_2D);
-	glColor3f(1.0, 1.0, 1.0);
-	glBegin(GL_QUADS);
-	glVertex2d(debug.minX, debug.minY);
-	glVertex2d(debug.maxX, debug.minY);
-	glVertex2d(debug.maxX, debug.maxY);
-	glVertex2d(debug.minX, debug.maxY);
-	glEnd();
-	glEnable(GL_TEXTURE_2D);
-	glBegin(GL_QUADS);
-	glTexCoord2d(0, 0); glVertex2d(debug.minX, debug.minY);
-	glTexCoord2d(1, 0); glVertex2d(debug.maxX, debug.minY);
-	glTexCoord2d(1, 1); glVertex2d(debug.maxX, debug.maxY);
-	glTexCoord2d(0, 1); glVertex2d(debug.minX, debug.maxY);
-	glEnd();
-	// END DEBUG
+	//// DEBUG
+	//util::rect<double> devicePosition = roi;
+	//devicePosition *= _deviceUnitsPerPixel;
+	//devicePosition += _deviceOffset;
+	//util::rect<double> debug = 0.25*devicePosition;
+	//debug += devicePosition.upperLeft() - debug.upperLeft();
+	//glDisable(GL_TEXTURE_2D);
+	//glColor3f(1.0, 1.0, 1.0);
+	//glBegin(GL_QUADS);
+	//glVertex2d(debug.minX, debug.minY);
+	//glVertex2d(debug.maxX, debug.minY);
+	//glVertex2d(debug.maxX, debug.maxY);
+	//glVertex2d(debug.minX, debug.maxY);
+	//glEnd();
+	//glEnable(GL_TEXTURE_2D);
+	//glBegin(GL_QUADS);
+	//glTexCoord2d(0, 0); glVertex2d(debug.minX, debug.minY);
+	//glTexCoord2d(1, 0); glVertex2d(debug.maxX, debug.minY);
+	//glTexCoord2d(1, 1); glVertex2d(debug.maxX, debug.maxY);
+	//glTexCoord2d(0, 1); glVertex2d(debug.minX, debug.maxY);
+	//glEnd();
+	//// END DEBUG
 
 	glDisable(GL_BLEND);
 }

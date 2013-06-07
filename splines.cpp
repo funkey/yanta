@@ -14,6 +14,7 @@
 #include <util/SignalHandler.h>
 
 #include <splines/Canvas.h>
+#include <splines/CanvasView.h>
 
 void handleException(boost::exception& e) {
 
@@ -71,14 +72,14 @@ int main(int optionc, char** optionv) {
 		// init signal handler
 		util::SignalHandler::init();
 
-		gui::WindowMode mode;
-		//mode.fullscreen = true;
-		pipeline::Process<gui::Window>   window("splines", mode);
+		pipeline::Process<gui::Window>   window("splines");
 		pipeline::Process<gui::ZoomView> zoomView;
+		pipeline::Process<CanvasView>    canvasView;
 		pipeline::Process<Canvas>        canvas;
 
 		window->setInput(zoomView->getOutput());
-		zoomView->setInput(canvas->getOutput("painter"));
+		zoomView->setInput(canvasView->getOutput("painter"));
+		canvasView->setInput(canvas->getOutput("strokes"));
 
 		LOG_USER(logger::out) << "[main] starting..." << std::endl;
 

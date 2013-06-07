@@ -8,10 +8,10 @@ logger::LogChannel canvaspainterlog("canvaspainterlog", "[CanvasPainter] ");
 
 CanvasPainter::CanvasPainter() :
 	_canvasTexture(0),
-	_prefetchLeft(100),
-	_prefetchRight(100),
-	_prefetchTop(100),
-	_prefetchBottom(100),
+	_prefetchLeft(1024),
+	_prefetchRight(1024),
+	_prefetchTop(1024),
+	_prefetchBottom(1024),
 	_state(Moving) {}
 
 void

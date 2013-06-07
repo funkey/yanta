@@ -5,34 +5,13 @@
 logger::LogChannel canvaslog("canvaslog", "[Canvas] ");
 
 Canvas::Canvas() :
-	_strokes(boost::make_shared<Strokes>()),
 	_penDown(false) {
 
-	registerOutput(_painter, "painter");
+	registerOutput(_strokes, "strokes");
 
-	_painter.registerForwardSlot(_contentChanged);
-	_painter.registerForwardCallback(&Canvas::onKeyDown, this);
-	_painter.registerForwardCallback(&Canvas::onPenDown, this);
-	_painter.registerForwardCallback(&Canvas::onPenMove, this);
-	_painter.registerForwardCallback(&Canvas::onPenUp, this);
-}
-
-void
-Canvas::updateOutputs() {
-
-	_painter->setStrokes(_strokes);
-}
-
-void
-Canvas::onKeyDown(const gui::KeyDown& signal) {
-
-	if (signal.key == gui::keys::U) {
-
-		LOG_DEBUG(canvaslog) << "requesting painter refresh" << std::endl;
-
-		_painter->refresh();
-		setDirty(_painter);
-	}
+	_strokes.registerForwardCallback(&Canvas::onPenDown, this);
+	_strokes.registerForwardCallback(&Canvas::onPenMove, this);
+	_strokes.registerForwardCallback(&Canvas::onPenUp, this);
 }
 
 void
@@ -52,7 +31,7 @@ Canvas::onPenDown(const gui::PenDown& signal) {
 	_strokes->currentStroke().push_back(StrokePoint(signal.position, signal.pressure, signal.timestamp));
 	_penDown = true;
 
-	_contentChanged();
+	setDirty(_strokes);
 }
 
 void
@@ -72,7 +51,7 @@ Canvas::onPenUp(const gui::PenUp& signal) {
 	_strokes->finishCurrentStroke();
 	_penDown = false;
 
-	_contentChanged();
+	setDirty(_strokes);
 }
 
 void
@@ -85,5 +64,5 @@ Canvas::onPenMove(const gui::PenMove& signal) {
 
 	_strokes->currentStroke().push_back(StrokePoint(signal.position, signal.pressure, signal.timestamp));
 
-	_contentChanged();
+	setDirty(_strokes);
 }
