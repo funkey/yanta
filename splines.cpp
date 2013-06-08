@@ -15,6 +15,14 @@
 
 #include <splines/Canvas.h>
 #include <splines/CanvasView.h>
+#include <splines/StrokesReader.h>
+#include <splines/StrokesWriter.h>
+
+util::ProgramOption optionFilename(
+		util::_long_name        = "file",
+		util::_short_name       = "f",
+		util::_description_text = "The file you want to open/save to",
+		util::_default_value    = "strokes.dat");
 
 void handleException(boost::exception& e) {
 
@@ -49,10 +57,6 @@ void processEvents(pipeline::Process<gui::Window> window) {
 
 		handleException(e);
 	}
-
-	LOG_USER(logger::out) << "[window thread] releasing shared pointer to window" << std::endl;
-
-	LOG_USER(logger::out) << "[window thread] quitting" << std::endl;
 }
 
 int main(int optionc, char** optionv) {
@@ -72,20 +76,30 @@ int main(int optionc, char** optionv) {
 		// init signal handler
 		util::SignalHandler::init();
 
+		/******************
+		 * SETUP PIPELINE *
+		 ******************/
+
+		// create process nodes
 		pipeline::Process<gui::Window>   window("splines");
 		pipeline::Process<gui::ZoomView> zoomView;
 		pipeline::Process<CanvasView>    canvasView;
 		pipeline::Process<Canvas>        canvas;
+		pipeline::Process<StrokesReader> reader(optionFilename.as<std::string>());
+		pipeline::Process<StrokesWriter> writer(optionFilename.as<std::string>());
 
+		// connect process nodes
 		window->setInput(zoomView->getOutput());
 		zoomView->setInput(canvasView->getOutput("painter"));
 		canvasView->setInput(canvas->getOutput("strokes"));
+		canvas->setInput(reader->getOutput());
+		writer->setInput(canvas->getOutput());
 
-		LOG_USER(logger::out) << "[main] starting..." << std::endl;
-
+		// enter window main loop
 		processEvents(window);
 
-		LOG_USER(logger::out) << "[main] exiting..." << std::endl;
+		// save strokes
+		writer->write();
 
 	} catch (Exception& e) {
 
