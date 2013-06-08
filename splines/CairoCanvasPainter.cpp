@@ -26,14 +26,14 @@ CairoCanvasPainter::draw(
 
 	LOG_ALL(cairocanvaspainterlog) << "drawing " << (_incremental ? "" : "non-") << "incrementally" << std::endl;
 
+	cairo_save(context);
+
 	if (roi.area() != 0) {
 
 		// clip outside our responsibility
 		cairo_rectangle(context, roi.minX, roi.minY, roi.width(), roi.height());
 		cairo_clip(context);
 	}
-
-	cairo_save(context);
 
 	// apply the given transformation
 
