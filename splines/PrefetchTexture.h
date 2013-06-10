@@ -1,6 +1,9 @@
 #ifndef SPLINES_PREFETCH_TEXTURE_H__
 #define SPLINES_PREFETCH_TEXTURE_H__
 
+#include <deque>
+#include <boost/thread.hpp>
+
 #include <cairo.h>
 
 #include <gui/Texture.h>
@@ -53,34 +56,43 @@ public:
 	void setWorkingArea(const util::rect<int>& subarea);
 
 	/**
-	 * Unset the working area.
-	 */
-	void unsetWorkingArea() { setWorkingArea(util::rect<int>(0, 0, 0, 0)); }
-
-	/**
 	 * Render the texture's content of roi to roi on the screen.
 	 */
 	void render(const util::rect<int>& roi);
-
-	/**
-	 * Get a vector of all dirty areas.
-	 */
-	const std::vector<util::rect<int> >& getDirtyAreas();
-
-	/**
-	 * Process all dirty areas and clean them.
-	 */
-	void cleanDirtyAreas(CairoCanvasPainter& painter);
 
 	/**
 	 * Put the split point to the upper left corner.
 	 */
 	void reset(const util::rect<int>& area);
 
+	/**
+	 * Check whether there are dirty areas in the texture.
+	 */
+	bool hasDirtyAreas() { return !_cleanUpRequests.empty(); }
+
+	/**
+	 * Clean all dirty areas.
+	 */
+	void cleanUp(CairoCanvasPainter& painter);
+
 	unsigned int width() { return _textureArea.width(); }
 	unsigned int height() { return _textureArea.height(); }
 
 private:
+
+	struct CleanUpRequest {
+
+		CleanUpRequest() {};
+
+		CleanUpRequest(
+				const util::rect<int>& area_,
+				const util::point<int>& textureOffset_) :
+				area(area_),
+				textureOffset(textureOffset_) {}
+
+		util::rect<int>  area;
+		util::point<int> textureOffset;
+	};
 
 	/**
 	 * Prepare the texture and buffers of the respective sizes. Returns true, if 
@@ -89,9 +101,20 @@ private:
 	bool prepare();
 
 	/**
-	 * Mark an area within the texture as dirty.
+	 * Mark an area within the texture as dirty. Thread safe.
 	 */
 	void markDirty(const util::rect<int>& area);
+
+	/**
+	 * Get the next cleanup request. Returns false, if there are none. Thread 
+	 * safe.
+	 */
+	bool getNextCleanUpRequest(CleanUpRequest& request);
+
+	/**
+	 * Fill a buffer using a painter with the content of the specified area.
+	 */
+	void fillBuffer(gui::Buffer& buffer, const util::rect<int>& bufferArea, CairoCanvasPainter& painter);
 
 	/**
 	 * Split an area into four parts, according to the beginning of the content 
@@ -116,6 +139,9 @@ private:
 	// the OpenGl texture to draw to
 	gui::Texture* _texture;
 
+	// a mutex to protect access to _texture
+	boost::mutex _textureMutex;
+
 	// the width of the x-, and the height of the y-buffer (used to reload dirty 
 	// areas along the edges of the texture)
 	unsigned int _bufferWidth;
@@ -129,7 +155,10 @@ private:
 	util::point<int> _splitPoint;
 
 	// dirty areas of the texture
-	std::vector<util::rect<int> > _dirtyAreas;
+	std::deque<CleanUpRequest> _cleanUpRequests;
+
+	// a mutex to protect access to _cleanUpRequests
+	boost::mutex _cleanUpRequestsMutex;
 
 	// an area who's content we should keep in memory for incremental drawing 
 	// operations

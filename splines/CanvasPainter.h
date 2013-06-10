@@ -20,6 +20,7 @@ public:
 
 		_strokes = strokes;
 		_cairoPainter.setStrokes(strokes);
+		_cairoCleanUpPainter.setStrokes(strokes);
 	}
 
 	void draw(
@@ -46,23 +47,15 @@ public:
 	 */
 	void refresh();
 
+	/**
+	 * Clean all dirty areas of the painter. Returns true, if there were some, 
+	 * false otherwise.
+	 */
+	bool cleanDirtyAreas();
+
 private:
 
-	void drawStrokes(
-			gui::cairo_pixel_t*     data,
-			const Strokes&          strokes,
-			const util::rect<int>&  dataArea,
-			const util::point<int>& splitCenter,
-			const util::rect<int>&  roi,
-			bool                    incremental);
-
 	void initiateFullRedraw(const util::rect<int>& roi);
-
-	// the strokes to draw
-	boost::shared_ptr<Strokes> _strokes;
-
-	// the cairo painter for the strokes
-	CairoCanvasPainter _cairoPainter;
 
 	/**
 	 * Prepare the texture and buffers of the respective sizes.
@@ -70,16 +63,35 @@ private:
 	bool prepareTexture(const util::rect<int>& pixelRoi);
 
 	/**
+	 * Update the texture strokes in the specified ROI.
+	 */
+	void updateStrokes(const Strokes& strokes, const util::rect<int>& roi);
+
+	/**
 	 * Draw the texture content that corresponds to roi into roi.
 	 */
 	void drawTexture(const util::rect<int>& roi);
 
 	/**
-	 * Update the texture strokes in the specified ROI.
+	 * The possible states of the CanvasPainter.
 	 */
-	void updateStrokes(const Strokes& strokes, const util::rect<int>& roi);
+	enum CanvasPainterState {
 
-	PrefetchTexture* _canvasTexture;
+		IncrementalDrawing,
+		Moving
+	};
+
+	// the strokes to draw
+	boost::shared_ptr<Strokes> _strokes;
+
+	// the cairo painter for the strokes
+	CairoCanvasPainter _cairoPainter;
+
+	// a cairo painter for the background updates
+	CairoCanvasPainter _cairoCleanUpPainter;
+
+	// the texture to draw to
+	boost::shared_ptr<PrefetchTexture> _canvasTexture;
 
 	// the number of pixels to add to the visible region for prefetching
 	unsigned int _prefetchLeft;
@@ -97,21 +109,11 @@ private:
 	util::point<int>    _shift;
 	util::point<double> _scale;
 
-	/********
-	 * MISC *
-	 ********/
-
-	enum CanvasPainterState {
-
-		IncrementalDrawing,
-		Moving
-	};
-
-	CanvasPainterState _state;
-
 	// the transform of the last call to draw
 	util::point<int>    _previousShift;
 	util::point<double> _previousScale;
+
+	CanvasPainterState _state;
 };
 
 #endif // CANVAS_PAINTER_H__

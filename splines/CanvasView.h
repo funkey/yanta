@@ -1,6 +1,8 @@
 #ifndef SPLINES_CANVAS_VIEW_H__
 #define SPLINES_CANVAS_VIEW_H__
 
+#include <boost/thread.hpp>
+
 #include <pipeline/all.h>
 #include <gui/GuiSignals.h>
 #include <gui/PointerSignalFilter.h>
@@ -13,6 +15,8 @@ class CanvasView : public pipeline::SimpleProcessNode<>, public gui::PointerSign
 public:
 
 	CanvasView();
+
+	~CanvasView();
 
 private:
 
@@ -40,6 +44,8 @@ private:
 
 	util::point<double> getFingerCenter();
 
+	void cleanDirtyAreas();
+
 	/**
 	 * Returns true if there was recent pen activity and finger movements should 
 	 * be ignored.
@@ -60,6 +66,12 @@ private:
 
 	// the last known position of the pen
 	util::point<double> _lastPen;
+
+	// used to stop the background rendering thread
+	bool _backgroundPainterStopped;
+
+	// the background rendering thread keeping dirty regions clean
+	boost::thread _backgroundThread;
 };
 
 #endif // SPLINES_CANVAS_VIEW_H__

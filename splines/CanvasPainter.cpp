@@ -1,4 +1,5 @@
 #include <cmath>
+#include <boost/make_shared.hpp>
 
 #include <gui/OpenGl.h>
 #include <util/Logger.h>
@@ -7,22 +8,19 @@
 logger::LogChannel canvaspainterlog("canvaspainterlog", "[CanvasPainter] ");
 
 CanvasPainter::CanvasPainter() :
-	_canvasTexture(0),
-	//_prefetchLeft(1024),
-	//_prefetchRight(1024),
-	//_prefetchTop(1024),
-	//_prefetchBottom(1024),
-	_prefetchLeft(100),
-	_prefetchRight(100),
-	_prefetchTop(100),
-	_prefetchBottom(100),
+	_prefetchLeft(1024),
+	_prefetchRight(1024),
+	_prefetchTop(1024),
+	_prefetchBottom(1024),
 	_shift(0, 0),
 	_scale(1.0, 1.0),
-	_state(Moving),
 	_previousShift(0, 0),
-	_previousScale(0, 0) {
+	_previousScale(0, 0),
+	_state(Moving) {
 
 	_cairoPainter.setDeviceTransformation(_scale, _shift);
+	_cairoCleanUpPainter.setDeviceTransformation(_scale, _shift);
+
 }
 
 void
@@ -49,6 +47,7 @@ CanvasPainter::zoom(double zoomChange, const util::point<double>& anchor) {
 
 	// we are taking care of the translation
 	_cairoPainter.setDeviceTransformation(_scale, util::point<double>(0.0, 0.0));
+	_cairoCleanUpPainter.setDeviceTransformation(_scale, util::point<double>(0.0, 0.0));
 }
 
 util::point<double>
@@ -102,7 +101,7 @@ CanvasPainter::draw(
 		// that we have a working area, now
 		if (_state == Moving) {
 
-			//_canvasTexture->setWorkingArea(pixelRoi);
+			_canvasTexture->setWorkingArea(pixelRoi);
 			_cairoPainter.resetIncrementalMemory();
 		}
 
@@ -115,28 +114,20 @@ CanvasPainter::draw(
 
 		LOG_ALL(canvaspainterlog) << "scale changed" << std::endl;
 
-		_canvasTexture->unsetWorkingArea();
-
 		_state = Moving;
 
 		initiateFullRedraw(pixelRoi);
-		updateStrokes(*_strokes, pixelRoi);
 
 	// shift changed -- move prefetch texture
 	} else {
 
 		LOG_ALL(canvaspainterlog) << "transformation moved by " << (_shift - _previousShift) << std::endl;
 
-		_canvasTexture->unsetWorkingArea();
-
 		_state = Moving;
 
 		// show a different part of the canvas texture
 		_canvasTexture->shift(_shift - _previousShift);
 	}
-
-	// TODO: do this in a separate thread
-	_canvasTexture->cleanDirtyAreas(_cairoPainter);
 
 	drawTexture(pixelRoi);
 
@@ -152,17 +143,16 @@ CanvasPainter::prepareTexture(const util::rect<int>& pixelRoi) {
 
 	LOG_ALL(canvaspainterlog) << "with pre-fetch areas, texture has to be of size " << textureWidth << "x" << textureHeight << std::endl;
 
-	if (_canvasTexture != 0 && (_canvasTexture->width() != textureWidth || _canvasTexture->height() != textureHeight)) {
+	if (_canvasTexture && (_canvasTexture->width() != textureWidth || _canvasTexture->height() != textureHeight)) {
 
 		LOG_ALL(canvaspainterlog) << "texture is of different size, create a new one" << std::endl;
 
-		delete _canvasTexture;
-		_canvasTexture = 0;
+		_canvasTexture.reset();
 	}
 
-	if (_canvasTexture == 0) {
+	if (!_canvasTexture) {
 
-		_canvasTexture = new PrefetchTexture(pixelRoi, _prefetchLeft, _prefetchRight, _prefetchTop, _prefetchBottom);
+		_canvasTexture = boost::make_shared<PrefetchTexture>(pixelRoi, _prefetchLeft, _prefetchRight, _prefetchTop, _prefetchBottom);
 
 		return true;
 	}
@@ -207,6 +197,26 @@ CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<int>& roi)
 }
 
 void
+CanvasPainter::initiateFullRedraw(const util::rect<int>& roi) {
+
+	_canvasTexture->reset(roi);
+	_cairoPainter.resetIncrementalMemory();
+}
+
+bool
+CanvasPainter::cleanDirtyAreas() {
+
+	boost::shared_ptr<PrefetchTexture> texture = _canvasTexture;
+
+	if (!texture || !texture->hasDirtyAreas())
+		return false;
+
+	texture->cleanUp(_cairoCleanUpPainter);
+
+	return true;
+}
+
+void
 CanvasPainter::drawTexture(const util::rect<int>& roi) {
 
 	glPushMatrix();
@@ -216,11 +226,3 @@ CanvasPainter::drawTexture(const util::rect<int>& roi) {
 
 	glPopMatrix();
 }
-
-void
-CanvasPainter::initiateFullRedraw(const util::rect<int>& roi) {
-
-	_canvasTexture->reset(roi);
-	_cairoPainter.resetIncrementalMemory();
-}
-

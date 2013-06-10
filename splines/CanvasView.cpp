@@ -3,7 +3,9 @@
 
 logger::LogChannel canvasviewlog("canvasviewlog", "[CanvasView] ");
 
-CanvasView::CanvasView() {
+CanvasView::CanvasView() :
+	_backgroundPainterStopped(false),
+	_backgroundThread(boost::bind(&CanvasView::cleanDirtyAreas, this)) {
 
 	registerInput(_strokes, "strokes");
 	registerOutput(_painter, "painter");
@@ -19,6 +21,14 @@ CanvasView::CanvasView() {
 	_painter.registerForwardCallback(&CanvasView::onFingerDown, this);
 	_painter.registerForwardCallback(&CanvasView::onFingerMove, this);
 	_painter.registerForwardCallback(&CanvasView::onFingerUp, this);
+}
+
+CanvasView::~CanvasView() {
+
+	LOG_DEBUG(canvasviewlog) << "tearing down background rendering thread" << std::endl;
+
+	_backgroundPainterStopped = true;
+	_backgroundThread.join();
 }
 
 void
@@ -170,3 +180,14 @@ CanvasView::locked(unsigned long /*now*/, const util::point<double>& position) {
 	return false;
 }
 
+void
+CanvasView::cleanDirtyAreas() {
+
+	while (!_backgroundPainterStopped) {
+
+		if (_painter && _painter->cleanDirtyAreas())
+			setDirty(_painter);
+		else
+			usleep(10*1000);
+	}
+}

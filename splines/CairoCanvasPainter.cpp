@@ -28,11 +28,18 @@ CairoCanvasPainter::draw(
 
 	cairo_save(context);
 
+	util::rect<double> canvasRoi(0, 0, 0, 0);
+
 	if (roi.area() != 0) {
 
 		// clip outside our responsibility
 		cairo_rectangle(context, roi.minX, roi.minY, roi.width(), roi.height());
 		cairo_clip(context);
+
+		// transform roi to canvas units
+		canvasRoi = roi;
+		canvasRoi -= _pixelOffset;
+		canvasRoi /= _pixelsPerDeviceUnit;
 	}
 
 	// apply the given transformation
@@ -54,7 +61,12 @@ CairoCanvasPainter::draw(
 				<< "drawing stroke " << i << ", starting from point "
 				<< drawnUntilStrokePoint << std::endl;
 
-		drawStroke(context, (*_strokes)[i], roi, drawnUntilStrokePoint);
+		const Stroke& stroke = (*_strokes)[i];
+
+		// draw only of no roi given or stroke intersects roi
+		if (canvasRoi.width() == 0 || stroke.boundingBox().intersects(canvasRoi))
+			drawStroke(context, stroke, canvasRoi, drawnUntilStrokePoint);
+
 		drawnUntilStrokePoint = 0;
 	}
 
@@ -64,7 +76,7 @@ CairoCanvasPainter::draw(
 	_drawnUntilStrokeTmp = std::max(0, static_cast<int>(_strokes->size()) - 1);
 
 	if (_strokes->size() > 0)
-		_drawnUntilStrokePointTmp = std::max(0, static_cast<int>((*_strokes)[_drawnUntilStrokeTmp].size()) - 1);
+		_drawnUntilStrokePointTmp = std::max(0, static_cast<int>((*_strokes)[_drawnUntilStrokeTmp].width()) - 1);
 	else
 		_drawnUntilStrokePointTmp = 0;
 }
@@ -80,7 +92,7 @@ CairoCanvasPainter::drawStroke(
 		return;
 
 	// TODO: read this from stroke data structure
-	double penWidth = 2.0;
+	double penWidth = stroke.width();
 	double penColorRed   = 0;
 	double penColorGreen = 0;
 	double penColorBlue  = 0;

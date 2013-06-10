@@ -50,7 +50,7 @@ Canvas::onPenDown(const gui::PenDown& signal) {
 	LOG_DEBUG(canvaslog) << "accepting" << std::endl;
 
 	_strokes->createNewStroke();
-	_strokes->currentStroke().push_back(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+	_strokes->currentStroke().add(StrokePoint(signal.position, signal.pressure, signal.timestamp));
 	_penDown = true;
 
 	setDirty(_strokes);
@@ -69,7 +69,7 @@ Canvas::onPenUp(const gui::PenUp& signal) {
 
 	LOG_DEBUG(canvaslog) << "accepting" << std::endl;
 
-	_strokes->currentStroke().push_back(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+	_strokes->currentStroke().add(StrokePoint(signal.position, signal.pressure, signal.timestamp));
 	_strokes->finishCurrentStroke();
 	_penDown = false;
 
@@ -84,7 +84,7 @@ Canvas::onPenMove(const gui::PenMove& signal) {
 
 	LOG_DEBUG(canvaslog) << "pen move" << std::endl;
 
-	_strokes->currentStroke().push_back(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+	_strokes->currentStroke().add(StrokePoint(signal.position, signal.pressure, signal.timestamp));
 
 	setDirty(_strokes);
 }

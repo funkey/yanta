@@ -36,6 +36,8 @@ PrefetchTexture::~PrefetchTexture() {
 	deleteBuffer(&_reloadBufferX);
 	deleteBuffer(&_reloadBufferY);
 
+	//boost::mutex::scoped_lock lock(_textureMutex);
+
 	if (_texture)
 		delete _texture;
 }
@@ -110,62 +112,75 @@ PrefetchTexture::fill(
 			createBuffer(width, height, &buffer);
 		}
 
-		gui::cairo_pixel_t* data = buffer->map<gui::cairo_pixel_t>();
+		fillBuffer(*buffer, parts[i], painter);
 
-		// wrap the buffer in a cairo surface
-		cairo_surface_t* surface =
-				cairo_image_surface_create_for_data(
-						(unsigned char*)data,
-						CAIRO_FORMAT_ARGB32,
-						width,
-						height,
-						cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width));
+		{
+			//boost::mutex::scoped_lock lock(_textureMutex);
 
-		cairo_status_t status = cairo_surface_status(surface);
-
-		if (status != CAIRO_STATUS_SUCCESS) {
-
-			if (status == CAIRO_STATUS_INVALID_STRIDE) {
-
-				LOG_ERROR(prefetchtexturelog) << "stride for reload buffer is invalid!" << std::endl;
-
-			} else {
-
-				LOG_ERROR(prefetchtexturelog) << "encountered error status " << status << " for cairo_image_surface_create_for_data()" << std::endl;
-			}
+			// update texture with buffer content
+			_texture->loadData(*buffer, offsets[i].x, offsets[i].y);
 		}
-
-		// create a context for the surface
-		cairo_t* context = cairo_create(surface);
-
-		// Now, we have a surface of widthxheight, with (0,0) being the upper left 
-		// corner and (width-1,height-1) the lower right. Translate operations, 
-		// such that the upper left is parts[i].upperLeft() and lower right is 
-		// parts[i].lowerRight().
-
-		// translate parts[i].upperLeft() to (0,0)
-		util::point<int> translate = -parts[i].upperLeft();
-		cairo_translate(context, translate.x, translate.y);
-
-		LOG_ALL(prefetchtexturelog) << "cairo translate (texture to canvas pixels): " << translate << std::endl;
-
-		painter.draw(context);
-
-		// cleanup
-		cairo_destroy(context);
-		cairo_surface_destroy(surface);
-
-		// unmap the buffer
-		buffer->unmap();
-
-		// update texture with buffer content
-		_texture->loadData(*buffer, offsets[i].x, offsets[i].y);
 
 		LOG_ALL(prefetchtexturelog) << "put reload buffer at " << offsets[i] << std::endl;
 
 		if (subarea != _workingArea)
 			deleteBuffer(&buffer);
 	}
+}
+
+void
+PrefetchTexture::fillBuffer(gui::Buffer& buffer, const util::rect<int>& bufferArea, CairoCanvasPainter& painter) {
+
+	unsigned int width  = bufferArea.width();
+	unsigned int height = bufferArea.height();
+
+	gui::cairo_pixel_t* data = buffer.map<gui::cairo_pixel_t>();
+
+	// wrap the buffer in a cairo surface
+	cairo_surface_t* surface =
+			cairo_image_surface_create_for_data(
+					(unsigned char*)data,
+					CAIRO_FORMAT_ARGB32,
+					width,
+					height,
+					cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width));
+
+	cairo_status_t status = cairo_surface_status(surface);
+
+	if (status != CAIRO_STATUS_SUCCESS) {
+
+		if (status == CAIRO_STATUS_INVALID_STRIDE) {
+
+			LOG_ERROR(prefetchtexturelog) << "stride for reload buffer is invalid!" << std::endl;
+
+		} else {
+
+			LOG_ERROR(prefetchtexturelog) << "encountered error status " << status << " for cairo_image_surface_create_for_data()" << std::endl;
+		}
+	}
+
+	// create a context for the surface
+	cairo_t* context = cairo_create(surface);
+
+	// Now, we have a surface of widthxheight, with (0,0) being the upper left 
+	// corner and (width-1,height-1) the lower right. Translate operations, such 
+	// that the upper left is bufferArea.upperLeft() and lower right is 
+	// bufferArea.lowerRight().
+
+	// translate bufferArea.upperLeft() to (0,0)
+	util::point<int> translate = -bufferArea.upperLeft();
+	cairo_translate(context, translate.x, translate.y);
+
+	LOG_ALL(prefetchtexturelog) << "cairo translate (texture to canvas pixels): " << translate << std::endl;
+
+	painter.draw(context, bufferArea);
+
+	// cleanup
+	cairo_destroy(context);
+	cairo_surface_destroy(surface);
+
+	// unmap the buffer
+	buffer.unmap();
 }
 
 void
@@ -203,6 +218,8 @@ PrefetchTexture::render(const util::rect<int>& roi) {
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	//boost::mutex::scoped_lock lock(_textureMutex);
 
 	_texture->bind();
 
@@ -257,25 +274,25 @@ PrefetchTexture::render(const util::rect<int>& roi) {
 	}
 
 	// DEBUG
-	util::rect<double> debug = roi;
-	debug -= roi.upperLeft();
-	debug *= 0.25;
-	debug += roi.upperLeft();
-	glDisable(GL_TEXTURE_2D);
-	glColor3f(1.0, 1.0, 1.0);
-	glBegin(GL_QUADS);
-	glVertex2d(debug.minX, debug.minY);
-	glVertex2d(debug.maxX, debug.minY);
-	glVertex2d(debug.maxX, debug.maxY);
-	glVertex2d(debug.minX, debug.maxY);
-	glEnd();
-	glEnable(GL_TEXTURE_2D);
-	glBegin(GL_QUADS);
-	glTexCoord2d(0, 0); glVertex2d(debug.minX, debug.minY);
-	glTexCoord2d(1, 0); glVertex2d(debug.maxX, debug.minY);
-	glTexCoord2d(1, 1); glVertex2d(debug.maxX, debug.maxY);
-	glTexCoord2d(0, 1); glVertex2d(debug.minX, debug.maxY);
-	glEnd();
+	//util::rect<double> debug = roi;
+	//debug -= roi.upperLeft();
+	//debug *= 0.25;
+	//debug += roi.upperLeft();
+	//glDisable(GL_TEXTURE_2D);
+	//glColor3f(1.0, 1.0, 1.0);
+	//glBegin(GL_QUADS);
+	//glVertex2d(debug.minX, debug.minY);
+	//glVertex2d(debug.maxX, debug.minY);
+	//glVertex2d(debug.maxX, debug.maxY);
+	//glVertex2d(debug.minX, debug.maxY);
+	//glEnd();
+	//glEnable(GL_TEXTURE_2D);
+	//glBegin(GL_QUADS);
+	//glTexCoord2d(0, 0); glVertex2d(debug.minX, debug.minY);
+	//glTexCoord2d(1, 0); glVertex2d(debug.maxX, debug.minY);
+	//glTexCoord2d(1, 1); glVertex2d(debug.maxX, debug.maxY);
+	//glTexCoord2d(0, 1); glVertex2d(debug.minX, debug.maxY);
+	//glEnd();
 	// END DEBUG
 
 	glDisable(GL_BLEND);
@@ -326,20 +343,22 @@ PrefetchTexture::markDirty(const util::rect<int>& area) {
 
 	LOG_ALL(prefetchtexturelog) << "area  " << area << " is dirty, now" << std::endl;
 
-	_dirtyAreas.push_back(area);
-}
+	util::rect<int>  parts[4];
+	util::point<int> offsets[4];
 
-void
-PrefetchTexture::cleanDirtyAreas(CairoCanvasPainter& painter) {
+	split(area, parts, offsets);
 
-	// since we have to clean dirty areas, we should not attempt to draw 
-	// incrementally
-	painter.setIncremental(false);
+	for (int i = 0; i < 4; i++) {
 
-	for (unsigned int i = 0; i < _dirtyAreas.size(); i++)
-		fill(_dirtyAreas[i], painter);
+		if (parts[i].area() <= 0)
+			continue;
 
-	_dirtyAreas.clear();
+		CleanUpRequest request(parts[i], offsets[i]);
+
+		boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
+
+		_cleanUpRequests.push_back(request);
+	}
 }
 
 void
@@ -354,6 +373,14 @@ PrefetchTexture::reset(const util::rect<int>& area) {
 	// center the current roi in the texture
 	_splitPoint = _textureArea.upperLeft();
 
+	{
+		boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
+
+		// dismiss all pending clean-up requests
+		_cleanUpRequests.clear();
+	}
+
+	// mark everything as dirty
 	markDirty(_textureArea);
 }
 
@@ -422,4 +449,54 @@ PrefetchTexture::deleteBuffer(gui::Buffer** buffer) {
 		delete *buffer;
 
 	*buffer = 0;
+}
+
+bool
+PrefetchTexture::getNextCleanUpRequest(CleanUpRequest& request) {
+
+	boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
+
+	if (_cleanUpRequests.size() == 0)
+		return false;
+
+	request = _cleanUpRequests.front();
+	_cleanUpRequests.pop_front();
+
+	return true;
+}
+
+void
+PrefetchTexture::cleanUp(CairoCanvasPainter& painter) {
+
+	gui::OpenGl::Guard guard;
+
+	unsigned int numRequests = _cleanUpRequests.size();
+
+	LOG_DEBUG(prefetchtexturelog) << "processing " << numRequests << " cleanup requests" << std::endl;
+
+	gui::Buffer* buffer = 0;
+	CleanUpRequest request;
+
+	for (unsigned int i = 0; i < numRequests; i++) {
+
+		// the number of requests might have decreased while we were working on 
+		// them, in this case abort and come back later
+		if (!getNextCleanUpRequest(request))
+			return;
+
+		createBuffer(request.area.width(), request.area.height(), &buffer);
+
+		fillBuffer(*buffer, request.area, painter);
+
+		{
+			//boost::mutex::scoped_lock lock(_textureMutex);
+
+			// update texture with buffer content
+			_texture->loadData(*buffer, request.textureOffset.x, request.textureOffset.y);
+		}
+
+		deleteBuffer(&buffer);
+	}
+
+	LOG_DEBUG(prefetchtexturelog) << "done cleaning up" << std::endl;
 }

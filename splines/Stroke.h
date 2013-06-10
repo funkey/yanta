@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <util/point.hpp>
+#include <util/rect.hpp>
 
 struct StrokePoint {
 
@@ -19,7 +20,68 @@ struct StrokePoint {
 	unsigned long       timestamp;
 };
 
-typedef std::vector<StrokePoint> Stroke;
+class Stroke {
+
+public:
+
+	Stroke() :
+		_width(1.0),
+		_boundingBox(0, 0, 0, 0) {}
+
+	void add(const StrokePoint& point) {
+
+		if (_points.size() == 0) {
+
+			_boundingBox.minX = point.position.x - _width;
+			_boundingBox.minY = point.position.y - _width;
+			_boundingBox.maxX = point.position.x + _width;
+			_boundingBox.maxY = point.position.y + _width;
+
+		} else {
+
+			_boundingBox.minX = std::min(_boundingBox.minX, point.position.x - _width);
+			_boundingBox.minY = std::min(_boundingBox.minY, point.position.y - _width);
+			_boundingBox.maxX = std::max(_boundingBox.maxX, point.position.x + _width);
+			_boundingBox.maxY = std::max(_boundingBox.maxY, point.position.y + _width);
+		}
+
+		_points.push_back(point);
+	}
+
+	unsigned int size() const {
+
+		return _points.size();
+	}
+
+	StrokePoint& operator[](unsigned int i) {
+
+		return _points[i];
+	}
+
+	const StrokePoint& operator[](unsigned int i) const {
+
+		return _points[i];
+	}
+
+	double width() const {
+
+		return _width;
+	}
+
+	const util::rect<double>& boundingBox() const {
+
+		return _boundingBox;
+	}
+
+private:
+
+	// TODO: make this a property of a pen
+	double _width;
+
+	util::rect<double> _boundingBox;
+
+	std::vector<StrokePoint> _points;
+};
 
 #endif // STROKE_H__
 

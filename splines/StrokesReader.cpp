@@ -40,7 +40,7 @@ StrokesReader::readStroke(std::ifstream& in) {
 	for (unsigned int i = 0; i < numPoints; i++) {
 
 		in >> x >> y >> pressure >> timestamp;
-		stroke.push_back(StrokePoint(util::point<double>(x, y), pressure, timestamp));
+		stroke.add(StrokePoint(util::point<double>(x, y), pressure, timestamp));
 	}
 
 	_strokes->add(stroke);
