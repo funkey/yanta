@@ -89,9 +89,8 @@ int main(int optionc, char** optionv) {
 		pipeline::Process<StrokesWriter> writer(optionFilename.as<std::string>());
 
 		// connect process nodes
-		//window->setInput(zoomView->getOutput());
-		//zoomView->setInput(canvasView->getOutput("painter"));
-		window->setInput(canvasView->getOutput());
+		window->setInput(zoomView->getOutput());
+		zoomView->setInput(canvasView->getOutput("painter"));
 		canvasView->setInput(canvas->getOutput("strokes"));
 		canvas->setInput(reader->getOutput());
 		writer->setInput(canvas->getOutput());
