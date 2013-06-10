@@ -20,7 +20,10 @@ CanvasPainter::CanvasPainter() :
 	_scale(1.0, 1.0),
 	_state(Moving),
 	_previousShift(0, 0),
-	_previousScale(0, 0) {}
+	_previousScale(0, 0) {
+
+	_cairoPainter.setDeviceTransformation(_scale, _shift);
+}
 
 void
 CanvasPainter::drag(const util::point<double>& direction) {
@@ -38,8 +41,14 @@ CanvasPainter::zoom(double zoomChange, const util::point<double>& anchor) {
 
 	LOG_ALL(canvaspainterlog) << "changing zoom by " << zoomChange << " keeping " << anchor << " where it is" << std::endl;
 
+	// convert the anchor from screen coordinates to texture coordinates
+	util::point<double> textureAnchor = anchor - _shift;
+
 	_scale *= zoomChange;
-	_shift  = anchor - zoomChange*(anchor - _shift);
+	_shift  = _shift + (1 - zoomChange)*textureAnchor;
+
+	// we are taking care of the translation
+	_cairoPainter.setDeviceTransformation(_scale, util::point<double>(0.0, 0.0));
 }
 
 util::point<double>
@@ -73,6 +82,9 @@ CanvasPainter::draw(
 	pixelRoi.maxX = (int)ceil(roi.maxX);
 	pixelRoi.maxY = (int)ceil(roi.maxY);
 
+	// convert the pixel roi from screen coordinates to texture coordinates
+	pixelRoi -= _shift;
+
 	LOG_ALL(canvaspainterlog) << "pixel roi is " << pixelRoi << std::endl;
 
 	gui::OpenGl::Guard guard;
@@ -90,7 +102,7 @@ CanvasPainter::draw(
 		// that we have a working area, now
 		if (_state == Moving) {
 
-			_canvasTexture->setWorkingArea(pixelRoi);
+			//_canvasTexture->setWorkingArea(pixelRoi);
 			_cairoPainter.resetIncrementalMemory();
 		}
 
@@ -124,7 +136,6 @@ CanvasPainter::draw(
 	}
 
 	// TODO: do this in a separate thread
-	_cairoPainter.setDeviceTransformation(_scale, _shift);
 	_canvasTexture->cleanDirtyAreas(_cairoPainter);
 
 	drawTexture(pixelRoi);
@@ -191,7 +202,6 @@ CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<int>& roi)
 	}
 
 	_cairoPainter.setIncremental(_state == IncrementalDrawing);
-	_cairoPainter.setDeviceTransformation(_scale, _shift);
 	_canvasTexture->fill(roi, _cairoPainter);
 	_cairoPainter.rememberDrawnStrokes();
 }
@@ -199,7 +209,12 @@ CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<int>& roi)
 void
 CanvasPainter::drawTexture(const util::rect<int>& roi) {
 
+	glPushMatrix();
+	glTranslated(_shift.x, _shift.y, 0.0);
+
 	_canvasTexture->render(roi);
+
+	glPopMatrix();
 }
 
 void

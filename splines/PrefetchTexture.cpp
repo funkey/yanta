@@ -161,6 +161,8 @@ PrefetchTexture::fill(
 		// update texture with buffer content
 		_texture->loadData(*buffer, offsets[i].x, offsets[i].y);
 
+		LOG_ALL(prefetchtexturelog) << "put reload buffer at " << offsets[i] << std::endl;
+
 		if (subarea != _workingArea)
 			deleteBuffer(&buffer);
 	}
@@ -255,8 +257,10 @@ PrefetchTexture::render(const util::rect<int>& roi) {
 	}
 
 	// DEBUG
-	util::rect<double> debug = 0.25*roi;
-	debug += roi.upperLeft() - debug.upperLeft();
+	util::rect<double> debug = roi;
+	debug -= roi.upperLeft();
+	debug *= 0.25;
+	debug += roi.upperLeft();
 	glDisable(GL_TEXTURE_2D);
 	glColor3f(1.0, 1.0, 1.0);
 	glBegin(GL_QUADS);
@@ -283,7 +287,7 @@ PrefetchTexture::shift(const util::point<int>& shift) {
 	LOG_ALL(prefetchtexturelog) << "shifting texture content by " << shift << std::endl;
 
 	// shift the area represented by the texture
-	_splitPoint += shift;
+	_textureArea -= shift;
 
 	// make sure the split point is within the area
 	while (_splitPoint.x < _textureArea.minX)
@@ -295,6 +299,7 @@ PrefetchTexture::shift(const util::point<int>& shift) {
 	while (_splitPoint.y >= _textureArea.maxY)
 		_splitPoint.y -= _textureArea.height();
 
+	LOG_ALL(prefetchtexturelog) << "texture area is now " << _textureArea << std::endl;
 	LOG_ALL(prefetchtexturelog) << "split point is now at " << _splitPoint << std::endl;
 
 	// the edge in front of the shift is dirty, now
@@ -391,8 +396,11 @@ PrefetchTexture::split(const util::rect<int>& subarea, util::rect<int>* parts, u
 		}
 
 		offsets[i] = parts[i].upperLeft() - _splitPoint;
-		if (offsets[i].x < 0) offsets[i].x += _textureArea.width();
-		if (offsets[i].y < 0) offsets[i].y += _textureArea.height();
+
+		while (offsets[i].x <  0) offsets[i].x += _textureArea.width();
+		while (offsets[i].y <  0) offsets[i].y += _textureArea.height();
+		while (offsets[i].x >= _textureArea.width())  offsets[i].x -= _textureArea.width();
+		while (offsets[i].y >= _textureArea.height()) offsets[i].y -= _textureArea.height();
 	}
 }
 
