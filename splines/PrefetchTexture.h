@@ -53,9 +53,14 @@ public:
 	void setWorkingArea(const util::rect<int>& subarea);
 
 	/**
-	 * Render the texture's content of subarea to subarea on the screen.
+	 * Unset the working area.
 	 */
-	void render(const util::rect<int>& roi, const util::point<double>& _deviceUnitsPerPixel, const util::point<double>& _deviceOffset);
+	void unsetWorkingArea() { setWorkingArea(util::rect<int>(0, 0, 0, 0)); }
+
+	/**
+	 * Render the texture's content of roi to roi on the screen.
+	 */
+	void render(const util::rect<int>& roi);
 
 	/**
 	 * Get a vector of all dirty areas.
@@ -89,8 +94,9 @@ private:
 	void markDirty(const util::rect<int>& area);
 
 	/**
-	 * Split an area into four parts, according to the split center.  
-	 * Additionally, the offset into the texture are returned.
+	 * Split an area into four parts, according to the beginning of the content 
+	 * in the texture. Additionally, give the offset for each part into the 
+	 * texture.
 	 */
 	void split(const util::rect<int>& subarea, util::rect<int>* parts, util::point<int>* offsets);
 
@@ -107,24 +113,26 @@ private:
 	unsigned int _prefetchTop;
 	unsigned int _prefetchBottom;
 
-	// the width of the x-, and the height of the y-buffer
-	unsigned int _bufferWidth;
-	unsigned int _bufferHeight;
-
 	// the OpenGl texture to draw to
 	gui::Texture* _texture;
+
+	// the width of the x-, and the height of the y-buffer (used to reload dirty 
+	// areas along the edges of the texture)
+	unsigned int _bufferWidth;
+	unsigned int _bufferHeight;
 
 	// OpenGl buffers to reload dirty parts of the texture
 	gui::Buffer* _reloadBufferX;
 	gui::Buffer* _reloadBufferY;
 
-	// the split center of the texture (where all four corners meet)
-	util::point<int> _splitCenter;
+	// the point where all four corners of the texture meet in content space
+	util::point<int> _splitPoint;
 
 	// dirty areas of the texture
 	std::vector<util::rect<int> > _dirtyAreas;
 
-	// an area who's content we should keep in memory
+	// an area who's content we should keep in memory for incremental drawing 
+	// operations
 	util::rect<int> _workingArea;
 
 	// the up-to-four buffers for the working area

@@ -15,8 +15,7 @@ public:
 	void setStrokes(boost::shared_ptr<Strokes> strokes) { _strokes = strokes; }
 
 	/**
-	 * Set the transformation to map from canvas pixel coordinates to device 
-	 * units.
+	 * Set the transformation to map from canvas units to pixel units.
 	 */
 	void setDeviceTransformation(
 			const util::point<double>& pixelsPerDeviceUnit,
