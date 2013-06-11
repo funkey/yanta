@@ -152,6 +152,9 @@ CanvasView::onFingerUp(const gui::FingerUp& signal) {
 	std::map<int, gui::FingerSignal>::iterator i = _fingerDown.find(signal.id);
 	if (i != _fingerDown.end())
 		_fingerDown.erase(i);
+
+	_painter->startIncrementalDrawing();
+	_contentChanged();
 }
 
 double
@@ -207,7 +210,7 @@ CanvasView::cleanDirtyAreas() {
 
 	while (!_backgroundPainterStopped) {
 
-		if (_painter && _painter->cleanDirtyAreas())
+		if (_painter && _painter->cleanDirtyAreas(2))
 			_contentChanged();
 		else
 			usleep(10*1000);

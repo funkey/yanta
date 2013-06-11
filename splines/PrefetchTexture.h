@@ -73,7 +73,12 @@ public:
 	/**
 	 * Clean all dirty areas.
 	 */
-	void cleanUp(CairoCanvasPainter& painter);
+	void cleanUp(CairoCanvasPainter& painter, unsigned int maxNumRequests);
+
+	/**
+	 * Check whether a given area is dirty.
+	 */
+	bool isDirty(const util::rect<int>& roi);
 
 	unsigned int width() { return _textureArea.width(); }
 	unsigned int height() { return _textureArea.height(); }
@@ -166,6 +171,9 @@ private:
 
 	// the up-to-four buffers for the working area
 	gui::Buffer* _workingBuffers[4];
+
+	// the clean-up area a thread is currently working on
+	util::rect<int> _currentCleanUpArea;
 };
 
 #endif // SPLINES_PREFETCH_TEXTURE_H__

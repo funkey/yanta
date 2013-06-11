@@ -97,16 +97,8 @@ CanvasPainter::draw(
 
 		LOG_ALL(canvaspainterlog) << "transformation did not change -- I just quickly update the strokes" << std::endl;
 
-		// when we are entering incremental mode, we have to tell the texture 
-		// that we have a working area, now
-		if (_state == Moving || pixelRoi != _previousPixelRoi) {
-
-			_canvasTexture->setWorkingArea(pixelRoi);
-			_cairoPainter.resetIncrementalMemory();
-			_previousPixelRoi = pixelRoi;
-		}
-
-		_state = IncrementalDrawing;
+		if (_state == Moving || pixelRoi != _previousPixelRoi)
+			startIncrementalDrawing(pixelRoi);
 
 		updateStrokes(*_strokes, pixelRoi);
 
@@ -132,8 +124,9 @@ CanvasPainter::draw(
 
 	drawTexture(pixelRoi);
 
-	_previousShift = _shift;
-	_previousScale = _scale;
+	_previousShift    = _shift;
+	_previousScale    = _scale;
+	_previousPixelRoi = pixelRoi;
 }
 
 bool
@@ -192,7 +185,6 @@ CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<int>& roi)
 				<< "drawing everything in " << roi << std::endl;
 	}
 
-	_cairoPainter.setIncremental(_state == IncrementalDrawing);
 	_canvasTexture->fill(roi, _cairoPainter);
 	_cairoPainter.rememberDrawnStrokes();
 }
@@ -205,16 +197,30 @@ CanvasPainter::initiateFullRedraw(const util::rect<int>& roi) {
 }
 
 bool
-CanvasPainter::cleanDirtyAreas() {
+CanvasPainter::cleanDirtyAreas(unsigned int maxNumRequests) {
 
 	boost::shared_ptr<PrefetchTexture> texture = _canvasTexture;
 
 	if (!texture || !texture->hasDirtyAreas())
 		return false;
 
-	texture->cleanUp(_cairoCleanUpPainter);
+	texture->cleanUp(_cairoCleanUpPainter, maxNumRequests);
 
 	return true;
+}
+
+void
+CanvasPainter::startIncrementalDrawing(const util::rect<int>& roi) {
+
+	LOG_DEBUG(canvaspainterlog) << "resetting the incremental memory" << std::endl;
+
+	if (roi.width() == 0)
+		_canvasTexture->setWorkingArea(_previousPixelRoi);
+	else
+		_canvasTexture->setWorkingArea(roi);
+	_cairoPainter.resetIncrementalMemory();
+
+	_state = IncrementalDrawing;
 }
 
 void
@@ -224,6 +230,18 @@ CanvasPainter::drawTexture(const util::rect<int>& roi) {
 	glTranslated(_shift.x, _shift.y, 0.0);
 
 	_canvasTexture->render(roi);
+
+	if (_canvasTexture->isDirty(roi)) {
+
+		glColor4f(1.0, 0.3, 1.0, 0.3);
+		glDisable(GL_TEXTURE_2D);
+		glBegin(GL_QUADS);
+		glVertex2d(roi.minX, roi.minY);
+		glVertex2d(roi.maxX, roi.minY);
+		glVertex2d(roi.maxX, roi.maxY);
+		glVertex2d(roi.minX, roi.maxY);
+		glEnd();
+	}
 
 	glPopMatrix();
 }

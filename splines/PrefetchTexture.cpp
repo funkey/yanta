@@ -20,7 +20,8 @@ PrefetchTexture::PrefetchTexture(
 	_bufferHeight(std::min(prefetchTop, prefetchBottom)),
 	_reloadBufferX(0),
 	_reloadBufferY(0),
-	_workingArea(0, 0, 0, 0) {
+	_workingArea(0, 0, 0, 0),
+	_currentCleanUpArea(0, 0, 0, 0) {
 
 	for (int i = 0; i < 4; i++)
 		_workingBuffers[i] = 0;
@@ -30,6 +31,8 @@ PrefetchTexture::PrefetchTexture(
 }
 
 PrefetchTexture::~PrefetchTexture() {
+
+	gui::OpenGl::Guard guard;
 
 	for (int i = 0; i < 4; i++)
 		deleteBuffer(&_workingBuffers[i]);
@@ -191,6 +194,8 @@ PrefetchTexture::setWorkingArea(const util::rect<int>& subarea) {
 	util::point<int> offsets[4];
 
 	split(subarea, parts, offsets);
+
+	gui::OpenGl::Guard guard;
 
 	for (int i = 0; i < 4; i++) {
 
@@ -462,15 +467,17 @@ PrefetchTexture::getNextCleanUpRequest(CleanUpRequest& request) {
 	request = _cleanUpRequests.front();
 	_cleanUpRequests.pop_front();
 
+	_currentCleanUpArea = request.area;
+
 	return true;
 }
 
 void
-PrefetchTexture::cleanUp(CairoCanvasPainter& painter) {
+PrefetchTexture::cleanUp(CairoCanvasPainter& painter, unsigned int maxNumRequests) {
 
 	gui::OpenGl::Guard guard;
 
-	unsigned int numRequests = _cleanUpRequests.size();
+	unsigned int numRequests = std::min(static_cast<unsigned int>(_cleanUpRequests.size()), maxNumRequests);
 
 	LOG_DEBUG(prefetchtexturelog) << "processing " << numRequests << " cleanup requests" << std::endl;
 
@@ -496,7 +503,34 @@ PrefetchTexture::cleanUp(CairoCanvasPainter& painter) {
 		}
 
 		deleteBuffer(&buffer);
+
+		_currentCleanUpArea = util::rect<int>(0, 0, 0, 0);
 	}
 
 	LOG_DEBUG(prefetchtexturelog) << "done cleaning up" << std::endl;
+}
+
+bool
+PrefetchTexture::isDirty(const util::rect<int>& roi) {
+
+	// is it in _cleanUpRequests?
+	{
+		boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
+
+		for (std::deque<CleanUpRequest>::const_iterator i = _cleanUpRequests.begin(); i != _cleanUpRequests.end(); i++)
+			if (i->area.intersects(roi)) {
+
+				LOG_ALL(prefetchtexturelog) << "roi " << roi << " is dirty because of request in " << i->area << std::endl;
+				return true;
+			}
+	}
+
+	// is it currently worked on?
+	if (_currentCleanUpArea.intersects(roi)) {
+
+		LOG_ALL(prefetchtexturelog) << "roi " << roi << " is dirty because of current work in " << _currentCleanUpArea << std::endl;
+		return true;
+	}
+
+	return false;
 }

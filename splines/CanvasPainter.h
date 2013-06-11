@@ -51,7 +51,12 @@ public:
 	 * Clean all dirty areas of the painter. Returns true, if there were some, 
 	 * false otherwise.
 	 */
-	bool cleanDirtyAreas();
+	bool cleanDirtyAreas(unsigned int maxNumRequests);
+
+	/**
+	 * Prepare buffers for incremental updates.
+	 */
+	void startIncrementalDrawing(const util::rect<int>& roi = util::rect<int>(0, 0, 0, 0));
 
 private:
 

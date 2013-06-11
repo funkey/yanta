@@ -6,7 +6,6 @@ logger::LogChannel cairocanvaspainterlog("cairocanvaspainterlog", "[CairoCanvasP
 CairoCanvasPainter::CairoCanvasPainter() :
 	_pixelsPerDeviceUnit(1.0, 1.0),
 	_pixelOffset(0, 0),
-	_incremental(false),
 	_drawnUntilStroke(0),
 	_drawnUntilStrokePoint(0),
 	_drawnUntilStrokeTmp(0),
@@ -24,7 +23,9 @@ CairoCanvasPainter::draw(
 		cairo_t* context,
 		const util::rect<double>& roi) {
 
-	LOG_ALL(cairocanvaspainterlog) << "drawing " << (_incremental ? "" : "non-") << "incrementally" << std::endl;
+	bool incremental = (_drawnUntilStroke != 0 || _drawnUntilStrokePoint != 0);
+
+	LOG_ALL(cairocanvaspainterlog) << "drawing " << (incremental ? "" : "non-") << "incrementally" << std::endl;
 
 	cairo_save(context);
 
@@ -50,12 +51,12 @@ CairoCanvasPainter::draw(
 	cairo_scale(context, _pixelsPerDeviceUnit.x, _pixelsPerDeviceUnit.y);
 
 	// prepare the background, if we do not draw incrementally
-	if (!_incremental || (_drawnUntilStroke == 0 && _drawnUntilStrokePoint == 0))
+	if (!incremental)
 		clearSurface(context);
 
 	// draw the (new) strokes in the current part
-	unsigned int drawnUntilStrokePoint = (_incremental ? _drawnUntilStrokePoint : 0);
-	for (unsigned int i = (_incremental ? _drawnUntilStroke : 0); i < _strokes->size(); i++) {
+	unsigned int drawnUntilStrokePoint = (incremental ? _drawnUntilStrokePoint : 0);
+	for (unsigned int i = (incremental ? _drawnUntilStroke : 0); i < _strokes->size(); i++) {
 
 		LOG_ALL(cairocanvaspainterlog)
 				<< "drawing stroke " << i << ", starting from point "
@@ -76,7 +77,7 @@ CairoCanvasPainter::draw(
 	_drawnUntilStrokeTmp = std::max(0, static_cast<int>(_strokes->size()) - 1);
 
 	if (_strokes->size() > 0)
-		_drawnUntilStrokePointTmp = std::max(0, static_cast<int>((*_strokes)[_drawnUntilStrokeTmp].width()) - 1);
+		_drawnUntilStrokePointTmp = std::max(0, static_cast<int>((*_strokes)[_drawnUntilStrokeTmp].size()) - 1);
 	else
 		_drawnUntilStrokePointTmp = 0;
 }
