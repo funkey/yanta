@@ -119,7 +119,8 @@ void
 CairoCanvasPainter::clearSurface(cairo_t* context) {
 
 	// clear surface
-	cairo_set_operator(context, CAIRO_OPERATOR_CLEAR);
+	cairo_set_operator(context, CAIRO_OPERATOR_SOURCE);
+	cairo_set_source_rgba(context, 1.0, 1.0, 1.0, 1.0);
 	cairo_paint(context);
 	cairo_set_operator(context, CAIRO_OPERATOR_OVER);
 }
