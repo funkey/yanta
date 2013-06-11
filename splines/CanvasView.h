@@ -28,6 +28,8 @@ private:
 	 */
 	bool filter(gui::PointerSignal&);
 
+	void onMouseMove(const gui::MouseMove& signal);
+
 	void onPenMove(const gui::PenMove& signal);
 
 	void onPenIn(const gui::PenIn& signal);

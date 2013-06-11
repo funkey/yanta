@@ -15,6 +15,7 @@ CanvasView::CanvasView() :
 	// establish pointer signal filter
 	PointerSignalFilter::filterBackward(_painter, _strokes, this);
 
+	_painter.registerForwardCallback(&CanvasView::onMouseMove, this);
 	_painter.registerForwardCallback(&CanvasView::onPenMove, this);
 	_painter.registerForwardCallback(&CanvasView::onPenIn, this);
 	_painter.registerForwardCallback(&CanvasView::onPenOut, this);
@@ -50,18 +51,32 @@ CanvasView::filter(gui::PointerSignal& signal) {
 void
 CanvasView::onPenMove(const gui::PenMove& signal) {
 
+	LOG_ALL(canvasviewlog) << "the pen moved to " << signal.position << std::endl;
+
+	_lastPen = signal.position;
+}
+
+void
+CanvasView::onMouseMove(const gui::MouseMove& signal) {
+
+	LOG_ALL(canvasviewlog) << "the mouse moved to " << signal.position << std::endl;
+
+	// the mouse cursor gives hints about the position of the pen (which the 
+	// PenIn cannot tell us)
 	_lastPen = signal.position;
 }
 
 void
 CanvasView::onPenIn(const gui::PenIn& /*signal*/) {
 
+	LOG_ALL(canvasviewlog) << "the pen came close to the screen" << std::endl;
 	_penClose = true;
 }
 
 void
 CanvasView::onPenOut(const gui::PenOut& /*signal*/) {
 
+	LOG_ALL(canvasviewlog) << "the pen moved away from the screen" << std::endl;
 	_penClose = false;
 }
 
@@ -128,7 +143,7 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 		_painter->zoom(distance/previousDistance, getFingerCenter());
 	}
 
-	setDirty(_painter);
+	_contentChanged();//setDirty(_painter);
 }
 
 void
@@ -171,10 +186,17 @@ CanvasView::locked(unsigned long /*now*/, const util::point<double>& position) {
 	// clearly not the palm (of a right-handed person)
 	if (_penClose) {
 
-		if (position.x < _lastPen.x)
+		LOG_ALL(canvasviewlog) << "the pen is close to the screen" << std::endl;
+
+		if (position.x < _lastPen.x) {
+
 			return false;
-		else
+
+		} else {
+
+			LOG_ALL(canvasviewlog) << "the pen is locking the canvas" << std::endl;
 			return true;
+		}
 	}
 
 	return false;
@@ -186,7 +208,7 @@ CanvasView::cleanDirtyAreas() {
 	while (!_backgroundPainterStopped) {
 
 		if (_painter && _painter->cleanDirtyAreas())
-			setDirty(_painter);
+			_contentChanged();
 		else
 			usleep(10*1000);
 	}
