@@ -113,6 +113,8 @@ private:
 	util::point<int>    _previousShift;
 	util::point<double> _previousScale;
 
+	util::rect<int> _previousPixelRoi;
+
 	CanvasPainterState _state;
 };
 

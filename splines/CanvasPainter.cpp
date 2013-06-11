@@ -16,6 +16,7 @@ CanvasPainter::CanvasPainter() :
 	_scale(1.0, 1.0),
 	_previousShift(0, 0),
 	_previousScale(0, 0),
+	_previousPixelRoi(0, 0, 0, 0),
 	_state(Moving) {
 
 	_cairoPainter.setDeviceTransformation(_scale, _shift);
@@ -88,7 +89,6 @@ CanvasPainter::draw(
 
 	gui::OpenGl::Guard guard;
 
-	// TODO: consider only the maximum of all observed pixelRois
 	if (prepareTexture(pixelRoi))
 		initiateFullRedraw(pixelRoi);
 
@@ -99,10 +99,11 @@ CanvasPainter::draw(
 
 		// when we are entering incremental mode, we have to tell the texture 
 		// that we have a working area, now
-		if (_state == Moving) {
+		if (_state == Moving || pixelRoi != _previousPixelRoi) {
 
 			_canvasTexture->setWorkingArea(pixelRoi);
 			_cairoPainter.resetIncrementalMemory();
+			_previousPixelRoi = pixelRoi;
 		}
 
 		_state = IncrementalDrawing;
@@ -143,7 +144,7 @@ CanvasPainter::prepareTexture(const util::rect<int>& pixelRoi) {
 
 	LOG_ALL(canvaspainterlog) << "with pre-fetch areas, texture has to be of size " << textureWidth << "x" << textureHeight << std::endl;
 
-	if (_canvasTexture && (_canvasTexture->width() != textureWidth || _canvasTexture->height() != textureHeight)) {
+	if (_canvasTexture && (_canvasTexture->width() < textureWidth || _canvasTexture->height() < textureHeight)) {
 
 		LOG_ALL(canvaspainterlog) << "texture is of different size, create a new one" << std::endl;
 
