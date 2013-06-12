@@ -138,8 +138,8 @@ SkiaCanvasPainter::drawStroke(
 	for (unsigned int i = drawnUntilStrokePoint; i < stroke.size() - (stroke.finished() ? 1 : 2); i++) {
 
 		//double alpha = alphaPressureCurve(stroke[i].pressure);
-		double widthStart = widthPressureCurve(stroke[i  ].pressure)*penWidth;
-		double widthEnd   = widthPressureCurve(stroke[i+1].pressure)*penWidth;
+		double widthStart = 0.5*widthPressureCurve(stroke[i  ].pressure)*penWidth;
+		double widthEnd   = 0.5*widthPressureCurve(stroke[i+1].pressure)*penWidth;
 
 		const util::point<double>& begin = stroke[i].position;
 		const util::point<double>& end   = stroke[i+1].position;
