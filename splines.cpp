@@ -80,26 +80,39 @@ int main(int optionc, char** optionv) {
 		 * SETUP PIPELINE *
 		 ******************/
 
-		// create process nodes
+		// make sure, the window gets destructed as the last process (workaround 
+		// for OpenGl-bug)
 		pipeline::Process<gui::Window>   window("splines");
-		pipeline::Process<gui::ZoomView> zoomView;
-		pipeline::Process<CanvasView>    canvasView;
-		pipeline::Process<Canvas>        canvas;
-		pipeline::Process<StrokesReader> reader(optionFilename.as<std::string>());
-		pipeline::Process<StrokesWriter> writer(optionFilename.as<std::string>());
 
-		// connect process nodes
-		window->setInput(zoomView->getOutput());
-		zoomView->setInput(canvasView->getOutput("painter"));
-		canvasView->setInput(canvas->getOutput("strokes"));
-		canvas->setInput(reader->getOutput());
-		writer->setInput(canvas->getOutput());
+		{
+			// create process nodes
+			pipeline::Process<gui::ZoomView> zoomView;
+			pipeline::Process<CanvasView>    canvasView;
+			pipeline::Process<Canvas>        canvas;
+			pipeline::Process<StrokesReader> reader(optionFilename.as<std::string>());
+			pipeline::Process<StrokesWriter> writer(optionFilename.as<std::string>());
 
-		// enter window main loop
-		processEvents(window);
+			// connect process nodes
+			window->setInput(zoomView->getOutput());
+			zoomView->setInput(canvasView->getOutput("painter"));
+			canvasView->setInput(canvas->getOutput("strokes"));
+			canvas->setInput(reader->getOutput());
+			writer->setInput(canvas->getOutput());
 
-		// save strokes
-		writer->write();
+			// enter window main loop
+			processEvents(window);
+
+			// TODO: this seems to workaround the Intel bufferdeallocate bug, 
+			// investigate that!
+			window->close();
+
+			// save strokes
+			writer->write();
+
+			// destruct pipeline as long as window still exists (workaround for 
+			// OpenGl-bug)
+			window->getInput().unset();
+		}
 
 	} catch (Exception& e) {
 
