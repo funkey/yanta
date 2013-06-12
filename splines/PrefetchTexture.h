@@ -8,7 +8,7 @@
 
 #include <gui/Texture.h>
 
-#include "CairoCanvasPainter.h"
+#include "SkiaCanvasPainter.h"
 
 /**
  * A texture used for prefetching drawings of a cairo painter. The texture's 
@@ -46,7 +46,7 @@ public:
 	 */
 	void fill(
 			const util::rect<int>& subarea,
-			CairoCanvasPainter& painter);
+			SkiaCanvasPainter& painter);
 
 	/**
 	 * Specify an area as working area. Buffers for this area will be kept in 
@@ -73,7 +73,7 @@ public:
 	/**
 	 * Clean all dirty areas.
 	 */
-	void cleanUp(CairoCanvasPainter& painter, unsigned int maxNumRequests);
+	void cleanUp(SkiaCanvasPainter& painter, unsigned int maxNumRequests);
 
 	/**
 	 * Check whether a given area is dirty.
@@ -119,7 +119,7 @@ private:
 	/**
 	 * Fill a buffer using a painter with the content of the specified area.
 	 */
-	void fillBuffer(gui::Buffer& buffer, const util::rect<int>& bufferArea, CairoCanvasPainter& painter);
+	void fillBuffer(gui::Buffer& buffer, const util::rect<int>& bufferArea, SkiaCanvasPainter& painter);
 
 	/**
 	 * Split an area into four parts, according to the beginning of the content 

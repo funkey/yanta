@@ -89,6 +89,14 @@ else()
   set(HAVE_PNG 0)
 endif()
 
+find_package(Freetype)
+if (FREETYPE_FOUND)
+  message(STATUS "Freetype found.")
+  include_directories(${FREETYPE_INCLUDE_DIRS})
+else()
+  message(STATUS "Freetype *NOT* found.")
+endif()
+
 #####################
 # optional packages #
 #####################
@@ -137,6 +145,7 @@ set(CORELIBS
   ${PNG_LIBRARY}
   ${Cairo_LIBRARY}
   ${Vigra_LIBRARIES}
+  ${FREETYPE_LIBRARIES}
 )
 
 #######################
@@ -146,11 +155,14 @@ set(CORELIBS
 include_directories(${PROJECT_BINARY_DIR})
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/modules)
+include_directories(${PROJECT_SOURCE_DIR}/modules/external/skia/include/core)
+include_directories(${PROJECT_SOURCE_DIR}/modules/external/skia/include/config)
 
 add_subdirectory(modules/util)
 add_subdirectory(modules/signals)
 add_subdirectory(modules/pipeline)
 add_subdirectory(modules/gui)
+add_subdirectory(modules/external/skia)
 
 #####################
 # compiler settings #
@@ -172,4 +184,4 @@ file (GLOB_RECURSE splinesfiles
   toys/*.cpp)
 
 add_executable(splines splines.cpp ${splinesfiles})
-target_link_libraries(splines signals pipeline gui util ${CORELIBS})
+target_link_libraries(splines signals pipeline gui util skia ${CORELIBS})

@@ -2,11 +2,11 @@
 #define CANVAS_PAINTER_H__
 
 #include <cairo.h>
-#include <gui/Cairo.h>
+#include <gui/Skia.h>
 #include <gui/Painter.h>
 #include <gui/Texture.h>
 
-#include "CairoCanvasPainter.h"
+#include "SkiaCanvasPainter.h"
 #include "PrefetchTexture.h"
 #include "Strokes.h"
 
@@ -90,10 +90,10 @@ private:
 	boost::shared_ptr<Strokes> _strokes;
 
 	// the cairo painter for the strokes
-	CairoCanvasPainter _cairoPainter;
+	SkiaCanvasPainter _cairoPainter;
 
 	// a cairo painter for the background updates
-	CairoCanvasPainter _cairoCleanUpPainter;
+	SkiaCanvasPainter _cairoCleanUpPainter;
 
 	// the texture to draw to
 	boost::shared_ptr<PrefetchTexture> _canvasTexture;

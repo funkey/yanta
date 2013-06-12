@@ -1,4 +1,6 @@
-#include <gui/Cairo.h>
+#include <SkBitmap.h>
+#include <SkCanvas.h>
+#include <gui/Skia.h>
 #include <gui/OpenGl.h>
 #include <util/Logger.h>
 #include "PrefetchTexture.h"
@@ -65,8 +67,8 @@ PrefetchTexture::prepare() {
 
 	if (_texture == 0) {
 
-		GLenum format = gui::detail::pixel_format_traits<gui::cairo_pixel_t>::gl_format;
-		GLenum type   = gui::detail::pixel_format_traits<gui::cairo_pixel_t>::gl_type;
+		GLenum format = gui::detail::pixel_format_traits<gui::skia_pixel_t>::gl_format;
+		GLenum type   = gui::detail::pixel_format_traits<gui::skia_pixel_t>::gl_type;
 
 		_texture = new gui::Texture(width, height, GL_RGBA);
 		_reloadBufferX = new gui::Buffer(_bufferWidth, height, format, type);
@@ -82,7 +84,7 @@ PrefetchTexture::prepare() {
 void
 PrefetchTexture::fill(
 		const util::rect<int>& subarea,
-		CairoCanvasPainter& painter) {
+		SkiaCanvasPainter& painter) {
 
 	// get the up-to-four parts of the subarea
 	util::rect<int>  parts[4];
@@ -132,38 +134,19 @@ PrefetchTexture::fill(
 }
 
 void
-PrefetchTexture::fillBuffer(gui::Buffer& buffer, const util::rect<int>& bufferArea, CairoCanvasPainter& painter) {
+PrefetchTexture::fillBuffer(gui::Buffer& buffer, const util::rect<int>& bufferArea, SkiaCanvasPainter& painter) {
 
 	unsigned int width  = bufferArea.width();
 	unsigned int height = bufferArea.height();
 
-	gui::cairo_pixel_t* data = buffer.map<gui::cairo_pixel_t>();
+	gui::skia_pixel_t* data = buffer.map<gui::skia_pixel_t>();
 
-	// wrap the buffer in a cairo surface
-	cairo_surface_t* surface =
-			cairo_image_surface_create_for_data(
-					(unsigned char*)data,
-					CAIRO_FORMAT_ARGB32,
-					width,
-					height,
-					cairo_format_stride_for_width(CAIRO_FORMAT_ARGB32, width));
+	// wrap the buffer in a skia bitmap
+	SkBitmap bitmap;
+	bitmap.setConfig(SkBitmap::kARGB_8888_Config, width, height);
+	bitmap.setPixels(data);
 
-	cairo_status_t status = cairo_surface_status(surface);
-
-	if (status != CAIRO_STATUS_SUCCESS) {
-
-		if (status == CAIRO_STATUS_INVALID_STRIDE) {
-
-			LOG_ERROR(prefetchtexturelog) << "stride for reload buffer is invalid!" << std::endl;
-
-		} else {
-
-			LOG_ERROR(prefetchtexturelog) << "encountered error status " << status << " for cairo_image_surface_create_for_data()" << std::endl;
-		}
-	}
-
-	// create a context for the surface
-	cairo_t* context = cairo_create(surface);
+	SkCanvas canvas(bitmap);
 
 	// Now, we have a surface of widthxheight, with (0,0) being the upper left 
 	// corner and (width-1,height-1) the lower right. Translate operations, such 
@@ -172,15 +155,11 @@ PrefetchTexture::fillBuffer(gui::Buffer& buffer, const util::rect<int>& bufferAr
 
 	// translate bufferArea.upperLeft() to (0,0)
 	util::point<int> translate = -bufferArea.upperLeft();
-	cairo_translate(context, translate.x, translate.y);
+	canvas.translate(translate.x, translate.y);
 
-	LOG_ALL(prefetchtexturelog) << "cairo translate (texture to canvas pixels): " << translate << std::endl;
+	LOG_ALL(prefetchtexturelog) << "skia translate (texture to canvas pixels): " << translate << std::endl;
 
-	painter.draw(context, bufferArea);
-
-	// cleanup
-	cairo_destroy(context);
-	cairo_surface_destroy(surface);
+	painter.draw(canvas, bufferArea);
 
 	// unmap the buffer
 	buffer.unmap();
@@ -473,7 +452,7 @@ PrefetchTexture::getNextCleanUpRequest(CleanUpRequest& request) {
 }
 
 void
-PrefetchTexture::cleanUp(CairoCanvasPainter& painter, unsigned int maxNumRequests) {
+PrefetchTexture::cleanUp(SkiaCanvasPainter& painter, unsigned int maxNumRequests) {
 
 	gui::OpenGl::Guard guard;
 
