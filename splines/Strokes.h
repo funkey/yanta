@@ -28,6 +28,7 @@ public:
 
 	void finishCurrentStroke() {
 
+		currentStroke().finish();
 	}
 
 	Stroke& operator[](unsigned int i) {

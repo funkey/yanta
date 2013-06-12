@@ -42,11 +42,9 @@ public:
 	}
 
 	/**
-	 * Get the number of the stroke until which all previous strokes have been 
-	 * drawn already (excluding the stroke represented by the number).
+	 * Return true if the strokes have been drawn by this painter already.
 	 */
-	unsigned int drawnUntilStroke()      { return _drawnUntilStroke; }
-	unsigned int drawnUntilStrokePoint() { return _drawnUntilStrokePoint; }
+	bool alreadyDrawn(const Strokes& strokes);
 
 	/**
 	 * Draw the whole canvas on the provided context.
@@ -71,6 +69,8 @@ private:
 			const Stroke& stroke,
 			const util::rect<double>& roi,
 			unsigned int drawnUntilStrokePoint);
+
+	util::point<double> getLineNormal(const Stroke& strokes, int i, double& length);
 
 	double widthPressureCurve(double pressure);
 

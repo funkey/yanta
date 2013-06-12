@@ -26,7 +26,8 @@ public:
 
 	Stroke() :
 		_width(1.0),
-		_boundingBox(0, 0, 0, 0) {}
+		_boundingBox(0, 0, 0, 0),
+		_finished(false) {}
 
 	void add(const StrokePoint& point) {
 
@@ -73,6 +74,16 @@ public:
 		return _boundingBox;
 	}
 
+	void finish() {
+
+		_finished = true;
+	}
+
+	bool finished() const {
+
+		return _finished;
+	}
+
 private:
 
 	// TODO: make this a property of a pen
@@ -81,6 +92,8 @@ private:
 	util::rect<double> _boundingBox;
 
 	std::vector<StrokePoint> _points;
+
+	bool _finished;
 };
 
 #endif // STROKE_H__

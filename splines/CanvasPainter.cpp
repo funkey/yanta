@@ -165,24 +165,10 @@ void
 CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<int>& roi) {
 
 	// is it necessary to draw something?
-	if (_cairoPainter.drawnUntilStroke() > 1 &&
-	    _cairoPainter.drawnUntilStroke() == strokes.size() &&
-	    _cairoPainter.drawnUntilStrokePoint() == strokes[_cairoPainter.drawnUntilStroke() - 1].size()) {
+	if (_cairoPainter.alreadyDrawn(strokes)) {
 
 		LOG_ALL(canvaspainterlog) << "nothing changed, skipping redraw" << std::endl;
 		return;
-	}
-
-	if (_state == IncrementalDrawing) {
-
-		LOG_ALL(canvaspainterlog)
-				<< "drawing incrementally in " << roi << ", starting with stroke "
-				<< _cairoPainter.drawnUntilStroke() << ", point "
-				<< _cairoPainter.drawnUntilStrokePoint() << std::endl;
-	} else {
-
-		LOG_ALL(canvaspainterlog)
-				<< "drawing everything in " << roi << std::endl;
 	}
 
 	_canvasTexture->fill(roi, _cairoPainter);
