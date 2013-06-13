@@ -8,6 +8,7 @@
 #include <gui/PointerSignalFilter.h>
 
 #include "CanvasPainter.h"
+#include "CanvasSignals.h"
 #include "Strokes.h"
 
 class CanvasView : public pipeline::SimpleProcessNode<>, public gui::PointerSignalFilter {
@@ -41,6 +42,8 @@ private:
 	void onFingerMove(const gui::FingerMove& signal);
 
 	void onFingerUp(const gui::FingerUp& signal);
+
+	void onChangedArea(const ChangedArea& signal);
 
 	double getFingerDistance();
 

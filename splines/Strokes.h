@@ -3,10 +3,13 @@
 
 #include <pipeline/Data.h>
 #include "Stroke.h"
+#include "StrokePoint.h"
 
 class Strokes : public pipeline::Data {
 
 public:
+
+	Strokes();
 
 	void add(const Stroke& stroke) {
 
@@ -31,22 +34,27 @@ public:
 		currentStroke().finish();
 	}
 
-	Stroke& operator[](unsigned int i) {
+	util::rect<double> erase(const util::point<double>& position, double radius);
+
+	inline Stroke& operator[](unsigned int i) {
 
 		return _strokes[i];
 	}
 
-	const Stroke& operator[](unsigned int i) const {
+	inline const Stroke& operator[](unsigned int i) const {
 
 		return _strokes[i];
 	}
 
-	unsigned int size() const {
+	inline unsigned int size() const {
 
 		return _strokes.size();
 	}
 
 private:
+
+	// global list of stroke points
+	std::vector<StrokePoint> _strokePoints;
 
 	std::vector<Stroke> _strokes;
 };

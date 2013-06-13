@@ -182,6 +182,12 @@ CanvasPainter::initiateFullRedraw(const util::rect<int>& roi) {
 	_cairoPainter.resetIncrementalMemory();
 }
 
+void
+CanvasPainter::markDirty(const util::rect<double>& area) {
+
+	_canvasTexture->markDirty(area);
+}
+
 bool
 CanvasPainter::cleanDirtyAreas(unsigned int maxNumRequests) {
 

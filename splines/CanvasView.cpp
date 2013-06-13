@@ -10,6 +10,8 @@ CanvasView::CanvasView() :
 	registerInput(_strokes, "strokes");
 	registerOutput(_painter, "painter");
 
+	_strokes.registerBackwardCallback(&CanvasView::onChangedArea, this);
+
 	_painter.registerForwardSlot(_contentChanged);
 
 	// establish pointer signal filter
@@ -143,7 +145,7 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 		_painter->zoom(distance/previousDistance, getFingerCenter());
 	}
 
-	_contentChanged();//setDirty(_painter);
+	_contentChanged();
 }
 
 void
@@ -154,6 +156,13 @@ CanvasView::onFingerUp(const gui::FingerUp& signal) {
 		_fingerDown.erase(i);
 
 	_painter->startIncrementalDrawing();
+	_contentChanged();
+}
+
+void
+CanvasView::onChangedArea(const ChangedArea& signal) {
+
+	_painter->markDirty(signal.area);
 	_contentChanged();
 }
 

@@ -6,11 +6,13 @@ logger::LogChannel canvaslog("canvaslog", "[Canvas] ");
 
 Canvas::Canvas() :
 	_penDown(false),
+	_erase(false),
 	_initialStrokesModified(false) {
 
 	registerOutput(_strokes, "strokes");
 	registerInput(_initialStrokes, "initial strokes", pipeline::Optional);
 
+	_strokes.registerForwardSlot(_changedArea);
 	_strokes.registerForwardCallback(&Canvas::onPenDown, this);
 	_strokes.registerForwardCallback(&Canvas::onPenMove, this);
 	_strokes.registerForwardCallback(&Canvas::onPenUp, this);
@@ -41,6 +43,12 @@ Canvas::onPenDown(const gui::PenDown& signal) {
 
 	LOG_DEBUG(canvaslog) << "pen down (button " << signal.button << ")" << std::endl;
 
+	if (signal.button == gui::buttons::Middle) {
+
+		_erase = true;
+		return;
+	}
+
 	if (signal.button != gui::buttons::Left)
 		return;
 
@@ -60,6 +68,12 @@ void
 Canvas::onPenUp(const gui::PenUp& signal) {
 
 	LOG_DEBUG(canvaslog) << "pen up (button " << signal.button << ")" << std::endl;
+
+	if (signal.button == gui::buttons::Middle) {
+
+		_erase = false;
+		return;
+	}
 
 	if (signal.button != gui::buttons::Left)
 		return;
@@ -82,9 +96,18 @@ Canvas::onPenMove(const gui::PenMove& signal) {
 	if (!_penDown)
 		return;
 
-	LOG_DEBUG(canvaslog) << "pen move" << std::endl;
+	LOG_DEBUG(canvaslog) << "pen move with modifiers " << signal.modifiers << std::endl;
 
-	_strokes->currentStroke().add(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+	if (_erase) {
 
-	setDirty(_strokes);
+		// TODO: get radius from current erasor configuration
+		util::rect<double> dirtyArea = _strokes->erase(signal.position, 10.0);
+		ChangedArea signal(dirtyArea);
+		_changedArea(signal);
+
+	} else {
+
+		_strokes->currentStroke().add(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+		setDirty(_strokes);
+	}
 }

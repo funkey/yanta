@@ -66,6 +66,11 @@ public:
 	void reset(const util::rect<int>& area);
 
 	/**
+	 * Mark an area within the texture as dirty. Thread safe.
+	 */
+	void markDirty(const util::rect<int>& area);
+
+	/**
 	 * Check whether there are dirty areas in the texture.
 	 */
 	bool hasDirtyAreas() { return !_cleanUpRequests.empty(); }
@@ -104,11 +109,6 @@ private:
 	 * a new texture was loaded.
 	 */
 	bool prepare();
-
-	/**
-	 * Mark an area within the texture as dirty. Thread safe.
-	 */
-	void markDirty(const util::rect<int>& area);
 
 	/**
 	 * Get the next cleanup request. Returns false, if there are none. Thread 

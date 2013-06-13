@@ -48,6 +48,11 @@ public:
 	void refresh();
 
 	/**
+	 * Mark an area as dirty for redraws.
+	 */
+	void markDirty(const util::rect<double>& area);
+
+	/**
 	 * Clean all dirty areas of the painter. Returns true, if there were some, 
 	 * false otherwise.
 	 */

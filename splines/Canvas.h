@@ -4,6 +4,7 @@
 #include <gui/PenSignals.h>
 #include <pipeline/all.h>
 #include "CanvasPainter.h"
+#include "CanvasSignals.h"
 
 class Canvas : public pipeline::SimpleProcessNode<> {
 
@@ -26,7 +27,11 @@ private:
 
 	bool _penDown;
 
+	bool _erase;
+
 	bool _initialStrokesModified;
+
+	signals::Slot<ChangedArea> _changedArea;
 };
 
 #endif // CANVAS_H__
