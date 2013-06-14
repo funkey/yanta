@@ -8,6 +8,8 @@
 logger::LogChannel canvaspainterlog("canvaspainterlog", "[CanvasPainter] ");
 
 CanvasPainter::CanvasPainter() :
+	_cairoPainter(gui::skia_pixel_t(255, 255, 255)),
+	_cairoCleanUpPainter(gui::skia_pixel_t(127, 255, 255)),
 	_prefetchLeft(1024),
 	_prefetchRight(1024),
 	_prefetchTop(1024),
@@ -52,12 +54,22 @@ CanvasPainter::zoom(double zoomChange, const util::point<double>& anchor) {
 }
 
 util::point<double>
-CanvasPainter::pixelToCanvas(const util::point<double>& point) {
+CanvasPainter::screenToCanvas(const util::point<double>& point) {
 
 	util::point<double> inv = point;
 
 	inv -= _shift;
 	inv /= _scale;
+
+	return inv;
+}
+
+util::point<int>
+CanvasPainter::canvasToTexture(const util::point<double>& point) {
+
+	util::point<double> inv = point;
+
+	inv *= _scale;
 
 	return inv;
 }
@@ -185,7 +197,28 @@ CanvasPainter::initiateFullRedraw(const util::rect<int>& roi) {
 void
 CanvasPainter::markDirty(const util::rect<double>& area) {
 
-	_canvasTexture->markDirty(area);
+	// area is in canvas units -- transform it to pixel units
+	util::point<int> ul = canvasToTexture(area.upperLeft());
+	util::point<int> lr = canvasToTexture(area.lowerRight());
+
+	// add a border of one pixels to compensate for rounding artefacts
+	util::rect<int> pixelArea(ul.x - 1, ul.y - 1, lr.x + 1, lr.y +1);
+
+	// are we currently looking at this area?
+	if (_state == IncrementalDrawing && pixelArea.intersects(_previousPixelRoi)) {
+
+		LOG_ALL(canvaspainterlog) << "redrawing " << pixelArea << std::endl;
+
+		gui::OpenGl::Guard guard;
+
+		// in this case, redraw immediately
+		_canvasTexture->fill(pixelArea, _cairoCleanUpPainter);
+
+	} else {
+
+		// otherwise, let the background threads do the work
+		_canvasTexture->markDirty(pixelArea);
+	}
 }
 
 bool

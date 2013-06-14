@@ -117,9 +117,14 @@ private:
 	bool getNextCleanUpRequest(CleanUpRequest& request);
 
 	/**
-	 * Fill a buffer using a painter with the content of the specified area.
+	 * Fill buffer, representing bufferArea, using painter, but draw only in 
+	 * roi.
 	 */
-	void fillBuffer(gui::Buffer& buffer, const util::rect<int>& bufferArea, SkiaCanvasPainter& painter);
+	void fillBuffer(
+			gui::Buffer&           buffer,
+			const util::rect<int>& bufferArea,
+			SkiaCanvasPainter&     painter,
+			const util::rect<int>& roi);
 
 	/**
 	 * Split an area into four parts, according to the beginning of the content 
@@ -168,6 +173,10 @@ private:
 	// an area who's content we should keep in memory for incremental drawing 
 	// operations
 	util::rect<int> _workingArea;
+
+	// the four parts of the working area and their offsets in the texture
+	util::rect<int>  _workingAreaParts[4];
+	util::point<int> _workingAreaOffsets[4];
 
 	// the up-to-four buffers for the working area
 	gui::Buffer* _workingBuffers[4];

@@ -46,7 +46,7 @@ CanvasView::updateOutputs() {
 bool
 CanvasView::filter(gui::PointerSignal& signal) {
 
-	signal.position = _painter->pixelToCanvas(signal.position);
+	signal.position = _painter->screenToCanvas(signal.position);
 	return true;
 }
 
@@ -161,6 +161,8 @@ CanvasView::onFingerUp(const gui::FingerUp& signal) {
 
 void
 CanvasView::onChangedArea(const ChangedArea& signal) {
+
+	LOG_ALL(canvasviewlog) << "area " << signal.area << " changed" << std::endl;
 
 	_painter->markDirty(signal.area);
 	_contentChanged();

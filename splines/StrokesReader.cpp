@@ -19,6 +19,8 @@ StrokesReader::updateOutputs() {
 	unsigned int fileVersion;
 	in >> fileVersion;
 
+	readStrokePoints(in);
+
 	unsigned int numStrokes;
 	in >> numStrokes;
 
@@ -27,21 +29,37 @@ StrokesReader::updateOutputs() {
 }
 
 void
-StrokesReader::readStroke(std::ifstream& in) {
+StrokesReader::readStrokePoints(std::ifstream& in) {
 
-	Stroke stroke;
-
-	unsigned int numPoints;
+	unsigned long numPoints;
 	in >> numPoints;
 
 	double x, y, pressure;
 	long unsigned int timestamp;
 
+	StrokePoints& points = _strokes->getStrokePoints();
+
 	for (unsigned int i = 0; i < numPoints; i++) {
 
 		in >> x >> y >> pressure >> timestamp;
-		stroke.add(StrokePoint(util::point<double>(x, y), pressure, timestamp));
+		points.add(StrokePoint(util::point<double>(x, y), pressure, timestamp));
 	}
+}
 
-	_strokes->add(stroke);
+void
+StrokesReader::readStroke(std::ifstream& in) {
+
+	unsigned long begin, end;
+	double penWidth;
+
+	in >> begin >> end >> penWidth;
+
+	Pen pen;
+	pen.setWidth(penWidth);
+
+	_strokes->createNewStroke();
+	_strokes->currentStroke().setBegin(begin);
+	_strokes->currentStroke().setEnd(end);
+	_strokes->currentStroke().setPen(pen);
+	_strokes->currentStroke().finish(_strokes->getStrokePoints());
 }

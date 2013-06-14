@@ -102,39 +102,42 @@ PrefetchTexture::fill(
 		unsigned int width  = parts[i].width();
 		unsigned int height = parts[i].height();
 
-		gui::Buffer* buffer = 0;
+		// if we are about to fill the region specified by setWorkingArea(), we 
+		// reuse the already allocated buffers
+		if (_workingArea.contains(subarea)) {
 
-		// if we are fill the region specified by setWorkingArea(), we reuse the 
-		// already allocated buffers
-		if (subarea == _workingArea) {
+			LOG_ALL(prefetchtexturelog) << "specified subarea is part of working area -- reuse working buffers" << std::endl;
 
-			LOG_ALL(prefetchtexturelog) << "specified subarea matches working area -- reuse working buffers" << std::endl;
-			buffer = _workingBuffers[i];
+			// fill the _workingBuffers[i], representing area 
+			// _workingAreaParts[i] only in the subarea parts[i]
+			fillBuffer(*_workingBuffers[i], _workingAreaParts[i], painter, parts[i]);
+
+			_texture->loadData(*_workingBuffers[i], _workingAreaOffsets[i].x, _workingAreaOffsets[i].y);
 
 		} else {
 
+			gui::Buffer* buffer = 0;
+
 			LOG_ALL(prefetchtexturelog) << "creating new buffers for the subarea update" << std::endl;
 			createBuffer(width, height, &buffer);
-		}
 
-		fillBuffer(*buffer, parts[i], painter);
+			fillBuffer(*buffer, parts[i], painter, parts[i]);
 
-		{
-			//boost::mutex::scoped_lock lock(_textureMutex);
-
-			// update texture with buffer content
 			_texture->loadData(*buffer, offsets[i].x, offsets[i].y);
-		}
 
-		LOG_ALL(prefetchtexturelog) << "put reload buffer at " << offsets[i] << std::endl;
+			LOG_ALL(prefetchtexturelog) << "put reload buffer at " << offsets[i] << std::endl;
 
-		if (subarea != _workingArea)
 			deleteBuffer(&buffer);
+		}
 	}
 }
 
 void
-PrefetchTexture::fillBuffer(gui::Buffer& buffer, const util::rect<int>& bufferArea, SkiaCanvasPainter& painter) {
+PrefetchTexture::fillBuffer(
+		gui::Buffer&           buffer,
+		const util::rect<int>& bufferArea,
+		SkiaCanvasPainter&     painter,
+		const util::rect<int>& roi) {
 
 	unsigned int width  = bufferArea.width();
 	unsigned int height = bufferArea.height();
@@ -159,7 +162,7 @@ PrefetchTexture::fillBuffer(gui::Buffer& buffer, const util::rect<int>& bufferAr
 
 	LOG_ALL(prefetchtexturelog) << "skia translate (texture to canvas pixels): " << translate << std::endl;
 
-	painter.draw(canvas, bufferArea);
+	painter.draw(canvas, roi);
 
 	// unmap the buffer
 	buffer.unmap();
@@ -190,9 +193,12 @@ PrefetchTexture::setWorkingArea(const util::rect<int>& subarea) {
 		unsigned int height = parts[i].height();
 
 		createBuffer(width, height, &_workingBuffers[i]);
+
+		_workingAreaParts[i]   = parts[i];
+		_workingAreaOffsets[i] = offsets[i];
 	}
 
-	_workingArea = subarea;
+	_workingArea        = subarea;
 }
 
 void
@@ -472,7 +478,7 @@ PrefetchTexture::cleanUp(SkiaCanvasPainter& painter, unsigned int maxNumRequests
 
 		createBuffer(request.area.width(), request.area.height(), &buffer);
 
-		fillBuffer(*buffer, request.area, painter);
+		fillBuffer(*buffer, request.area, painter, request.area);
 
 		{
 			//boost::mutex::scoped_lock lock(_textureMutex);

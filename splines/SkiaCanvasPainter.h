@@ -3,6 +3,7 @@
 
 #include <SkCanvas.h>
 
+#include <gui/Skia.h>
 #include <util/rect.hpp>
 #include "Strokes.h"
 
@@ -10,7 +11,7 @@ class SkiaCanvasPainter {
 
 public:
 
-	SkiaCanvasPainter();
+	SkiaCanvasPainter(gui::skia_pixel_t clearColor);
 
 	void setStrokes(boost::shared_ptr<Strokes> strokes) { _strokes = strokes; }
 
@@ -31,13 +32,11 @@ public:
 	 */
 	void resetIncrementalMemory() {
 
-		_drawnUntilStroke      = 0;
 		_drawnUntilStrokePoint = 0;
 	}
 
 	void rememberDrawnStrokes() {
 
-		_drawnUntilStroke = _drawnUntilStrokeTmp;
 		_drawnUntilStrokePoint = _drawnUntilStrokePointTmp;
 	}
 
@@ -64,31 +63,32 @@ private:
 
 	void clearSurface(SkCanvas& context);
 
-	void drawStroke(
+	bool drawStroke(
 			SkCanvas& context,
 			const Stroke& stroke,
 			const util::rect<double>& roi,
-			unsigned int drawnUntilStrokePoint);
+			unsigned long beginStroke,
+			unsigned long endStroke);
 
-	util::point<double> getLineNormal(const Stroke& strokes, int i, double& length);
+	util::point<double> getLineNormal(const Stroke& stroke, const StrokePoints& points, long i, double& length);
 
 	double widthPressureCurve(double pressure);
 
 	double alphaPressureCurve(double pressure);
+
+	gui::skia_pixel_t _clearColor;
 
 	boost::shared_ptr<Strokes> _strokes;
 
 	util::point<double> _pixelsPerDeviceUnit;
 	util::point<double> _pixelOffset;
 
-	// the number of the stroke until which all have been drawn already
-	unsigned int _drawnUntilStroke;
-	unsigned int _drawnUntilStrokePoint;
+	// the number of the stroke point until which all have been drawn already
+	unsigned long _drawnUntilStrokePoint;
 
-	// temporal memory of the number of the stroke until which all have been 
-	// drawn already
-	unsigned int _drawnUntilStrokeTmp;
-	unsigned int _drawnUntilStrokePointTmp;
+	// temporal memory of the number of the stroke point until which all have 
+	// been drawn already
+	unsigned long _drawnUntilStrokePointTmp;
 };
 
 #endif // SPLINES_SKIA_CANVAS_PAINTER_H__

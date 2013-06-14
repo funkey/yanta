@@ -13,28 +13,40 @@ StrokesWriter::write() {
 	std::ofstream out(_filename.c_str());
 
 	// write the file version (currently, we only have one)
-	out << 1 << std::endl;;
+	out << 1 << std::endl;
 
-	unsigned int numStrokes = _strokes->size();
+	writeStrokePoints(out, _strokes->getStrokePoints());
+
+	// skip the last stroke, if it wasn't started, yet
+	unsigned int numStrokes = _strokes->numStrokes();
+	if (_strokes->currentStroke().size() <= 1)
+		numStrokes--;
+
 	out << numStrokes << std::endl;;
 
 	for (unsigned int i = 0; i < numStrokes; i++)
-		writeStroke(out, (*_strokes)[i]);
+		writeStroke(out, _strokes->getStroke(i));
+}
+
+void
+StrokesWriter::writeStrokePoints(std::ofstream& out, const StrokePoints& points) {
+
+	unsigned long numPoints = points.size();
+	out << numPoints;
+
+	for (unsigned long i = 0; i < numPoints; i++)
+		out << " "
+				<< points[i].position.x << " "
+				<< points[i].position.y << " "
+				<< points[i].pressure << " "
+				<< points[i].timestamp;
+
+	out << std::endl;
 }
 
 void
 StrokesWriter::writeStroke(std::ofstream& out, const Stroke& stroke) {
 
-	unsigned int numPoints = stroke.size();
-	out << numPoints;
-
-	for (unsigned int i = 0; i < numPoints; i++)
-		out << " "
-				<< stroke[i].position.x << " "
-				<< stroke[i].position.y << " "
-				<< stroke[i].pressure << " "
-				<< stroke[i].timestamp;
-
-	out << std::endl;
+	out << " " << stroke.begin() << " " << stroke.end() << " " << stroke.getPen().width();
 }
 

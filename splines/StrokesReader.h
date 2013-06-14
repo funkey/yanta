@@ -16,6 +16,8 @@ private:
 
 	void updateOutputs();
 
+	void readStrokePoints(std::ifstream& in);
+
 	void readStroke(std::ifstream& in);
 
 	pipeline::Output<Strokes> _strokes;

@@ -18,6 +18,8 @@ private:
 
 	void updateOutputs() {}
 
+	void writeStrokePoints(std::ofstream& out, const StrokePoints& points);
+
 	void writeStroke(std::ofstream& out, const Stroke& stroke);
 
 	pipeline::Input<Strokes> _strokes;

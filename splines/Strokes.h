@@ -4,57 +4,106 @@
 #include <pipeline/Data.h>
 #include "Stroke.h"
 #include "StrokePoint.h"
+#include "StrokePoints.h"
 
 class Strokes : public pipeline::Data {
 
 public:
 
-	Strokes();
+	/**
+	 * Create a new stroke starting behind the existing points.
+	 */
+	inline void createNewStroke() {
 
-	void add(const Stroke& stroke) {
-
-		_strokes.push_back(stroke);
+		createNewStroke(_strokePoints.size());
 	}
 
-	void createNewStroke() {
+	/**
+	 * Create a new stroke starting at begin (and without an end).
+	 */
+	inline void createNewStroke(unsigned long begin) {
 
-		_strokes.push_back(Stroke());
+		// if this happens in the middle of a draw, finish the unfinished
+		if (numStrokes() > 0 && !currentStroke().finished())
+			currentStroke().finish(_strokePoints);
+
+		_strokes.push_back(Stroke(begin));
 	}
 
-	Stroke& currentStroke() {
+	/**
+	 * Get the current stroke.
+	 */
+	inline Stroke& currentStroke() { return _strokes.back(); }
+	const inline Stroke& currentStroke() const { return _strokes.back(); }
 
-		if (_strokes.size() == 0)
-			createNewStroke();
+	/**
+	 * Add a new stroke point to the global list and append it to the current 
+	 * stroke.
+	 */
+	inline void addStrokePoint(const StrokePoint& point) {
 
-		return _strokes.back();
+		_strokePoints.add(point);
+		currentStroke().setEnd(_strokePoints.size());
 	}
 
-	void finishCurrentStroke() {
+	/**
+	 * Finish appending the current stroke and prepare for the next stroke.
+	 */
+	inline void finishCurrentStroke() {
 
-		currentStroke().finish();
+		currentStroke().finish(_strokePoints);
 	}
 
+	/**
+	 * Get the stroke point with the given index.
+	 */
+	inline StrokePoint& getStrokePoint(unsigned long i) { return _strokePoints[i]; }
+	inline const StrokePoint& getStrokePoint(unsigned long i) const { return _strokePoints[i]; }
+
+	/**
+	 * Virtually erase points within the given postion and radius by splitting 
+	 * the involved strokes.
+	 */
 	util::rect<double> erase(const util::point<double>& position, double radius);
 
-	inline Stroke& operator[](unsigned int i) {
+	/**
+	 * Get a stroke by its index.
+	 */
+	inline Stroke& getStroke(unsigned int i) { return _strokes[i]; }
+	inline const Stroke& getStroke(unsigned int i) const { return _strokes[i]; }
 
-		return _strokes[i];
-	}
-
-	inline const Stroke& operator[](unsigned int i) const {
-
-		return _strokes[i];
-	}
-
-	inline unsigned int size() const {
+	/**
+	 * Get the number of strokes.
+	 */
+	inline unsigned int numStrokes() const {
 
 		return _strokes.size();
 	}
 
+	/**
+	 * Get the list of all stroke points.
+	 */
+	inline StrokePoints& getStrokePoints() { return _strokePoints; }
+	inline const StrokePoints& getStrokePoints() const { return _strokePoints; }
+
 private:
 
+	/**
+	 * Erase points from a stroke by splitting. Reports the changed area.
+	 */
+	util::rect<double> erase(
+			Stroke* stroke,
+			const util::point<double>& position,
+			double radius);
+
+	bool intersectsErasorCircle(
+			const util::point<double> lineStart,
+			const util::point<double> lineEnd,
+			const util::point<double> center,
+			double radius2);
+
 	// global list of stroke points
-	std::vector<StrokePoint> _strokePoints;
+	StrokePoints _strokePoints;
 
 	std::vector<Stroke> _strokes;
 };

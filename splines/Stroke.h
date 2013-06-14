@@ -5,95 +5,117 @@
 #include <util/point.hpp>
 #include <util/rect.hpp>
 
-struct StrokePoint {
-
-	StrokePoint(
-			util::point<double> position_,
-			double pressure_,
-			unsigned long timestamp_) :
-		position(position_),
-		pressure(pressure_),
-		timestamp(timestamp_) {}
-
-	util::point<double> position;
-	double              pressure;
-	unsigned long       timestamp;
-};
+#include "StrokePoints.h"
+#include "Pen.h"
 
 class Stroke {
 
 public:
 
-	Stroke() :
-		_width(1.0),
+	Stroke(unsigned long begin = 0) :
 		_boundingBox(0, 0, 0, 0),
-		_finished(false) {}
+		_finished(false),
+		_begin(begin),
+		_end(0) {}
 
-	void add(const StrokePoint& point) {
+	/**
+	 * Get the number of stroke points in this stroke.
+	 */
+	inline unsigned long size() const {
 
-		if (_points.size() == 0) {
+		if (_end <= _begin)
+			return 0;
 
-			_boundingBox.minX = point.position.x - _width;
-			_boundingBox.minY = point.position.y - _width;
-			_boundingBox.maxX = point.position.x + _width;
-			_boundingBox.maxY = point.position.y + _width;
-
-		} else {
-
-			_boundingBox.minX = std::min(_boundingBox.minX, point.position.x - _width);
-			_boundingBox.minY = std::min(_boundingBox.minY, point.position.y - _width);
-			_boundingBox.maxX = std::max(_boundingBox.maxX, point.position.x + _width);
-			_boundingBox.maxY = std::max(_boundingBox.maxY, point.position.y + _width);
-		}
-
-		_points.push_back(point);
+		return _end - _begin;
 	}
 
-	unsigned int size() const {
+	/**
+	 * Set the pen this stroke should be drawn with.
+	 */
+	inline void setPen(const Pen& pen) { _pen = pen; }
 
-		return _points.size();
+	/**
+	 * Get the pen this stroke is supposed to be drawn with.
+	 */
+	inline const Pen& getPen() const {
+
+		return _pen;
 	}
 
-	StrokePoint& operator[](unsigned int i) {
+	/**
+	 * Get the pen this stroke is supposed to be drawn with.
+	 */
+	inline Pen& getPen() {
 
-		return _points[i];
+		return _pen;
 	}
 
-	const StrokePoint& operator[](unsigned int i) const {
-
-		return _points[i];
-	}
-
-	double width() const {
-
-		return _width;
-	}
-
-	const util::rect<double>& boundingBox() const {
+	/**
+	 * Get the bounding box of this stroke. Note that not-finished strokes don't 
+	 * have a valid bounding box.
+	 */
+	inline const util::rect<double>& boundingBox() const {
 
 		return _boundingBox;
 	}
 
-	void finish() {
+	/**
+	 * Set the first stroke point of this stroke.
+	 */
+	inline void setBegin(unsigned long index) {
 
-		_finished = true;
+		_begin = index;
 	}
 
-	bool finished() const {
+	/**
+	 * Set the last (exclusive) stroke point of this stroke.
+	 */
+	inline void setEnd(unsigned long index) {
+
+		_end = index;
+	}
+
+	/**
+	 * Get the index of the first point of this stroke.
+	 */
+	inline unsigned long begin() const { return _begin; }
+
+	/**
+	 * Get the index of the point after the last point of this stroke.
+	 */
+	inline unsigned long end() const { return _end; }
+
+	/**
+	 * Finish this stroke. Computes the bounding box.
+	 */
+	inline void finish(const StrokePoints& points) {
+
+		_finished = true;
+
+		computeBoundingBox(points);
+	}
+
+	/**
+	 * Test, whether this stroke was finished already.
+	 */
+	inline bool finished() const {
 
 		return _finished;
 	}
 
 private:
 
-	// TODO: make this a property of a pen
-	double _width;
+	void computeBoundingBox(const StrokePoints& points);
+
+	Pen _pen;
 
 	util::rect<double> _boundingBox;
 
-	std::vector<StrokePoint> _points;
-
 	bool _finished;
+
+	// indices of the stroke points in the global point list
+	unsigned long _begin;
+	unsigned long _end;
 };
 
 #endif // STROKE_H__

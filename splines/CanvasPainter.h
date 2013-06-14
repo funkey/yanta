@@ -38,9 +38,14 @@ public:
 	void zoom(double zoomChange, const util::point<double>& anchor);
 
 	/**
-	 * Transform a point from pixel units to canvas units.
+	 * Transform a point from screen pixel units to canvas units.
 	 */
-	util::point<double> pixelToCanvas(const util::point<double>& p);
+	util::point<double> screenToCanvas(const util::point<double>& p);
+
+	/**
+	 * Transform a point from canvas units to texture pixel units.
+	 */
+	util::point<int> canvasToTexture(const util::point<double>& p);
 
 	/**
 	 * Manually request a full redraw.
