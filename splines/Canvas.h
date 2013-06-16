@@ -5,6 +5,7 @@
 #include <pipeline/all.h>
 #include "CanvasPainter.h"
 #include "CanvasSignals.h"
+#include "PenMode.h"
 
 class Canvas : public pipeline::SimpleProcessNode<> {
 
@@ -23,6 +24,7 @@ private:
 	void onPenMove(const gui::PenMove& signal);
 
 	pipeline::Output<Strokes> _strokes;
+	pipeline::Input<PenMode>  _penMode;
 	pipeline::Input<Strokes>  _initialStrokes;
 
 	bool _penDown;

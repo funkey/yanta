@@ -47,6 +47,12 @@ StrokesWriter::writeStrokePoints(std::ofstream& out, const StrokePoints& points)
 void
 StrokesWriter::writeStroke(std::ofstream& out, const Stroke& stroke) {
 
-	out << " " << stroke.begin() << " " << stroke.end() << " " << stroke.getPen().width();
+	out << " "
+		<< stroke.begin() << " " << stroke.end() << " "
+		<< stroke.getStyle().width() << " "
+		<< stroke.getStyle().getRed() << " "
+		<< stroke.getStyle().getGreen() << " "
+		<< stroke.getStyle().getBlue() << " "
+		<< stroke.getStyle().getAlpha() << " ";
 }
 

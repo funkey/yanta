@@ -51,15 +51,17 @@ StrokesReader::readStroke(std::ifstream& in) {
 
 	unsigned long begin, end;
 	double penWidth;
+	unsigned char red, green, blue, alpha;
 
-	in >> begin >> end >> penWidth;
+	in >> begin >> end >> penWidth >> red >> green >> blue >> alpha;
 
-	Pen pen;
-	pen.setWidth(penWidth);
+	Style style;
+	style.setWidth(penWidth);
+	style.setColor(red, green, blue, alpha);
 
 	_strokes->createNewStroke();
 	_strokes->currentStroke().setBegin(begin);
 	_strokes->currentStroke().setEnd(end);
-	_strokes->currentStroke().setPen(pen);
+	_strokes->currentStroke().setStyle(style);
 	_strokes->currentStroke().finish(_strokes->getStrokePoints());
 }

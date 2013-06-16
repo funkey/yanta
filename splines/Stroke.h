@@ -6,7 +6,7 @@
 #include <util/rect.hpp>
 
 #include "StrokePoints.h"
-#include "Pen.h"
+#include "Style.h"
 
 class Stroke {
 
@@ -30,24 +30,24 @@ public:
 	}
 
 	/**
-	 * Set the pen this stroke should be drawn with.
+	 * Set the style this stroke should be drawn with.
 	 */
-	inline void setPen(const Pen& pen) { _pen = pen; }
+	inline void setStyle(const Style& style) { _style = style; }
 
 	/**
-	 * Get the pen this stroke is supposed to be drawn with.
+	 * Get the style this stroke is supposed to be drawn with.
 	 */
-	inline const Pen& getPen() const {
+	inline const Style& getStyle() const {
 
-		return _pen;
+		return _style;
 	}
 
 	/**
-	 * Get the pen this stroke is supposed to be drawn with.
+	 * Get the style this stroke is supposed to be drawn with.
 	 */
-	inline Pen& getPen() {
+	inline Style& getStyle() {
 
-		return _pen;
+		return _style;
 	}
 
 	/**
@@ -107,7 +107,7 @@ private:
 
 	void computeBoundingBox(const StrokePoints& points);
 
-	Pen _pen;
+	Style _style;
 
 	util::rect<double> _boundingBox;
 

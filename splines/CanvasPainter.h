@@ -23,6 +23,11 @@ public:
 		_cairoCleanUpPainter.setStrokes(strokes);
 	}
 
+	void setCursorPosition(const util::point<double>& position) {
+
+		_cursorPosition = position;
+	}
+
 	void draw(
 			const util::rect<double>&  roi,
 			const util::point<double>& resolution);
@@ -131,6 +136,9 @@ private:
 	util::rect<int> _previousPixelRoi;
 
 	CanvasPainterState _state;
+
+	// the position of the cursor to draw in screen pixels
+	util::point<double> _cursorPosition;
 };
 
 #endif // CANVAS_PAINTER_H__

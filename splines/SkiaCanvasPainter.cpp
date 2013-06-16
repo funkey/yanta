@@ -113,7 +113,7 @@ void
 SkiaCanvasPainter::clearSurface(SkCanvas& canvas) {
 
 	// clear the surface, respecting the clipping
-	canvas.drawColor(SkColorSetRGB(_clearColor.red, _clearColor.green, _clearColor.blue));
+	canvas.drawColor(SkColorSetRGB(_clearColor.blue, _clearColor.green, _clearColor.red));
 }
 
 bool
@@ -131,17 +131,18 @@ SkiaCanvasPainter::drawStroke(
 		return false;
 	}
 
-	double penWidth = stroke.getPen().width();
-	// TODO: read this from stroke data structure
-	unsigned char penColorRed   = 0;
-	unsigned char penColorGreen = 0;
-	unsigned char penColorBlue  = 0;
+	double penWidth = stroke.getStyle().width();
+	unsigned char penColorRed   = stroke.getStyle().getRed();
+	unsigned char penColorGreen = stroke.getStyle().getGreen();
+	unsigned char penColorBlue  = stroke.getStyle().getBlue();
 
 	const StrokePoints& strokePoints = _strokes->getStrokePoints();
 
 	SkPaint paint;
 	paint.setStrokeCap(SkPaint::kRound_Cap);
-	paint.setColor(SkColorSetRGB(penColorRed, penColorGreen, penColorBlue));
+	// for skia, red and blue need to be exchanged (skia pixel is RGBA, opengl 
+	// buffer expects BGRA)
+	paint.setColor(SkColorSetRGB(penColorBlue, penColorGreen, penColorRed));
 	paint.setAntiAlias(true);
 
 	double length;

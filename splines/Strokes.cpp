@@ -59,7 +59,7 @@ Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius2
 
 	LOG_ALL(strokeslog) << "testing stroke lines " << begin << " until " << end << std::endl;
 
-	Pen pen = stroke->getPen();
+	Style style = stroke->getStyle();
 	bool wasErasing = false;
 
 	// for each line in the stroke
@@ -99,7 +99,7 @@ Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius2
 
 			createNewStroke(i);
 			stroke = &(currentStroke());
-			stroke->setPen(pen);
+			stroke->setStyle(style);
 			wasErasing = false;
 		}
 	}
@@ -112,13 +112,13 @@ Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius2
 		stroke->finish(_strokePoints);
 	}
 
-	// increase the size of the changedArea (if there is one) by the pen width
+	// increase the size of the changedArea (if there is one) by the style width
 	if (changedArea.width() > 0) {
 
-		changedArea.minX -= pen.width();
-		changedArea.minY -= pen.width();
-		changedArea.maxX += pen.width();
-		changedArea.maxY += pen.width();
+		changedArea.minX -= style.width();
+		changedArea.minY -= style.width();
+		changedArea.maxX += style.width();
+		changedArea.maxY += style.width();
 	}
 
 	LOG_ALL(strokeslog) << "done erasing this stroke, changed area is " << changedArea << std::endl;

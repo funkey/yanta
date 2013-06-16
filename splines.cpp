@@ -6,6 +6,7 @@
 #include <string>
 #include <boost/thread.hpp>
 
+#include <gui/ContainerView.h>
 #include <gui/Window.h>
 #include <gui/ZoomView.h>
 #include <pipeline/Process.h>
@@ -15,6 +16,7 @@
 
 #include <splines/Canvas.h>
 #include <splines/CanvasView.h>
+#include <splines/Osd.h>
 #include <splines/StrokesReader.h>
 #include <splines/StrokesWriter.h>
 
@@ -82,21 +84,28 @@ int main(int optionc, char** optionv) {
 
 		// make sure, the window gets destructed as the last process (workaround 
 		// for OpenGl-bug)
-		pipeline::Process<gui::Window>   window("splines");
+		gui::WindowMode mode;
+		mode.hideCursor = true;
+		pipeline::Process<gui::Window>   window("splines", mode);
 
 		{
 			// create process nodes
-			pipeline::Process<gui::ZoomView> zoomView;
-			pipeline::Process<CanvasView>    canvasView;
-			pipeline::Process<Canvas>        canvas;
-			pipeline::Process<StrokesReader> reader(optionFilename.as<std::string>());
-			pipeline::Process<StrokesWriter> writer(optionFilename.as<std::string>());
+			pipeline::Process<gui::ContainerView<gui::OverlayPlacing> > overlayView;
+			pipeline::Process<gui::ZoomView>                            zoomView;
+			pipeline::Process<CanvasView>                               canvasView;
+			pipeline::Process<Osd>                                      osd;
+			pipeline::Process<Canvas>                                   canvas;
+			pipeline::Process<StrokesReader>                            reader(optionFilename.as<std::string>());
+			pipeline::Process<StrokesWriter>                            writer(optionFilename.as<std::string>());
 
 			// connect process nodes
 			window->setInput(zoomView->getOutput());
-			zoomView->setInput(canvasView->getOutput("painter"));
+			zoomView->setInput(overlayView->getOutput());
+			overlayView->addInput(osd->getOutput("osd painter"));
+			overlayView->addInput(canvasView->getOutput());
 			canvasView->setInput(canvas->getOutput("strokes"));
-			canvas->setInput(reader->getOutput());
+			canvas->setInput("initial strokes", reader->getOutput());
+			canvas->setInput("pen mode", osd->getOutput("pen mode"));
 			writer->setInput(canvas->getOutput());
 
 			// enter window main loop

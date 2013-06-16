@@ -56,6 +56,8 @@ CanvasView::onPenMove(const gui::PenMove& signal) {
 	LOG_ALL(canvasviewlog) << "the pen moved to " << signal.position << std::endl;
 
 	_lastPen = signal.position;
+	_painter->setCursorPosition(signal.position);
+	_contentChanged();
 }
 
 void
@@ -85,6 +87,9 @@ CanvasView::onPenOut(const gui::PenOut& /*signal*/) {
 void
 CanvasView::onFingerDown(const gui::FingerDown& signal) {
 
+	if (signal.processed)
+		return;
+
 	LOG_ALL(canvasviewlog) << "a finger was put down (" << _fingerDown.size() << " fingers now)" << std::endl;
 
 	_fingerDown[signal.id] = signal;
@@ -92,6 +97,9 @@ CanvasView::onFingerDown(const gui::FingerDown& signal) {
 
 void
 CanvasView::onFingerMove(const gui::FingerMove& signal) {
+
+	if (signal.processed)
+		return;
 
 	LOG_ALL(canvasviewlog) << "a finger is moved" << std::endl;
 
@@ -150,6 +158,9 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 void
 CanvasView::onFingerUp(const gui::FingerUp& signal) {
+
+	if (signal.processed)
+		return;
 
 	std::map<int, gui::FingerSignal>::iterator i = _fingerDown.find(signal.id);
 	if (i != _fingerDown.end())

@@ -19,11 +19,11 @@ CanvasPainter::CanvasPainter() :
 	_previousShift(0, 0),
 	_previousScale(0, 0),
 	_previousPixelRoi(0, 0, 0, 0),
-	_state(Moving) {
+	_state(Moving),
+	_cursorPosition(0, 0) {
 
 	_cairoPainter.setDeviceTransformation(_scale, _shift);
 	_cairoCleanUpPainter.setDeviceTransformation(_scale, _shift);
-
 }
 
 void
@@ -144,6 +144,15 @@ CanvasPainter::draw(
 	}
 
 	drawTexture(pixelRoi);
+
+	// draw cursor
+	glColor3f(0, 0, 0);
+	glBegin(GL_QUADS);
+	glVertex2d(_cursorPosition.x - 2, _cursorPosition.y - 2);
+	glVertex2d(_cursorPosition.x - 2, _cursorPosition.y + 2);
+	glVertex2d(_cursorPosition.x + 2, _cursorPosition.y + 2);
+	glVertex2d(_cursorPosition.x + 2, _cursorPosition.y - 2);
+	glEnd();
 
 	_previousShift    = _shift;
 	_previousScale    = _scale;

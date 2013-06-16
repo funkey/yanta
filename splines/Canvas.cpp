@@ -10,6 +10,7 @@ Canvas::Canvas() :
 	_initialStrokesModified(false) {
 
 	registerOutput(_strokes, "strokes");
+	registerInput(_penMode, "pen mode");
 	registerInput(_initialStrokes, "initial strokes", pipeline::Optional);
 
 	_strokes.registerForwardSlot(_changedArea);
@@ -58,6 +59,7 @@ Canvas::onPenDown(const gui::PenDown& signal) {
 	LOG_DEBUG(canvaslog) << "accepting" << std::endl;
 
 	_strokes->createNewStroke();
+	_strokes->currentStroke().setStyle(_penMode->getStyle());
 	_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
 	_penDown = true;
 
