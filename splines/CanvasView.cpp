@@ -92,7 +92,6 @@ CanvasView::onFingerDown(const gui::FingerDown& signal) {
 
 	LOG_ALL(canvasviewlog) << "a finger was put down (" << _fingerDown.size() << " fingers now)" << std::endl;
 
-	_painter->setMode(CanvasPainter::Moving);
 	_fingerDown[signal.id] = signal;
 }
 
@@ -141,6 +140,7 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 		return;
 
 	// set drag
+	_painter->setMode(CanvasPainter::Moving);
 	_painter->drag(moved);
 
 	// set zoom
