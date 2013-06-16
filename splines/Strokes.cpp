@@ -6,7 +6,7 @@ logger::LogChannel strokeslog("strokeslog", "[Strokes] ");
 util::rect<double>
 Strokes::erase(const util::point<double>& position, double radius) {
 
-	LOG_ALL(strokeslog) << "erasing at " << position << " with radius " << radius << std::endl;
+	//LOG_ALL(strokeslog) << "erasing at " << position << " with radius " << radius << std::endl;
 
 	util::rect<double> eraseBoundingBox(
 			position.x - radius,
@@ -21,7 +21,7 @@ Strokes::erase(const util::point<double>& position, double radius) {
 	for (unsigned int i = 0; i < n; i++)
 		if (getStroke(i).boundingBox().intersects(eraseBoundingBox)) {
 
-			LOG_ALL(strokeslog) << "stroke " << i << " is close to the erase position" << std::endl;
+			//LOG_ALL(strokeslog) << "stroke " << i << " is close to the erase position" << std::endl;
 
 			util::rect<double> changedStrokeArea = erase(&getStroke(i), position, radius*radius);
 
@@ -57,7 +57,7 @@ Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius2
 	unsigned long begin = stroke->begin();
 	unsigned long end   = stroke->end() - 1;
 
-	LOG_ALL(strokeslog) << "testing stroke lines " << begin << " until " << end << std::endl;
+	LOG_ALL(strokeslog) << "testing stroke lines " << begin << " until " << (end - 1) << std::endl;
 
 	Style style = stroke->getStyle();
 	bool wasErasing = false;
@@ -87,7 +87,7 @@ Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius2
 
 				LOG_ALL(strokeslog) << "this is the first line to erase on this stroke" << std::endl;
 
-				stroke->setEnd(i);
+				stroke->setEnd(i+1);
 				stroke->finish(_strokePoints);
 				wasErasing = true;
 			}
