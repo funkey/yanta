@@ -10,9 +10,20 @@
 #include "PrefetchTexture.h"
 #include "Strokes.h"
 
+extern logger::LogChannel canvaspainterlog;
+
 class CanvasPainter : public gui::Painter {
 
 public:
+
+	/**
+	 * The possible states of the CanvasPainter.
+	 */
+	enum CanvasPainterMode {
+
+		IncrementalDrawing,
+		Moving
+	};
 
 	CanvasPainter();
 
@@ -25,8 +36,12 @@ public:
 
 	void setCursorPosition(const util::point<double>& position) {
 
+		LOG_ALL(canvaspainterlog) << "cursor set to position " << position << std::endl;
+
 		_cursorPosition = position;
 	}
+
+	void setMode(CanvasPainterMode mode);
 
 	void draw(
 			const util::rect<double>&  roi,
@@ -92,15 +107,6 @@ private:
 	 */
 	void drawTexture(const util::rect<int>& roi);
 
-	/**
-	 * The possible states of the CanvasPainter.
-	 */
-	enum CanvasPainterState {
-
-		IncrementalDrawing,
-		Moving
-	};
-
 	// the strokes to draw
 	boost::shared_ptr<Strokes> _strokes;
 
@@ -135,7 +141,7 @@ private:
 
 	util::rect<int> _previousPixelRoi;
 
-	CanvasPainterState _state;
+	CanvasPainterMode _mode;
 
 	// the position of the cursor to draw in screen pixels
 	util::point<double> _cursorPosition;

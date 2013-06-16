@@ -92,6 +92,7 @@ CanvasView::onFingerDown(const gui::FingerDown& signal) {
 
 	LOG_ALL(canvasviewlog) << "a finger was put down (" << _fingerDown.size() << " fingers now)" << std::endl;
 
+	_painter->setMode(CanvasPainter::Moving);
 	_fingerDown[signal.id] = signal;
 }
 
@@ -166,7 +167,7 @@ CanvasView::onFingerUp(const gui::FingerUp& signal) {
 	if (i != _fingerDown.end())
 		_fingerDown.erase(i);
 
-	_painter->startIncrementalDrawing();
+	_painter->setMode(CanvasPainter::IncrementalDrawing);
 	_contentChanged();
 }
 

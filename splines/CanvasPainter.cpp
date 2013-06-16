@@ -19,7 +19,7 @@ CanvasPainter::CanvasPainter() :
 	_previousShift(0, 0),
 	_previousScale(0, 0),
 	_previousPixelRoi(0, 0, 0, 0),
-	_state(Moving),
+	_mode(IncrementalDrawing),
 	_cursorPosition(0, 0) {
 
 	_cairoPainter.setDeviceTransformation(_scale, _shift);
@@ -75,6 +75,15 @@ CanvasPainter::canvasToTexture(const util::point<double>& point) {
 }
 
 void
+CanvasPainter::setMode(CanvasPainterMode mode) {
+
+	if (mode == IncrementalDrawing && _mode != IncrementalDrawing)
+		startIncrementalDrawing();
+
+	_mode = mode;
+}
+
+void
 CanvasPainter::draw(
 		const util::rect<double>&  roi,
 		const util::point<double>& resolution) {
@@ -104,16 +113,26 @@ CanvasPainter::draw(
 	if (prepareTexture(pixelRoi))
 		initiateFullRedraw(pixelRoi);
 
-	// transformation did not change
-	if (_shift == _previousShift && _scale == _previousScale) {
+	// scale changed -- texture needs to be redrawn completely
+	if (_scale != _previousScale) {
+
+		LOG_ALL(canvaspainterlog) << "scale changed" << std::endl;
+
+		initiateFullRedraw(pixelRoi);
+		startIncrementalDrawing(pixelRoi);
+
+	// shift changed -- move prefetch texture
+	} else if (_shift != _previousShift) {
+
+		LOG_ALL(canvaspainterlog) << "transformation moved by " << (_shift - _previousShift) << std::endl;
+
+		// show a different part of the canvas texture
+		_canvasTexture->shift(_shift - _previousShift);
+
+	// transformation did not change and we are in incremental drawing mode
+	} else if (_mode == IncrementalDrawing) {
 
 		LOG_ALL(canvaspainterlog) << "transformation did not change -- I just quickly update the strokes" << std::endl;
-
-		if (_state == Moving) {
-		
-			LOG_ALL(canvaspainterlog) << "I was moving, previously" << std::endl;
-			startIncrementalDrawing(pixelRoi);
-		}
 
 		if (pixelRoi != _previousPixelRoi) {
 
@@ -121,26 +140,8 @@ CanvasPainter::draw(
 			startIncrementalDrawing(pixelRoi);
 		}
 
-		updateStrokes(*_strokes, pixelRoi);
-
-	// scale changed -- texture needs to be redrawn completely
-	} else if (_scale != _previousScale) {
-
-		LOG_ALL(canvaspainterlog) << "scale changed" << std::endl;
-
-		_state = Moving;
-
-		initiateFullRedraw(pixelRoi);
-
-	// shift changed -- move prefetch texture
-	} else {
-
-		LOG_ALL(canvaspainterlog) << "transformation moved by " << (_shift - _previousShift) << std::endl;
-
-		_state = Moving;
-
-		// show a different part of the canvas texture
-		_canvasTexture->shift(_shift - _previousShift);
+		if (_mode != Moving)
+			updateStrokes(*_strokes, pixelRoi);
 	}
 
 	drawTexture(pixelRoi);
@@ -223,7 +224,7 @@ CanvasPainter::markDirty(const util::rect<double>& area) {
 	util::rect<int> pixelArea(ul.x - 1, ul.y - 1, lr.x + 1, lr.y +1);
 
 	// are we currently looking at this area?
-	if (_state == IncrementalDrawing && pixelArea.intersects(_previousPixelRoi)) {
+	if (_mode == IncrementalDrawing && pixelArea.intersects(_previousPixelRoi)) {
 
 		LOG_ALL(canvaspainterlog) << "redrawing " << pixelArea << std::endl;
 
@@ -263,7 +264,7 @@ CanvasPainter::startIncrementalDrawing(const util::rect<int>& roi) {
 		_canvasTexture->setWorkingArea(roi);
 	_cairoPainter.resetIncrementalMemory();
 
-	_state = IncrementalDrawing;
+	_mode = IncrementalDrawing;
 }
 
 void
