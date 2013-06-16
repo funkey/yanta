@@ -14,7 +14,7 @@ bool
 SkiaCanvasPainter::alreadyDrawn(const Strokes& strokes) {
 
 	// is it necessary to draw something?
-	if (strokes.numStrokes() > 0 && _drawnUntilStrokePoint == strokes.currentStroke().end() - (strokes.currentStroke().finished() ? 1 : 0))
+	if (strokes.numStrokes() > 0 && _drawnUntilStrokePoint == strokes.currentStroke().end() - (strokes.currentStroke().finished() ? 0 : 1))
 		return true;
 
 	return false;
@@ -66,7 +66,7 @@ SkiaCanvasPainter::draw(
 	boost::shared_lock<boost::shared_mutex> lock(_strokes->getStrokePoints().getMutex());
 
 	// reset temporal memory about what we drew already
-	_drawnUntilStrokePointTmp = 0;
+	_drawnUntilStrokePointTmp = _drawnUntilStrokePoint;
 
 	// draw the (new) strokes in the current part
 	for (unsigned int i = 0; i < _strokes->numStrokes(); i++) {
@@ -79,11 +79,11 @@ SkiaCanvasPainter::draw(
 		long end   = (long)stroke.end() - (stroke.finished() ? 0 : 1);
 
 		// drawn already?
-		if (end <= (long)_drawnUntilStrokePoint) {
-
-			LOG_ALL(skiacanvaspainterlog) << "stroke " << i << " was drawn already" << std::endl;
+		if (end <= (long)_drawnUntilStrokePoint)
 			continue;
-		}
+
+		// remember the biggest point we drew already
+		_drawnUntilStrokePointTmp = std::max(_drawnUntilStrokePointTmp, (unsigned long)end);
 
 		// draw only of no roi given or stroke intersects roi
 		if (canvasRoi.width() == 0 || !stroke.finished() || stroke.boundingBox().intersects(canvasRoi)) {
@@ -99,9 +99,6 @@ SkiaCanvasPainter::draw(
 
 			LOG_ALL(skiacanvaspainterlog) << "stroke " << i << " is not visible" << std::endl;
 		}
-
-		// remember the biggest point we drew already
-		_drawnUntilStrokePointTmp = std::max(_drawnUntilStrokePointTmp, (unsigned long)end);
 	}
 
 	canvas.restore();
@@ -156,8 +153,6 @@ SkiaCanvasPainter::drawStroke(
 
 	// for each line in the stroke
 	for (unsigned long i = beginStroke; i < endStroke - 1; i++) {
-
-		LOG_ALL(skiacanvaspainterlog) << "\tdrawing line " << i << std::endl;
 
 		//double alpha = alphaPressureCurve(stroke[i].pressure);
 		double widthStart = 0.5*widthPressureCurve(strokePoints[i  ].pressure)*penWidth;
