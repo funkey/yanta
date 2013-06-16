@@ -23,7 +23,7 @@ Strokes::erase(const util::point<double>& position, double radius) {
 
 			LOG_ALL(strokeslog) << "stroke " << i << " is close to the erase position" << std::endl;
 
-			util::rect<double> changedStrokeArea = erase(&getStroke(i), position, radius);
+			util::rect<double> changedStrokeArea = erase(&getStroke(i), position, radius*radius);
 
 			if (changedArea.width() == 0) {
 
@@ -47,7 +47,7 @@ Strokes::erase(const util::point<double>& position, double radius) {
 }
 
 util::rect<double>
-Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius) {
+Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius2) {
 
 	util::rect<double> changedArea(0, 0, 0, 0);
 
@@ -66,7 +66,7 @@ Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius)
 	for (unsigned long i = begin; i < end; i++) {
 
 		// this line should be erased
-		if (intersectsErasorCircle(_strokePoints[i].position, _strokePoints[i+1].position, center, radius)) {
+		if (intersectsErasorCircle(_strokePoints[i].position, _strokePoints[i+1].position, center, radius2)) {
 
 			LOG_ALL(strokeslog) << "line " << i << " needs to be erased" << std::endl;
 

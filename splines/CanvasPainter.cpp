@@ -109,8 +109,17 @@ CanvasPainter::draw(
 
 		LOG_ALL(canvaspainterlog) << "transformation did not change -- I just quickly update the strokes" << std::endl;
 
-		if (_state == Moving || pixelRoi != _previousPixelRoi)
+		if (_state == Moving) {
+		
+			LOG_ALL(canvaspainterlog) << "I was moving, previously" << std::endl;
 			startIncrementalDrawing(pixelRoi);
+		}
+
+		if (pixelRoi != _previousPixelRoi) {
+
+			LOG_ALL(canvaspainterlog) << "The ROI changed" << std::endl;
+			startIncrementalDrawing(pixelRoi);
+		}
 
 		updateStrokes(*_strokes, pixelRoi);
 
