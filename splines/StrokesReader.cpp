@@ -21,7 +21,7 @@ StrokesReader::updateOutputs() {
 
 	readStrokePoints(in);
 
-	unsigned int numStrokes;
+	unsigned int numStrokes = 0;
 	in >> numStrokes;
 
 	for (unsigned int i = 0; i < numStrokes; i++)
@@ -31,7 +31,7 @@ StrokesReader::updateOutputs() {
 void
 StrokesReader::readStrokePoints(std::ifstream& in) {
 
-	unsigned long numPoints;
+	unsigned long numPoints = 0;
 	in >> numPoints;
 
 	double x, y, pressure;

@@ -19,7 +19,7 @@ StrokesWriter::write() {
 
 	// skip the last stroke, if it wasn't started, yet
 	unsigned int numStrokes = _strokes->numStrokes();
-	if (_strokes->currentStroke().size() <= 1)
+	if (numStrokes > 0 && _strokes->currentStroke().size() <= 1)
 		numStrokes--;
 
 	out << numStrokes << std::endl;;
