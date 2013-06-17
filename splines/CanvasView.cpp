@@ -32,6 +32,8 @@ CanvasView::~CanvasView() {
 
 	_backgroundPainterStopped = true;
 	_backgroundThread.join();
+
+	LOG_DEBUG(canvasviewlog) << "background rendering thread stopped" << std::endl;
 }
 
 void
@@ -53,8 +55,6 @@ CanvasView::filter(gui::PointerSignal& signal) {
 void
 CanvasView::onPenMove(const gui::PenMove& signal) {
 
-	LOG_ALL(canvasviewlog) << "the pen moved to " << signal.position << std::endl;
-
 	_lastPen = signal.position;
 	_painter->setCursorPosition(signal.position);
 	_contentChanged();
@@ -62,8 +62,6 @@ CanvasView::onPenMove(const gui::PenMove& signal) {
 
 void
 CanvasView::onMouseMove(const gui::MouseMove& signal) {
-
-	LOG_ALL(canvasviewlog) << "the mouse moved to " << signal.position << std::endl;
 
 	// the mouse cursor gives hints about the position of the pen (which the 
 	// PenIn cannot tell us)
@@ -87,7 +85,7 @@ CanvasView::onPenOut(const gui::PenOut& /*signal*/) {
 void
 CanvasView::onFingerDown(const gui::FingerDown& signal) {
 
-	if (signal.processed)
+	if (signal.processed || locked(signal.timestamp, signal.position))
 		return;
 
 	LOG_ALL(canvasviewlog) << "a finger was put down (" << _fingerDown.size() << " fingers now)" << std::endl;
@@ -103,16 +101,31 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 	LOG_ALL(canvasviewlog) << "a finger is moved" << std::endl;
 
-	if (_fingerDown.size() > 2)
-		return;
-
 	// get the moving finger
 	std::map<int, gui::FingerSignal>::iterator i = _fingerDown.find(signal.id);
 	if (i == _fingerDown.end()) {
 
-		LOG_ERROR(canvasviewlog) << "got a move from unseen finger " << signal.id << std::endl;
+		LOG_ALL(canvasviewlog) << "got a move from unseen (or ignored) finger " << signal.id << std::endl;
 		return;
 	}
+
+	// is there a reason not to accept the drag and zoom?
+	if (locked(signal.timestamp, signal.position)) {
+
+		LOG_ALL(canvasviewlog) << "finger " << signal.id << " is locked -- erase it" << std::endl;
+
+		// don't listen to this finger anymore
+		_fingerDown.erase(i);
+
+		// this is like moving a valid finger up
+		_painter->prepareDrawing();
+		_contentChanged();
+
+		return;
+	}
+
+	if (_fingerDown.size() > 2)
+		return;
 
 	// get the previous position of the finger
 	util::point<double>& previousPosition = i->second.position;
@@ -134,10 +147,6 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 	// update remembered position
 	previousPosition = signal.position;
-
-	// is there a reason not to accept the drag and zoom?
-	if (locked(signal.timestamp, signal.position))
-		return;
 
 	// set drag
 	_painter->drag(moved);
@@ -162,12 +171,23 @@ CanvasView::onFingerUp(const gui::FingerUp& signal) {
 	if (signal.processed)
 		return;
 
-	std::map<int, gui::FingerSignal>::iterator i = _fingerDown.find(signal.id);
-	if (i != _fingerDown.end())
-		_fingerDown.erase(i);
+	LOG_ALL(canvasviewlog) << "finger " << signal.id << " finger was moved up" << std::endl;
 
-	_painter->prepareDrawing();
-	_contentChanged();
+	std::map<int, gui::FingerSignal>::iterator i = _fingerDown.find(signal.id);
+
+	// is this one of the fingers we are listening to?
+	if (i != _fingerDown.end()) {
+
+		LOG_ALL(canvasviewlog) << "this is one of the fingers I am listening to" << std::endl;
+
+		_fingerDown.erase(i);
+		_painter->prepareDrawing();
+		_contentChanged();
+
+	} else {
+
+		LOG_ALL(canvasviewlog) << "this finger is ignored" << std::endl;
+	}
 }
 
 void

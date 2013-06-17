@@ -115,7 +115,6 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 		return;
 	}
 
-	signal.processed = true;
 	setDirty(_penMode);
 	setDirty(_painter);
 }
