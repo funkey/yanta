@@ -16,15 +16,6 @@ class CanvasPainter : public gui::Painter {
 
 public:
 
-	/**
-	 * The possible states of the CanvasPainter.
-	 */
-	enum CanvasPainterMode {
-
-		IncrementalDrawing,
-		Moving
-	};
-
 	CanvasPainter();
 
 	void setStrokes(boost::shared_ptr<Strokes> strokes) {
@@ -41,8 +32,6 @@ public:
 		_cursorPosition = position;
 	}
 
-	void setMode(CanvasPainterMode mode);
-
 	void draw(
 			const util::rect<double>&  roi,
 			const util::point<double>& resolution);
@@ -56,6 +45,11 @@ public:
 	 * Request a zoom by the given scale, centered around anchor.
 	 */
 	void zoom(double zoomChange, const util::point<double>& anchor);
+
+	/**
+	 * Prepare for drawing. Call this after drag() or zoom().
+	 */
+	void prepareDrawing(const util::rect<int>& roi = util::rect<int>(0, 0, 0, 0));
 
 	/**
 	 * Transform a point from screen pixel units to canvas units.
@@ -83,12 +77,17 @@ public:
 	 */
 	bool cleanDirtyAreas(unsigned int maxNumRequests);
 
-	/**
-	 * Prepare buffers for incremental updates.
-	 */
-	void startIncrementalDrawing(const util::rect<int>& roi = util::rect<int>(0, 0, 0, 0));
-
 private:
+
+	/**
+	 * The possible states of the CanvasPainter.
+	 */
+	enum CanvasPainterMode {
+
+		IncrementalDrawing,
+		Moving,
+		Zooming
+	};
 
 	void initiateFullRedraw(const util::rect<int>& roi);
 

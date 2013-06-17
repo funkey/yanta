@@ -140,7 +140,6 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 		return;
 
 	// set drag
-	_painter->setMode(CanvasPainter::Moving);
 	_painter->drag(moved);
 
 	// set zoom
@@ -167,7 +166,7 @@ CanvasView::onFingerUp(const gui::FingerUp& signal) {
 	if (i != _fingerDown.end())
 		_fingerDown.erase(i);
 
-	_painter->setMode(CanvasPainter::IncrementalDrawing);
+	_painter->prepareDrawing();
 	_contentChanged();
 }
 

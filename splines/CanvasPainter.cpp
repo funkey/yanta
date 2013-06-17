@@ -35,6 +35,8 @@ CanvasPainter::drag(const util::point<double>& direction) {
 	d.y = (int)round(direction.y);
 
 	_shift += d;
+
+	_mode = Moving;
 }
 
 void
@@ -51,6 +53,8 @@ CanvasPainter::zoom(double zoomChange, const util::point<double>& anchor) {
 	// we are taking care of the translation
 	_cairoPainter.setDeviceTransformation(_scale, util::point<double>(0.0, 0.0));
 	_cairoCleanUpPainter.setDeviceTransformation(_scale, util::point<double>(0.0, 0.0));
+
+	_mode = Zooming;
 }
 
 util::point<double>
@@ -72,15 +76,6 @@ CanvasPainter::canvasToTexture(const util::point<double>& point) {
 	inv *= _scale;
 
 	return inv;
-}
-
-void
-CanvasPainter::setMode(CanvasPainterMode mode) {
-
-	if (mode == IncrementalDrawing && _mode != IncrementalDrawing)
-		startIncrementalDrawing();
-
-	_mode = mode;
 }
 
 void
@@ -113,40 +108,63 @@ CanvasPainter::draw(
 	if (prepareTexture(pixelRoi))
 		initiateFullRedraw(pixelRoi);
 
-	// scale changed -- texture needs to be redrawn completely
-	if (_scale != _previousScale) {
+	if (_mode == IncrementalDrawing) {
 
-		LOG_ALL(canvaspainterlog) << "scale changed" << std::endl;
+		// scale changed while we are in drawing mode -- texture needs to be 
+		// redrawn completely
+		if (_scale != _previousScale) {
 
-		initiateFullRedraw(pixelRoi);
-		startIncrementalDrawing(pixelRoi);
+			LOG_DEBUG(canvaspainterlog) << "scale changed while we are in drawing mode" << std::endl;
 
-	// shift changed -- move prefetch texture
-	} else if (_shift != _previousShift) {
+			initiateFullRedraw(pixelRoi);
+			prepareDrawing(pixelRoi);
 
-		LOG_ALL(canvaspainterlog) << "transformation moved by " << (_shift - _previousShift) << std::endl;
+		// shift changed in incremental drawing mode -- move prefetch texture 
+		// and get back to incremental drawing
+		} else if (_shift != _previousShift) {
 
-		// show a different part of the canvas texture
-		_canvasTexture->shift(_shift - _previousShift);
+			LOG_DEBUG(canvaspainterlog) << "shift changed while we are in drawing mode" << std::endl;
 
-	// transformation did not change and we are in incremental drawing mode
-	} else if (_mode == IncrementalDrawing) {
+			_canvasTexture->shift(_shift - _previousShift);
+			prepareDrawing(pixelRoi);
 
-		LOG_ALL(canvaspainterlog) << "transformation did not change -- I just quickly update the strokes" << std::endl;
+		// transformation did not change
+		} else {
 
-		if (pixelRoi != _previousPixelRoi) {
+			LOG_ALL(canvaspainterlog) << "transformation did not change -- I just quickly update the strokes" << std::endl;
 
-			LOG_ALL(canvaspainterlog) << "The ROI changed" << std::endl;
-			startIncrementalDrawing(pixelRoi);
-		}
+			if (pixelRoi != _previousPixelRoi) {
 
-		if (_mode != Moving)
+				LOG_ALL(canvaspainterlog) << "The ROI changed" << std::endl;
+				prepareDrawing(pixelRoi);
+			}
+
 			updateStrokes(*_strokes, pixelRoi);
+		}
 	}
 
+	if (_mode == Moving) {
+
+		// shift changed in move mode -- just move prefetch texture
+		if (_shift != _previousShift) {
+
+			LOG_ALL(canvaspainterlog) << "shift changed by " << (_shift - _previousShift) << std::endl;
+
+			// show a different part of the canvas texture
+			_canvasTexture->shift(_shift - _previousShift);
+		}
+	}
+
+	if (_mode == Zooming) {
+
+		// TODO: show scaled version of texture
+		initiateFullRedraw(pixelRoi);
+	}
+
+	// draw the canvas
 	drawTexture(pixelRoi);
 
-	// draw cursor
+	// draw the cursor
 	glColor3f(0, 0, 0);
 	glBegin(GL_QUADS);
 	glVertex2d(_cursorPosition.x - 2, _cursorPosition.y - 2);
@@ -155,6 +173,7 @@ CanvasPainter::draw(
 	glVertex2d(_cursorPosition.x + 2, _cursorPosition.y - 2);
 	glEnd();
 
+	// remember configuration for next draw()
 	_previousShift    = _shift;
 	_previousScale    = _scale;
 	_previousPixelRoi = pixelRoi;
@@ -254,7 +273,7 @@ CanvasPainter::cleanDirtyAreas(unsigned int maxNumRequests) {
 }
 
 void
-CanvasPainter::startIncrementalDrawing(const util::rect<int>& roi) {
+CanvasPainter::prepareDrawing(const util::rect<int>& roi) {
 
 	LOG_DEBUG(canvaspainterlog) << "resetting the incremental memory" << std::endl;
 
