@@ -106,7 +106,7 @@ Canvas::onPenMove(const gui::PenMove& signal) {
 		// TODO: get radius from current erasor configuration
 		util::rect<double> dirtyArea = _strokes->erase(signal.position, 100.0);
 
-		if (dirtyArea.width() > 0) {
+		if (!dirtyArea.isZero()) {
 
 			ChangedArea signal(dirtyArea);
 			_changedArea(signal);

@@ -277,7 +277,7 @@ CanvasPainter::prepareDrawing(const util::rect<int>& roi) {
 
 	LOG_DEBUG(canvaspainterlog) << "resetting the incremental memory" << std::endl;
 
-	if (roi.width() == 0)
+	if (roi.isZero())
 		_canvasTexture->setWorkingArea(_previousPixelRoi);
 	else
 		_canvasTexture->setWorkingArea(roi);

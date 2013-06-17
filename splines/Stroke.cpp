@@ -9,7 +9,7 @@ Stroke::computeBoundingBox(const StrokePoints& points) {
 
 		const StrokePoint& point = points[i];
 
-		if (_boundingBox.width() == 0) {
+		if (_boundingBox.isZero()) {
 
 			_boundingBox.minX = point.position.x - _style.width();
 			_boundingBox.minY = point.position.y - _style.width();

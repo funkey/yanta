@@ -86,7 +86,7 @@ SkiaCanvasPainter::draw(
 		_drawnUntilStrokePointTmp = std::max(_drawnUntilStrokePointTmp, (unsigned long)end);
 
 		// draw only of no roi given or stroke intersects roi
-		if (canvasRoi.width() == 0 || !stroke.finished() || stroke.boundingBox().intersects(canvasRoi)) {
+		if (canvasRoi.isZero() || !stroke.finished() || stroke.boundingBox().intersects(canvasRoi)) {
 
 			LOG_ALL(skiacanvaspainterlog)
 					<< "drawing stroke " << i << " (" << stroke.begin() << " - " << stroke.end()

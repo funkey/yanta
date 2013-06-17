@@ -25,13 +25,13 @@ Strokes::erase(const util::point<double>& position, double radius) {
 
 			util::rect<double> changedStrokeArea = erase(&getStroke(i), position, radius*radius);
 
-			if (changedArea.width() == 0) {
+			if (changedArea.isZero()) {
 
 				changedArea = changedStrokeArea;
 
 			} else {
 
-				if (changedStrokeArea.width() != 0) {
+				if (!changedStrokeArea.isZero()) {
 
 					changedArea.minX = std::min(changedArea.minX, changedStrokeArea.minX);
 					changedArea.minY = std::min(changedArea.minY, changedStrokeArea.minY);
@@ -71,7 +71,7 @@ Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius2
 			LOG_ALL(strokeslog) << "line " << i << " needs to be erased" << std::endl;
 
 			// update the changed area
-			if (changedArea.width() == 0) {
+			if (changedArea.isZero()) {
 
 				changedArea.minX = _strokePoints[i].position.x;
 				changedArea.minY = _strokePoints[i].position.y;
@@ -81,6 +81,9 @@ Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius2
 
 			changedArea.fit(_strokePoints[i].position);
 			changedArea.fit(_strokePoints[i+1].position);
+
+			if (changedArea.isZero())
+				LOG_ERROR(strokeslog) << "the change area is empty for line " << _strokePoints[i].position << " -- " << _strokePoints[i+1].position << std::endl;
 
 			// if this is the first line to delete, we have to split
 			if (!wasErasing) {
@@ -113,7 +116,7 @@ Strokes::erase(Stroke* stroke, const util::point<double>& center, double radius2
 	}
 
 	// increase the size of the changedArea (if there is one) by the style width
-	if (changedArea.width() > 0) {
+	if (!changedArea.isZero()) {
 
 		changedArea.minX -= style.width();
 		changedArea.minY -= style.width();
