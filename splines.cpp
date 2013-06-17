@@ -86,6 +86,7 @@ int main(int optionc, char** optionv) {
 		// for OpenGl-bug)
 		gui::WindowMode mode;
 		mode.hideCursor = true;
+		mode.fullscreen = true;
 		pipeline::Process<gui::Window>   window("splines", mode);
 
 		{
