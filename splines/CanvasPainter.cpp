@@ -9,7 +9,7 @@ logger::LogChannel canvaspainterlog("canvaspainterlog", "[CanvasPainter] ");
 
 CanvasPainter::CanvasPainter() :
 	_cairoPainter(gui::skia_pixel_t(255, 255, 255)),
-	_cairoCleanUpPainter(gui::skia_pixel_t(127, 255, 255)),
+	_cairoCleanUpPainter(gui::skia_pixel_t(255, 255, 255)),
 	_prefetchLeft(1024),
 	_prefetchRight(1024),
 	_prefetchTop(1024),
