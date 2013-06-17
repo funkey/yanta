@@ -24,6 +24,16 @@ private:
 	pipeline::Output<OsdPainter> _painter;
 
 	PenMode _currentMode;
+
+	unsigned char _previousRed;
+	unsigned long _redTapTime;
+	unsigned char _previousGreen;
+	unsigned long _greenTapTime;
+	unsigned char _previousBlue;
+	unsigned long _blueTapTime;
+
+	double        _previousWidth;
+	unsigned long _widthTapTime;
 };
 
 #endif // SPLINES_OSD_H__

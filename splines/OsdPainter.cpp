@@ -29,26 +29,27 @@ OsdPainter::draw(
 	gui::OpenGl::Guard guard;
 
 	glEnable(GL_BLEND);
+	glDisable(GL_TEXTURE_2D);
 	glColor4f(1.0, 0.0, 0.0, 0.1 + (float)red/255.0*0.9);
 	glBegin(GL_QUADS);
 	glVertex2f(0, 0);
-	glVertex2f(0, 99);
-	glVertex2f(99, 99);
-	glVertex2f(99, 0);
+	glVertex2f(0, 100);
+	glVertex2f(100, 100);
+	glVertex2f(100, 0);
 	glEnd();
 	glColor4f(0.0, 1.0, 0.0, 0.1 + (float)green/255.0*0.9);
 	glBegin(GL_QUADS);
 	glVertex2f(0, 100);
 	glVertex2f(0, 200);
-	glVertex2f(99, 199);
-	glVertex2f(99, 100);
+	glVertex2f(100, 200);
+	glVertex2f(100, 100);
 	glEnd();
 	glColor4f(0.0, 0.0, 1.0, 0.1 + (float)blue/255.0*0.9);
 	glBegin(GL_QUADS);
 	glVertex2f(0, 200);
-	glVertex2f(0, 299);
-	glVertex2f(99, 299);
-	glVertex2f(99, 200);
+	glVertex2f(0, 300);
+	glVertex2f(100, 300);
+	glVertex2f(100, 200);
 	glEnd();
 
 	glColor4f(0.0, 0.0, 0.0, std::max(0.0, 0.9 - pow(1.0 - width, 2)) + 0.1);
