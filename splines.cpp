@@ -24,7 +24,8 @@ util::ProgramOption optionFilename(
 		util::_long_name        = "file",
 		util::_short_name       = "f",
 		util::_description_text = "The file you want to open/save to",
-		util::_default_value    = "strokes.dat");
+		util::_default_value    = "strokes.dat",
+		util::_is_positional    = true);
 
 void handleException(boost::exception& e) {
 
