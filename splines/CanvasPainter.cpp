@@ -277,10 +277,18 @@ CanvasPainter::prepareDrawing(const util::rect<int>& roi) {
 
 	LOG_DEBUG(canvaspainterlog) << "resetting the incremental memory" << std::endl;
 
-	if (roi.isZero())
+	if (roi.isZero()) {
+
+		if (_mode == IncrementalDrawing)
+			return;
+
 		_canvasTexture->setWorkingArea(_previousPixelRoi);
-	else
+
+	} else {
+
 		_canvasTexture->setWorkingArea(roi);
+	}
+
 	_cairoPainter.resetIncrementalMemory();
 
 	_mode = IncrementalDrawing;
