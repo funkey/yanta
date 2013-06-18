@@ -3,6 +3,7 @@
 
 #include <pipeline/all.h>
 #include <gui/FingerSignals.h>
+#include <gui/PenSignals.h>
 
 #include "OsdPainter.h"
 
@@ -16,9 +17,11 @@ private:
 
 	void updateOutputs() { *_penMode = _currentMode; _painter->setPenMode(_currentMode); }
 
+	void onFingerUp(gui::FingerUp& signal);
 	void onFingerDown(gui::FingerDown& signal);
 
-	void onFingerUp(gui::FingerUp& signal);
+	void onPenIn(const gui::PenIn& signal);
+	void onPenAway(const gui::PenAway& signal);
 
 	pipeline::Output<PenMode>    _penMode;
 	pipeline::Output<OsdPainter> _painter;
@@ -34,6 +37,8 @@ private:
 
 	double        _previousWidth;
 	unsigned long _widthTapTime;
+
+	bool _penAway;
 };
 
 #endif // SPLINES_OSD_H__

@@ -5,7 +5,8 @@ logger::LogChannel osdlog("osdlog", "[Osd] ");
 
 Osd::Osd() :
 	_previousWidth(2.0),
-	_widthTapTime(0) {
+	_widthTapTime(0),
+	_penAway(false) {
 
 	registerOutput(_penMode, "pen mode");
 	registerOutput(_painter, "osd painter");
@@ -117,4 +118,16 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 
 	setDirty(_penMode);
 	setDirty(_painter);
+}
+
+void
+Osd::onPenIn(const gui::PenIn& /*signal*/) {
+
+	_penAway = false;
+}
+
+void
+Osd::onPenAway(const gui::PenAway& /*signal*/) {
+
+	_penAway = true;
 }
