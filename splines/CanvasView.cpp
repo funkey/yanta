@@ -4,8 +4,12 @@
 logger::LogChannel canvasviewlog("canvasviewlog", "[CanvasView] ");
 
 CanvasView::CanvasView() :
+	_lastPen(0, 0),
+	_gestureStartCenter(0, 0),
+	_gestureStartDistance(0),
 	_backgroundPainterStopped(false),
-	_backgroundThread(boost::bind(&CanvasView::cleanDirtyAreas, this)) {
+	_backgroundThread(boost::bind(&CanvasView::cleanDirtyAreas, this)),
+	_mode(Nothing) {
 
 	registerInput(_strokes, "strokes");
 	registerOutput(_painter, "painter");
@@ -13,6 +17,7 @@ CanvasView::CanvasView() :
 	_strokes.registerBackwardCallback(&CanvasView::onChangedArea, this);
 
 	_painter.registerForwardSlot(_contentChanged);
+	_painter.registerForwardSlot(_fullscreen);
 
 	// establish pointer signal filter
 	PointerSignalFilter::filterBackward(_painter, _strokes, this);
@@ -41,7 +46,6 @@ CanvasView::updateOutputs() {
 
 	_painter->setStrokes(_strokes);
 
-	// TODO: do we need that?
 	_contentChanged();
 }
 
@@ -88,9 +92,7 @@ CanvasView::onFingerDown(const gui::FingerDown& signal) {
 	if (signal.processed || locked(signal.timestamp, signal.position))
 		return;
 
-	LOG_ALL(canvasviewlog) << "a finger was put down (" << _fingerDown.size() << " fingers now)" << std::endl;
-
-	_fingerDown[signal.id] = signal;
+	addFinger(signal);
 }
 
 void
@@ -113,46 +115,59 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 	if (locked(signal.timestamp, signal.position)) {
 
 		LOG_ALL(canvasviewlog) << "finger " << signal.id << " is locked -- erase it" << std::endl;
-
-		// don't listen to this finger anymore
-		_fingerDown.erase(i);
-
-		// this is like moving a valid finger up
-		_painter->prepareDrawing();
-		_contentChanged();
-
+		removeFinger(signal.id);
 		return;
 	}
 
-	if (_fingerDown.size() > 2)
-		return;
+	// update the position of the finger
+	i->second.position = signal.position;
 
-	// get the previous position of the finger
-	util::point<double>& previousPosition = i->second.position;
+	if (_mode == WindowRequests) {
 
-	// determine drag, let each finger contribute with equal weight
-	util::point<double> moved = (1.0/_fingerDown.size())*(signal.position - previousPosition);
+		LOG_ALL(canvasviewlog) << "I am in window request mode (number of fingers down == 3)" << std::endl;
 
-	// if two fingers are down, perform a zoom
-	double previousDistance = 0;
-	if (_fingerDown.size() == 2) {
+		// get the amount by which the fingers where moved
+		util::point<double> moved = getFingerCenter() - _gestureStartCenter;
+
+		LOG_ALL(canvasviewlog) << "moved by " << moved << " (" << getFingerCenter() << " - " << _gestureStartCenter << ")" << std::endl;
+
+		// moved upwards
+		if (moved.y < -WindowRequestThreshold) {
+
+			LOG_ALL(canvasviewlog) << "requesting fullscreen" << std::endl;
+			_fullscreen(gui::WindowFullscreen(true));
+		}
+
+		// moved downwards
+		if (moved.y > WindowRequestThreshold) {
+
+			LOG_ALL(canvasviewlog) << "requesting no fullscreen" << std::endl;
+			_fullscreen(gui::WindowFullscreen(false));
+		}
+	}
+
+	if (_mode == StartZooming) {
+
+		if (_gestureStartDistance < ZoomMinDistance) {
+
+			_gestureStartDistance = getFingerDistance();
+			return;
+		}
+
+		double zoomed = getFingerDistance()/_gestureStartDistance;
+
+		if (std::abs(1.0 - zoomed) > ZoomThreshold)
+			_mode = Zooming;
+	}
+
+	if (_mode == Zooming) {
 
 		LOG_ALL(canvasviewlog) << "I am in zooming mode (number of fingers down == 2)" << std::endl;
 
 		// the previous distance between the fingers
-		previousDistance = getFingerDistance();
+		double previousDistance = _gestureStartDistance;
 
 		LOG_ALL(canvasviewlog) << "previous finger distance was " << previousDistance << std::endl;
-	}
-
-	// update remembered position
-	previousPosition = signal.position;
-
-	// set drag
-	_painter->drag(moved);
-
-	// set zoom
-	if (_fingerDown.size() == 2) {
 
 		double distance = getFingerDistance();
 
@@ -160,9 +175,38 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 		LOG_ALL(canvasviewlog) << "zooming by " << (distance/previousDistance) << " with center at " << getFingerCenter() << std::endl;
 
 		_painter->zoom(distance/previousDistance, getFingerCenter());
+
+		// remember last distance
+		_gestureStartDistance = distance;
+
+		_contentChanged();
+
+		return;
 	}
 
-	_contentChanged();
+	if (_mode == StartDragging) {
+
+		util::point<double> moved = getFingerCenter() - _gestureStartCenter;
+
+		if (moved.x*moved.x + moved.y*moved.y > DragThreshold2)
+			_mode = Dragging;
+	}
+
+	if (_mode == Dragging) {
+
+		// determine drag, let each finger contribute with equal weight
+		util::point<double> drag = (1.0/_fingerDown.size())*(signal.position - _gestureStartCenter);
+
+		// set drag
+		_painter->drag(drag);
+
+		// remember last dragging position
+		_gestureStartCenter = getFingerCenter();
+
+		_contentChanged();
+
+		return;
+	}
 }
 
 void
@@ -171,9 +215,25 @@ CanvasView::onFingerUp(const gui::FingerUp& signal) {
 	if (signal.processed)
 		return;
 
-	LOG_ALL(canvasviewlog) << "finger " << signal.id << " finger was moved up" << std::endl;
+	removeFinger(signal.id);
+}
 
-	std::map<int, gui::FingerSignal>::iterator i = _fingerDown.find(signal.id);
+void
+CanvasView::addFinger(const gui::FingerDown& signal) {
+
+	LOG_ALL(canvasviewlog) << "a finger was put down (" << _fingerDown.size() << " fingers now)" << std::endl;
+
+	_fingerDown[signal.id] = signal;
+	initGesture();
+	setMode();
+}
+
+void
+CanvasView::removeFinger(unsigned int id) {
+
+	LOG_ALL(canvasviewlog) << "finger " << id << " finger was moved up" << std::endl;
+
+	std::map<int, gui::FingerSignal>::iterator i = _fingerDown.find(id);
 
 	// is this one of the fingers we are listening to?
 	if (i != _fingerDown.end()) {
@@ -183,11 +243,43 @@ CanvasView::onFingerUp(const gui::FingerUp& signal) {
 		_fingerDown.erase(i);
 		_painter->prepareDrawing();
 		_contentChanged();
+		initGesture();
+		setMode();
 
 	} else {
 
 		LOG_ALL(canvasviewlog) << "this finger is ignored" << std::endl;
 	}
+}
+
+void
+CanvasView::setMode() {
+
+	switch (_fingerDown.size()) {
+
+		case 1:
+			_mode = StartDragging;
+			break;
+
+		case 2:
+			_mode = StartZooming;
+			break;
+
+		case 3:
+			_mode = WindowRequests;
+			break;
+
+		default:
+			_mode = Nothing;
+			break;
+	}
+}
+
+void
+CanvasView::initGesture() {
+
+	_gestureStartCenter   = getFingerCenter();
+	_gestureStartDistance = getFingerDistance();
 }
 
 void
