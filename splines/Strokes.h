@@ -67,6 +67,12 @@ public:
 	util::rect<double> erase(const util::point<double>& position, double radius);
 
 	/**
+	 * Virtually erase strokes that intersect with the given line by setting 
+	 * their end to their start.
+	 */
+	util::rect<double> erase(const util::point<double>& begin, const util::point<double>& end);
+
+	/**
 	 * Get a stroke by its index.
 	 */
 	inline Stroke& getStroke(unsigned int i) { return _strokes[i]; }
@@ -96,11 +102,29 @@ private:
 			const util::point<double>& position,
 			double radius);
 
+	/**
+	 * Erase the given stroke if it intersects the line.
+	 */
+	util::rect<double> erase(
+			Stroke* stroke,
+			const util::point<double>& lineBegin,
+			const util::point<double>& lineEnd);
+
 	bool intersectsErasorCircle(
 			const util::point<double> lineStart,
 			const util::point<double> lineEnd,
 			const util::point<double> center,
 			double radius2);
+
+	/**
+	 * Test, whether the lines p + t*r and q + u*s, with t and u in [0,1], 
+	 * intersect.
+	 */
+	bool intersectLines(
+			const util::point<double>& p,
+			const util::point<double>& r,
+			const util::point<double>& q,
+			const util::point<double>& s);
 
 	// global list of stroke points
 	StrokePoints _strokePoints;

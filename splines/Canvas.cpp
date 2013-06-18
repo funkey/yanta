@@ -44,26 +44,33 @@ Canvas::onPenDown(const gui::PenDown& signal) {
 
 	LOG_DEBUG(canvaslog) << "pen down (button " << signal.button << ")" << std::endl;
 
+	if (signal.button == gui::buttons::Left) {
+
+		_penDown = true;
+
+		if (!_erase) {
+
+			LOG_DEBUG(canvaslog) << "accepting" << std::endl;
+
+			_strokes->createNewStroke();
+			_strokes->currentStroke().setStyle(_penMode->getStyle());
+			_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+		}
+	}
+
 	if (signal.button == gui::buttons::Middle) {
 
 		_erase = true;
-		return;
+		_previousErasePosition = signal.position;
+
+		if (_penDown) {
+
+			_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+			_strokes->finishCurrentStroke();
+
+			setDirty(_strokes);
+		}
 	}
-
-	if (signal.button != gui::buttons::Left)
-		return;
-
-	if (signal.modifiers & gui::keys::ControlDown)
-		return;
-
-	LOG_DEBUG(canvaslog) << "accepting" << std::endl;
-
-	_strokes->createNewStroke();
-	_strokes->currentStroke().setStyle(_penMode->getStyle());
-	_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
-	_penDown = true;
-
-	setDirty(_strokes);
 }
 
 void
@@ -71,26 +78,32 @@ Canvas::onPenUp(const gui::PenUp& signal) {
 
 	LOG_DEBUG(canvaslog) << "pen up (button " << signal.button << ")" << std::endl;
 
-	if (_erase || signal.button == gui::buttons::Middle) {
+	if (signal.button == gui::buttons::Left) {
 
 		_penDown = false;
-		_erase   = false;
-		return;
+
+		if (!_erase) {
+
+			LOG_DEBUG(canvaslog) << "accepting" << std::endl;
+
+			_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+			_strokes->finishCurrentStroke();
+
+			setDirty(_strokes);
+		}
 	}
 
-	if (signal.button != gui::buttons::Left)
-		return;
+	if (signal.button == gui::buttons::Middle) {
 
-	if (signal.modifiers & gui::keys::ControlDown)
-		return;
+		_erase = false;
 
-	LOG_DEBUG(canvaslog) << "accepting" << std::endl;
+		if (_penDown) {
 
-	_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
-	_strokes->finishCurrentStroke();
-	_penDown = false;
-
-	setDirty(_strokes);
+			_strokes->createNewStroke();
+			_strokes->currentStroke().setStyle(_penMode->getStyle());
+			_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+		}
+	}
 }
 
 void
@@ -103,8 +116,9 @@ Canvas::onPenMove(const gui::PenMove& signal) {
 
 	if (_erase) {
 
-		// TODO: get radius from current erasor configuration
-		util::rect<double> dirtyArea = _strokes->erase(signal.position, 100.0);
+		util::rect<double> dirtyArea = _strokes->erase(_previousErasePosition, signal.position);
+
+		_previousErasePosition = signal.position;
 
 		if (!dirtyArea.isZero()) {
 

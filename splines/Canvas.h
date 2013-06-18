@@ -30,6 +30,7 @@ private:
 	bool _penDown;
 
 	bool _erase;
+	util::point<double> _previousErasePosition;
 
 	bool _initialStrokesModified;
 
