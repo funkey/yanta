@@ -27,7 +27,7 @@ CanvasPainter::CanvasPainter() :
 }
 
 void
-CanvasPainter::drag(const util::point<double>& direction) {
+CanvasPainter::drag(const util::point<Canvas::Precision>& direction) {
 
 	// the direction is given in (sub)pixel units, but we need integers
 	util::point<int> d;
@@ -40,7 +40,7 @@ CanvasPainter::drag(const util::point<double>& direction) {
 }
 
 void
-CanvasPainter::zoom(double zoomChange, const util::point<double>& anchor) {
+CanvasPainter::zoom(double zoomChange, const util::point<Canvas::Precision>& anchor) {
 
 	LOG_ALL(canvaspainterlog) << "changing zoom by " << zoomChange << " keeping " << anchor << " where it is" << std::endl;
 
@@ -51,16 +51,16 @@ CanvasPainter::zoom(double zoomChange, const util::point<double>& anchor) {
 	_shift  = _shift + (1 - zoomChange)*textureAnchor;
 
 	// we are taking care of the translation
-	_cairoPainter.setDeviceTransformation(_scale, util::point<double>(0.0, 0.0));
-	_cairoCleanUpPainter.setDeviceTransformation(_scale, util::point<double>(0.0, 0.0));
+	_cairoPainter.setDeviceTransformation(_scale, util::point<Canvas::Precision>(0.0, 0.0));
+	_cairoCleanUpPainter.setDeviceTransformation(_scale, util::point<Canvas::Precision>(0.0, 0.0));
 
 	_mode = Zooming;
 }
 
-util::point<double>
+util::point<Canvas::Precision>
 CanvasPainter::screenToCanvas(const util::point<double>& point) {
 
-	util::point<double> inv = point;
+	util::point<Canvas::Precision> inv = point;
 
 	inv -= _shift;
 	inv /= _scale;
@@ -69,7 +69,7 @@ CanvasPainter::screenToCanvas(const util::point<double>& point) {
 }
 
 util::point<int>
-CanvasPainter::canvasToTexture(const util::point<double>& point) {
+CanvasPainter::canvasToTexture(const util::point<Canvas::Precision>& point) {
 
 	util::point<double> inv = point;
 
@@ -233,7 +233,7 @@ CanvasPainter::initiateFullRedraw(const util::rect<int>& roi) {
 }
 
 void
-CanvasPainter::markDirty(const util::rect<double>& area) {
+CanvasPainter::markDirty(const util::rect<Canvas::Precision>& area) {
 
 	// area is in canvas units -- transform it to pixel units
 	util::point<int> ul = canvasToTexture(area.upperLeft());

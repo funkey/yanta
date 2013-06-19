@@ -30,7 +30,7 @@ private:
 	bool _penDown;
 
 	bool _erase;
-	util::point<double> _previousErasePosition;
+	util::point<Canvas::Precision> _previousErasePosition;
 
 	bool _initialCanvasModified;
 

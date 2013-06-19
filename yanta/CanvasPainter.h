@@ -25,7 +25,7 @@ public:
 		_cairoCleanUpPainter.setCanvas(canvas);
 	}
 
-	void setCursorPosition(const util::point<double>& position) {
+	void setCursorPosition(const util::point<Canvas::Precision>& position) {
 
 		LOG_ALL(canvaspainterlog) << "cursor set to position " << position << std::endl;
 
@@ -39,12 +39,12 @@ public:
 	/**
 	 * Request a drag of the painter in pixel units.
 	 */
-	void drag(const util::point<double>& direction);
+	void drag(const util::point<Canvas::Precision>& direction);
 
 	/**
 	 * Request a zoom by the given scale, centered around anchor.
 	 */
-	void zoom(double zoomChange, const util::point<double>& anchor);
+	void zoom(double zoomChange, const util::point<Canvas::Precision>& anchor);
 
 	/**
 	 * Prepare for drawing. Call this after drag() or zoom().
@@ -54,12 +54,12 @@ public:
 	/**
 	 * Transform a point from screen pixel units to canvas units.
 	 */
-	util::point<double> screenToCanvas(const util::point<double>& p);
+	util::point<Canvas::Precision> screenToCanvas(const util::point<double>& p);
 
 	/**
 	 * Transform a point from canvas units to texture pixel units.
 	 */
-	util::point<int> canvasToTexture(const util::point<double>& p);
+	util::point<int> canvasToTexture(const util::point<Canvas::Precision>& p);
 
 	/**
 	 * Manually request a full redraw.
@@ -69,7 +69,7 @@ public:
 	/**
 	 * Mark an area as dirty for redraws.
 	 */
-	void markDirty(const util::rect<double>& area);
+	void markDirty(const util::rect<Canvas::Precision>& area);
 
 	/**
 	 * Clean all dirty areas of the painter. Returns true, if there were some, 

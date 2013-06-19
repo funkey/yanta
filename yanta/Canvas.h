@@ -11,6 +11,11 @@ class Canvas : public pipeline::Data {
 public:
 
 	/**
+	 * The precision in which canvas coordinates are measured.
+	 */
+	typedef double Precision;
+
+	/**
 	 * Create a new stroke starting behind the existing points.
 	 */
 	inline void createNewStroke() {
@@ -64,13 +69,13 @@ public:
 	 * Virtually erase points within the given postion and radius by splitting 
 	 * the involved strokes.
 	 */
-	util::rect<double> erase(const util::point<double>& position, double radius);
+	util::rect<Canvas::Precision> erase(const util::point<Canvas::Precision>& position, Canvas::Precision radius);
 
 	/**
 	 * Virtually erase strokes that intersect with the given line by setting 
 	 * their end to their start.
 	 */
-	util::rect<double> erase(const util::point<double>& begin, const util::point<double>& end);
+	util::rect<Canvas::Precision> erase(const util::point<Canvas::Precision>& begin, const util::point<Canvas::Precision>& end);
 
 	/**
 	 * Get a stroke by its index.
@@ -97,34 +102,34 @@ private:
 	/**
 	 * Erase points from a stroke by splitting. Reports the changed area.
 	 */
-	util::rect<double> erase(
+	util::rect<Canvas::Precision> erase(
 			Stroke* stroke,
-			const util::point<double>& position,
-			double radius);
+			const util::point<Canvas::Precision>& position,
+			Canvas::Precision radius);
 
 	/**
 	 * Erase the given stroke if it intersects the line.
 	 */
-	util::rect<double> erase(
+	util::rect<Canvas::Precision> erase(
 			Stroke* stroke,
-			const util::point<double>& lineBegin,
-			const util::point<double>& lineEnd);
+			const util::point<Canvas::Precision>& lineBegin,
+			const util::point<Canvas::Precision>& lineEnd);
 
 	bool intersectsErasorCircle(
-			const util::point<double> lineStart,
-			const util::point<double> lineEnd,
-			const util::point<double> center,
-			double radius2);
+			const util::point<Canvas::Precision> lineStart,
+			const util::point<Canvas::Precision> lineEnd,
+			const util::point<Canvas::Precision> center,
+			Canvas::Precision radius2);
 
 	/**
 	 * Test, whether the lines p + t*r and q + u*s, with t and u in [0,1], 
 	 * intersect.
 	 */
 	bool intersectLines(
-			const util::point<double>& p,
-			const util::point<double>& r,
-			const util::point<double>& q,
-			const util::point<double>& s);
+			const util::point<Canvas::Precision>& p,
+			const util::point<Canvas::Precision>& r,
+			const util::point<Canvas::Precision>& q,
+			const util::point<Canvas::Precision>& s);
 
 	// global list of stroke points
 	StrokePoints _strokePoints;

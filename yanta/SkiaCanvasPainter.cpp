@@ -23,14 +23,14 @@ SkiaCanvasPainter::alreadyDrawn(const Canvas& canvas) {
 void
 SkiaCanvasPainter::draw(SkCanvas& canvas) {
 
-	util::rect<double> roi(0, 0, 0, 0);
+	util::rect<Canvas::Precision> roi(0, 0, 0, 0);
 	draw(canvas, roi);
 }
 
 void
 SkiaCanvasPainter::draw(
 		SkCanvas& canvas,
-		const util::rect<double>& roi) {
+		const util::rect<Canvas::Precision>& roi) {
 
 	bool incremental = (_drawnUntilStrokePoint != 0);
 

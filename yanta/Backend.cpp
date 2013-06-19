@@ -116,7 +116,7 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	if (_erase) {
 
-		util::rect<double> dirtyArea = _canvas->erase(_previousErasePosition, signal.position);
+		util::rect<Canvas::Precision> dirtyArea = _canvas->erase(_previousErasePosition, signal.position);
 
 		_previousErasePosition = signal.position;
 

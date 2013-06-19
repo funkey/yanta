@@ -57,7 +57,7 @@ public:
 	 */
 	void draw(
 			SkCanvas& context,
-			const util::rect<double>& roi);
+			const util::rect<Canvas::Precision>& roi);
 
 private:
 
@@ -66,7 +66,7 @@ private:
 	bool drawStroke(
 			SkCanvas& context,
 			const Stroke& stroke,
-			const util::rect<double>& roi,
+			const util::rect<Canvas::Precision>& roi,
 			unsigned long beginStroke,
 			unsigned long endStroke);
 

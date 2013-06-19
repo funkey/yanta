@@ -127,11 +127,11 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 		LOG_ALL(canvasviewlog) << "I am in window request mode (number of fingers down == 3)" << std::endl;
 
 		// get the amount by which the fingers where moved
-		util::point<double> moved = getFingerCenter() - _gestureStartCenter;
+		util::point<Canvas::Precision> moved = getFingerCenter() - _gestureStartCenter;
 
 		LOG_ALL(canvasviewlog) << "moved by " << moved << " (" << getFingerCenter() << " - " << _gestureStartCenter << ")" << std::endl;
 
-		double threshold = WindowRequestThreshold;
+		Canvas::Precision threshold = WindowRequestThreshold;
 
 		// moved upwards
 		if (moved.y < -threshold) {
@@ -167,11 +167,11 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 		LOG_ALL(canvasviewlog) << "I am in zooming mode (number of fingers down == 2)" << std::endl;
 
 		// the previous distance between the fingers
-		double previousDistance = _gestureStartDistance;
+		Canvas::Precision previousDistance = _gestureStartDistance;
 
 		LOG_ALL(canvasviewlog) << "previous finger distance was " << previousDistance << std::endl;
 
-		double distance = getFingerDistance();
+		Canvas::Precision distance = getFingerDistance();
 
 		LOG_ALL(canvasviewlog) << "current finger distance is " << distance << std::endl;
 		LOG_ALL(canvasviewlog) << "zooming by " << (distance/previousDistance) << " with center at " << getFingerCenter() << std::endl;
@@ -188,7 +188,7 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 	if (_mode == StartDragging) {
 
-		util::point<double> moved = getFingerCenter() - _gestureStartCenter;
+		util::point<Canvas::Precision> moved = getFingerCenter() - _gestureStartCenter;
 
 		if (moved.x*moved.x + moved.y*moved.y > DragThreshold2)
 			_mode = Dragging;
@@ -197,7 +197,7 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 	if (_mode == Dragging) {
 
 		// determine drag, let each finger contribute with equal weight
-		util::point<double> drag = (1.0/_fingerDown.size())*(signal.position - _gestureStartCenter);
+		util::point<Canvas::Precision> drag = (1.0/_fingerDown.size())*(signal.position - _gestureStartCenter);
 
 		// set drag
 		_painter->drag(drag);
@@ -293,7 +293,7 @@ CanvasView::onChangedArea(const ChangedArea& signal) {
 	_contentChanged();
 }
 
-double
+Canvas::Precision
 CanvasView::getFingerDistance() {
 
 	if (_fingerDown.size() != 2)
@@ -301,17 +301,17 @@ CanvasView::getFingerDistance() {
 
 	std::map<int, gui::FingerSignal>::const_iterator i = _fingerDown.begin();
 
-	util::point<double> diff = i->second.position;
+	util::point<Canvas::Precision> diff = i->second.position;
 	i++;
 	diff -= i->second.position;
 
 	return sqrt(diff.x*diff.x + diff.y*diff.y);
 }
 
-util::point<double>
+util::point<Canvas::Precision>
 CanvasView::getFingerCenter() {
 
-	util::point<double> center(0, 0);
+	util::point<Canvas::Precision> center(0, 0);
 	for (std::map<int, gui::FingerSignal>::const_iterator i = _fingerDown.begin(); i != _fingerDown.end(); i++)
 		center += i->second.position;
 
@@ -319,7 +319,7 @@ CanvasView::getFingerCenter() {
 }
 
 bool
-CanvasView::locked(unsigned long /*now*/, const util::point<double>& position) {
+CanvasView::locked(unsigned long /*now*/, const util::point<Canvas::Precision>& position) {
 
 	// if there is a pen, allow only dragging and moving from an area that is 
 	// clearly not the palm (of a right-handed person)

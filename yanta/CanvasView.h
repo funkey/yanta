@@ -68,9 +68,9 @@ private:
 
 	void initGesture();
 
-	double getFingerDistance();
+	Canvas::Precision getFingerDistance();
 
-	util::point<double> getFingerCenter();
+	util::point<Canvas::Precision> getFingerCenter();
 
 	void cleanDirtyAreas();
 
@@ -78,13 +78,13 @@ private:
 	 * Returns true if there was recent pen activity and finger movements should 
 	 * be ignored.
 	 */
-	bool locked(unsigned long now, const util::point<double>& position);
+	bool locked(unsigned long now, const util::point<Canvas::Precision>& position);
 
 	// number of pixels to move at once before a window request is sent
-	static const double WindowRequestThreshold = 100;
-	static const double ZoomThreshold          = 0.2;
-	static const double ZoomMinDistance        = 200;
-	static const double DragThreshold2         = 50*50;
+	static const Canvas::Precision WindowRequestThreshold = 100;
+	static const Canvas::Precision ZoomThreshold          = 0.2;
+	static const Canvas::Precision ZoomMinDistance        = 200;
+	static const Canvas::Precision DragThreshold2         = 50*50;
 
 	pipeline::Input<Canvas>        _canvas;
 	pipeline::Output<CanvasPainter> _painter;
@@ -99,12 +99,12 @@ private:
 	bool _penClose;
 
 	// the last known position of the pen
-	util::point<double> _lastPen;
+	util::point<Canvas::Precision> _lastPen;
 
 	// the center of the fingers at the beginning of a gesture (i.e., when the 
 	// number of fingers on the screen changes)
-	util::point<double> _gestureStartCenter;
-	double              _gestureStartDistance;
+	util::point<Canvas::Precision> _gestureStartCenter;
+	Canvas::Precision              _gestureStartDistance;
 
 	// used to stop the background rendering thread
 	bool _backgroundPainterStopped;

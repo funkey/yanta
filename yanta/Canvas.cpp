@@ -3,19 +3,19 @@
 
 logger::LogChannel canvaslog("canvaslog", "[Canvas] ");
 
-util::rect<double>
-Canvas::erase(const util::point<double>& begin, const util::point<double>& end) {
+util::rect<Canvas::Precision>
+Canvas::erase(const util::point<Canvas::Precision>& begin, const util::point<Canvas::Precision>& end) {
 
 	//LOG_ALL(canvaslog) << "erasing strokes that intersect line from " << begin << " to " << end << std::endl;
 
-	util::rect<double> eraseBoundingBox(
+	util::rect<Canvas::Precision> eraseBoundingBox(
 			begin.x,
 			begin.y,
 			begin.x,
 			begin.y);
 	eraseBoundingBox.fit(end);
 
-	util::rect<double> changedArea(0, 0, 0, 0);
+	util::rect<Canvas::Precision> changedArea(0, 0, 0, 0);
 
 	unsigned int n = numStrokes();
 
@@ -24,7 +24,7 @@ Canvas::erase(const util::point<double>& begin, const util::point<double>& end) 
 
 			//LOG_ALL(canvaslog) << "stroke " << i << " is close to the erase position" << std::endl;
 
-			util::rect<double> changedStrokeArea = erase(&getStroke(i), begin, end);
+			util::rect<Canvas::Precision> changedStrokeArea = erase(&getStroke(i), begin, end);
 
 			if (changedArea.isZero()) {
 
@@ -47,18 +47,18 @@ Canvas::erase(const util::point<double>& begin, const util::point<double>& end) 
 	return changedArea;
 }
 
-util::rect<double>
-Canvas::erase(const util::point<double>& position, double radius) {
+util::rect<Canvas::Precision>
+Canvas::erase(const util::point<Canvas::Precision>& position, Canvas::Precision radius) {
 
 	//LOG_ALL(canvaslog) << "erasing at " << position << " with radius " << radius << std::endl;
 
-	util::rect<double> eraseBoundingBox(
+	util::rect<Canvas::Precision> eraseBoundingBox(
 			position.x - radius,
 			position.y - radius,
 			position.x + radius,
 			position.y + radius);
 
-	util::rect<double> changedArea(0, 0, 0, 0);
+	util::rect<Canvas::Precision> changedArea(0, 0, 0, 0);
 
 	unsigned int n = numStrokes();
 
@@ -67,7 +67,7 @@ Canvas::erase(const util::point<double>& position, double radius) {
 
 			//LOG_ALL(canvaslog) << "stroke " << i << " is close to the erase position" << std::endl;
 
-			util::rect<double> changedStrokeArea = erase(&getStroke(i), position, radius*radius);
+			util::rect<Canvas::Precision> changedStrokeArea = erase(&getStroke(i), position, radius*radius);
 
 			if (changedArea.isZero()) {
 
@@ -90,10 +90,10 @@ Canvas::erase(const util::point<double>& position, double radius) {
 	return changedArea;
 }
 
-util::rect<double>
-Canvas::erase(Stroke* stroke, const util::point<double>& center, double radius2) {
+util::rect<Canvas::Precision>
+Canvas::erase(Stroke* stroke, const util::point<Canvas::Precision>& center, Canvas::Precision radius2) {
 
-	util::rect<double> changedArea(0, 0, 0, 0);
+	util::rect<Canvas::Precision> changedArea(0, 0, 0, 0);
 
 	if (stroke->begin() == stroke->end())
 		return changedArea;
@@ -173,10 +173,10 @@ Canvas::erase(Stroke* stroke, const util::point<double>& center, double radius2)
 	return changedArea;
 }
 
-util::rect<double>
-Canvas::erase(Stroke* stroke, const util::point<double>& lineBegin, const util::point<double>& lineEnd) {
+util::rect<Canvas::Precision>
+Canvas::erase(Stroke* stroke, const util::point<Canvas::Precision>& lineBegin, const util::point<Canvas::Precision>& lineEnd) {
 
-	util::rect<double> changedArea(0, 0, 0, 0);
+	util::rect<Canvas::Precision> changedArea(0, 0, 0, 0);
 
 	if (stroke->begin() == stroke->end())
 		return changedArea;
@@ -213,13 +213,13 @@ Canvas::erase(Stroke* stroke, const util::point<double>& lineBegin, const util::
 
 bool
 Canvas::intersectsErasorCircle(
-		const util::point<double> lineStart,
-		const util::point<double> lineEnd,
-		const util::point<double> center,
-		double radius2) {
+		const util::point<Canvas::Precision> lineStart,
+		const util::point<Canvas::Precision> lineEnd,
+		const util::point<Canvas::Precision> center,
+		Canvas::Precision radius2) {
 
 	// if either of the points are in the circle, the line intersects
-	util::point<double> diff = center - lineStart;
+	util::point<Canvas::Precision> diff = center - lineStart;
 	if (diff.x*diff.x + diff.y*diff.y < radius2)
 		return true;
 	diff = center - lineEnd;
@@ -229,19 +229,19 @@ Canvas::intersectsErasorCircle(
 	// see if the closest point on the line is in the circle
 
 	// the line
-	util::point<double> lineVector = lineEnd - lineStart;
-	double lenLineVector = sqrt(lineVector.x*lineVector.x + lineVector.y*lineVector.y);
+	util::point<Canvas::Precision> lineVector = lineEnd - lineStart;
+	Canvas::Precision lenLineVector = sqrt(lineVector.x*lineVector.x + lineVector.y*lineVector.y);
 
 	// unit vector in the line's direction
-	util::point<double> lineDirection = lineVector/lenLineVector;
+	util::point<Canvas::Precision> lineDirection = lineVector/lenLineVector;
 
 	// the direction to the erasor
-	util::point<double> erasorVector = center - lineStart;
-	double lenErasorVector2 = erasorVector.x*erasorVector.x + erasorVector.y*erasorVector.y;
+	util::point<Canvas::Precision> erasorVector = center - lineStart;
+	Canvas::Precision lenErasorVector2 = erasorVector.x*erasorVector.x + erasorVector.y*erasorVector.y;
 
 	// the dotproduct gives the distance from _strokePoints[i] to the closest 
 	// point on the line to the erasor
-	double a = lineDirection.x*erasorVector.x + lineDirection.y*erasorVector.y;
+	Canvas::Precision a = lineDirection.x*erasorVector.x + lineDirection.y*erasorVector.y;
 
 	// if a is beyond the beginning of end of the line, the line does not 
 	// intersect the circle (since the beginning and end are not in the circle)
@@ -249,7 +249,7 @@ Canvas::intersectsErasorCircle(
 		return false;
 
 	// get the distance of the closest point to the center
-	double erasorDistance2 = lenErasorVector2 - a*a;
+	Canvas::Precision erasorDistance2 = lenErasorVector2 - a*a;
 
 	if (erasorDistance2 < radius2)
 		return true;
@@ -259,26 +259,26 @@ Canvas::intersectsErasorCircle(
 
 bool
 Canvas::intersectLines(
-		const util::point<double>& p,
-		const util::point<double>& r,
-		const util::point<double>& q,
-		const util::point<double>& s) {
+		const util::point<Canvas::Precision>& p,
+		const util::point<Canvas::Precision>& r,
+		const util::point<Canvas::Precision>& q,
+		const util::point<Canvas::Precision>& s) {
 
 	// Line 1 is p + t*r, line 2 is q + u*s. We want to find t and u, such that 
 	// p + t*r = q + u*s.
 
 	// cross product between r and s
-	double rXs = r.x*s.y - r.y*s.x;
+	Canvas::Precision rXs = r.x*s.y - r.y*s.x;
 
 	// vector from p to q
-	const util::point<double> pq = q - p;
+	const util::point<Canvas::Precision> pq = q - p;
 
 	// cross product of pq with s and r
-	double pqXs = pq.x*s.y - pq.y*s.x;
-	double pqXr = pq.x*r.y - pq.y*r.x;
+	Canvas::Precision pqXs = pq.x*s.y - pq.y*s.x;
+	Canvas::Precision pqXr = pq.x*r.y - pq.y*r.x;
 
-	double t = pqXs/rXs;
-	double u = pqXr/rXs;
+	Canvas::Precision t = pqXs/rXs;
+	Canvas::Precision u = pqXr/rXs;
 
 	// only if both t and u are between 0 and 1 the lines intersected
 	return t >= 0 && t <= 1 && u >= 0 && u <= 1;
