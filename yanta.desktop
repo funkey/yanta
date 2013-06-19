@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Yet Another Note Taking Application
+Exec=splines %U
+Icon=splines
+Terminal=false
+MimeType=application/x-splines
