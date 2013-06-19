@@ -1,5 +1,5 @@
-#ifndef SPLINES_OSD_PAINTER_H__
-#define SPLINES_OSD_PAINTER_H__
+#ifndef YANTA_OSD_PAINTER_H__
+#define YANTA_OSD_PAINTER_H__
 
 #include <gui/Painter.h>
 #include <gui/Texture.h>
@@ -26,5 +26,5 @@ private:
 	PenMode _penMode;
 };
 
-#endif // SPLINES_OSD_PAINTER_H__
+#endif // YANTA_OSD_PAINTER_H__
 

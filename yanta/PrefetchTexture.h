@@ -1,5 +1,5 @@
-#ifndef SPLINES_PREFETCH_TEXTURE_H__
-#define SPLINES_PREFETCH_TEXTURE_H__
+#ifndef YANTA_PREFETCH_TEXTURE_H__
+#define YANTA_PREFETCH_TEXTURE_H__
 
 #include <deque>
 #include <boost/thread.hpp>
@@ -185,5 +185,5 @@ private:
 	util::rect<int> _currentCleanUpArea;
 };
 
-#endif // SPLINES_PREFETCH_TEXTURE_H__
+#endif // YANTA_PREFETCH_TEXTURE_H__
 

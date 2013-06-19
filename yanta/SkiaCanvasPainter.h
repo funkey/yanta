@@ -1,5 +1,5 @@
-#ifndef SPLINES_SKIA_CANVAS_PAINTER_H__
-#define SPLINES_SKIA_CANVAS_PAINTER_H__
+#ifndef YANTA_SKIA_CANVAS_PAINTER_H__
+#define YANTA_SKIA_CANVAS_PAINTER_H__
 
 #include <SkCanvas.h>
 
@@ -91,5 +91,5 @@ private:
 	unsigned long _drawnUntilStrokePointTmp;
 };
 
-#endif // SPLINES_SKIA_CANVAS_PAINTER_H__
+#endif // YANTA_SKIA_CANVAS_PAINTER_H__
 

@@ -1,5 +1,5 @@
-#ifndef SPLINES_STYLE_H__
-#define SPLINES_STYLE_H__
+#ifndef YANTA_STYLE_H__
+#define YANTA_STYLE_H__
 
 class Style {
 
@@ -43,5 +43,5 @@ private:
 	unsigned char _alpha;
 };
 
-#endif // SPLINES_STYLE_H__
+#endif // YANTA_STYLE_H__
 

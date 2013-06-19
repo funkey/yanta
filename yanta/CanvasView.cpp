@@ -131,15 +131,17 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 		LOG_ALL(canvasviewlog) << "moved by " << moved << " (" << getFingerCenter() << " - " << _gestureStartCenter << ")" << std::endl;
 
+		double threshold = WindowRequestThreshold;
+
 		// moved upwards
-		if (moved.y < -WindowRequestThreshold) {
+		if (moved.y < -threshold) {
 
 			LOG_ALL(canvasviewlog) << "requesting fullscreen" << std::endl;
 			_fullscreen(gui::WindowFullscreen(true));
 		}
 
 		// moved downwards
-		if (moved.y > WindowRequestThreshold) {
+		if (moved.y > threshold) {
 
 			LOG_ALL(canvasviewlog) << "requesting no fullscreen" << std::endl;
 			_fullscreen(gui::WindowFullscreen(false));
@@ -148,7 +150,7 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 	if (_mode == StartZooming) {
 
-		if (_gestureStartDistance < ZoomMinDistance) {
+		if (_gestureStartDistance < ZoomThreshold) {
 
 			_gestureStartDistance = getFingerDistance();
 			return;

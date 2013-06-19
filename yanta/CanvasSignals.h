@@ -1,5 +1,5 @@
-#ifndef SPLINES_CANVAS_SIGNALS_H__
-#define SPLINES_CANVAS_SIGNALS_H__
+#ifndef YANTA_CANVAS_SIGNALS_H__
+#define YANTA_CANVAS_SIGNALS_H__
 
 #include <signals/Signal.h>
 #include <util/rect.hpp>
@@ -17,5 +17,5 @@ public:
 	util::rect<double> area;
 };
 
-#endif // SPLINES_CANVAS_SIGNALS_H__
+#endif // YANTA_CANVAS_SIGNALS_H__
 

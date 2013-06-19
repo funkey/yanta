@@ -5,7 +5,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 # project information #
 #######################
 
-project(splines)
+project(yanta)
 set(VERSION_MAJOR 0)
 set(VERSION_MINOR 1)
 
@@ -72,14 +72,6 @@ else()
   set(HAVE_CAIRO 0)
 endif()
 
-find_package(Vigra REQUIRED)
-if (Vigra_FOUND)
-  include_directories(${Vigra_INCLUDE_DIR})
-  message(STATUS "Vigra found.")
-else()
-  message(STATUS "Vigra *NOT* found.")
-endif()
-
 find_package(PNG)
 if(PNG_FOUND)
   message(STATUS "PNG found.")
@@ -144,7 +136,6 @@ set(CORELIBS
   ${Boost_LIBRARIES}
   ${PNG_LIBRARY}
   ${Cairo_LIBRARY}
-  ${Vigra_LIBRARIES}
   ${FREETYPE_LIBRARIES}
 )
 
@@ -175,13 +166,7 @@ set(CMAKE_CXX_FLAGS_DEBUG   "-g -Wall -Wextra")
 # main target #
 ###############
 
-file (GLOB_RECURSE splinesfiles
-  external/dgc/*.cpp
-  splines/*.cpp
-  gui/*.cpp
-  io/*.cpp
-  inference/*.cpp
-  toys/*.cpp)
+file (GLOB_RECURSE yantafiles yanta/*.cpp)
 
-add_executable(splines splines.cpp ${splinesfiles})
-target_link_libraries(splines signals pipeline gui util skia ${CORELIBS})
+add_executable(yanta yanta.cpp ${yantafiles})
+target_link_libraries(yanta signals pipeline gui util skia ${CORELIBS})

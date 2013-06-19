@@ -1,5 +1,5 @@
 /**
- * splines main file. Initializes all objects, views, and visualizers.
+ * yanta main file. Initializes all objects, views, and visualizers.
  */
 
 #include <iostream>
@@ -14,11 +14,11 @@
 #include <util/ProgramOptions.h>
 #include <util/SignalHandler.h>
 
-#include <splines/Canvas.h>
-#include <splines/CanvasView.h>
-#include <splines/Osd.h>
-#include <splines/StrokesReader.h>
-#include <splines/StrokesWriter.h>
+#include <yanta/Canvas.h>
+#include <yanta/CanvasView.h>
+#include <yanta/Osd.h>
+#include <yanta/StrokesReader.h>
+#include <yanta/StrokesWriter.h>
 
 util::ProgramOption optionFilename(
 		util::_long_name        = "file",
@@ -88,7 +88,7 @@ int main(int optionc, char** optionv) {
 		gui::WindowMode mode;
 		mode.hideCursor = true;
 		mode.fullscreen = true;
-		pipeline::Process<gui::Window>   window("splines", mode);
+		pipeline::Process<gui::Window>   window("yanta", mode);
 
 		{
 			// create process nodes

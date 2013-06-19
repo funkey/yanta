@@ -1,5 +1,5 @@
-#ifndef SPLINES_OSD_H__
-#define SPLINES_OSD_H__
+#ifndef YANTA_OSD_H__
+#define YANTA_OSD_H__
 
 #include <pipeline/all.h>
 #include <gui/FingerSignals.h>
@@ -41,5 +41,5 @@ private:
 	bool _penAway;
 };
 
-#endif // SPLINES_OSD_H__
+#endif // YANTA_OSD_H__
 

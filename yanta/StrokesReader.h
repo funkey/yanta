@@ -1,5 +1,5 @@
-#ifndef SPLINES_STROKES_READER_H__
-#define SPLINES_STROKES_READER_H__
+#ifndef YANTA_STROKES_READER_H__
+#define YANTA_STROKES_READER_H__
 
 #include <string>
 
@@ -25,5 +25,5 @@ private:
 	std::string _filename;
 };
 
-#endif // SPLINES_STROKES_READER_H__
+#endif // YANTA_STROKES_READER_H__
 

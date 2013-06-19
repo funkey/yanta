@@ -1,5 +1,5 @@
-#ifndef SPLINES_STROKE_POINT_H__
-#define SPLINES_STROKE_POINT_H__
+#ifndef YANTA_STROKE_POINT_H__
+#define YANTA_STROKE_POINT_H__
 
 struct StrokePoint {
 
@@ -16,5 +16,5 @@ struct StrokePoint {
 	unsigned long       timestamp;
 };
 
-#endif // SPLINES_STROKE_POINT_H__
+#endif // YANTA_STROKE_POINT_H__
 

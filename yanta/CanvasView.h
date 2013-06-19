@@ -1,5 +1,5 @@
-#ifndef SPLINES_CANVAS_VIEW_H__
-#define SPLINES_CANVAS_VIEW_H__
+#ifndef YANTA_CANVAS_VIEW_H__
+#define YANTA_CANVAS_VIEW_H__
 
 #include <boost/thread.hpp>
 
@@ -115,5 +115,5 @@ private:
 	int _mode;
 };
 
-#endif // SPLINES_CANVAS_VIEW_H__
+#endif // YANTA_CANVAS_VIEW_H__
 

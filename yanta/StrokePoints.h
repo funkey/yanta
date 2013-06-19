@@ -1,5 +1,5 @@
-#ifndef SPLINES_STROKE_POINTS_H__
-#define SPLINES_STROKE_POINTS_H__
+#ifndef YANTA_STROKE_POINTS_H__
+#define YANTA_STROKE_POINTS_H__
 
 #include <vector>
 #include <boost/thread/shared_mutex.hpp>
@@ -74,5 +74,5 @@ private:
 
 };
 
-#endif // SPLINES_STROKE_POINTS_H__
+#endif // YANTA_STROKE_POINTS_H__
 
