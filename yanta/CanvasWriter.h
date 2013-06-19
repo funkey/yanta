@@ -1,16 +1,16 @@
-#ifndef YANTA_STROKES_WRITER_H__
-#define YANTA_STROKES_WRITER_H__
+#ifndef YANTA_CANVAS_WRITER_H__
+#define YANTA_CANVAS_WRITER_H__
 
 #include <string>
 
 #include <pipeline/all.h>
-#include "Strokes.h"
+#include "Canvas.h"
 
-class StrokesWriter : public pipeline::SimpleProcessNode<> {
+class CanvasWriter : public pipeline::SimpleProcessNode<> {
 
 public:
 
-	StrokesWriter(const std::string& filename);
+	CanvasWriter(const std::string& filename);
 
 	void write();
 
@@ -22,10 +22,10 @@ private:
 
 	void writeStroke(std::ofstream& out, const Stroke& stroke);
 
-	pipeline::Input<Strokes> _strokes;
+	pipeline::Input<Canvas> _canvas;
 
 	std::string _filename;
 };
 
-#endif // YANTA_STROKES_WRITER_H__
+#endif // YANTA_CANVAS_WRITER_H__
 

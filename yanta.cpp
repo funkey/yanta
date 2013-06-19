@@ -14,11 +14,11 @@
 #include <util/ProgramOptions.h>
 #include <util/SignalHandler.h>
 
-#include <yanta/Canvas.h>
+#include <yanta/Backend.h>
 #include <yanta/CanvasView.h>
 #include <yanta/Osd.h>
-#include <yanta/StrokesReader.h>
-#include <yanta/StrokesWriter.h>
+#include <yanta/CanvasReader.h>
+#include <yanta/CanvasWriter.h>
 
 util::ProgramOption optionFilename(
 		util::_long_name        = "file",
@@ -96,19 +96,19 @@ int main(int optionc, char** optionv) {
 			pipeline::Process<gui::ZoomView>                            zoomView;
 			pipeline::Process<CanvasView>                               canvasView;
 			pipeline::Process<Osd>                                      osd;
-			pipeline::Process<Canvas>                                   canvas;
-			pipeline::Process<StrokesReader>                            reader(optionFilename.as<std::string>());
-			pipeline::Process<StrokesWriter>                            writer(optionFilename.as<std::string>());
+			pipeline::Process<Backend>                                  backend;
+			pipeline::Process<CanvasReader>                             reader(optionFilename.as<std::string>());
+			pipeline::Process<CanvasWriter>                             writer(optionFilename.as<std::string>());
 
 			// connect process nodes
 			window->setInput(zoomView->getOutput());
 			zoomView->setInput(overlayView->getOutput());
 			overlayView->addInput(osd->getOutput("osd painter"));
 			overlayView->addInput(canvasView->getOutput());
-			canvasView->setInput(canvas->getOutput("strokes"));
-			canvas->setInput("initial strokes", reader->getOutput());
-			canvas->setInput("pen mode", osd->getOutput("pen mode"));
-			writer->setInput(canvas->getOutput());
+			canvasView->setInput(backend->getOutput("canvas"));
+			backend->setInput("initial canvas", reader->getOutput());
+			backend->setInput("pen mode", osd->getOutput("pen mode"));
+			writer->setInput(backend->getOutput());
 
 			// enter window main loop
 			processEvents(window);

@@ -1,35 +1,35 @@
 #include <fstream>
-#include "StrokesWriter.h"
+#include "CanvasWriter.h"
 
-StrokesWriter::StrokesWriter(const std::string& filename) :
+CanvasWriter::CanvasWriter(const std::string& filename) :
 	_filename(filename) {
 
-	registerInput(_strokes, "strokes");
+	registerInput(_canvas, "canvas");
 }
 
 void
-StrokesWriter::write() {
+CanvasWriter::write() {
 
 	std::ofstream out(_filename.c_str());
 
 	// write the file version (currently, we only have one)
 	out << 1 << std::endl;
 
-	writeStrokePoints(out, _strokes->getStrokePoints());
+	writeStrokePoints(out, _canvas->getStrokePoints());
 
 	// skip the last stroke, if it wasn't started, yet
-	unsigned int numStrokes = _strokes->numStrokes();
-	if (numStrokes > 0 && _strokes->currentStroke().size() <= 1)
+	unsigned int numStrokes = _canvas->numStrokes();
+	if (numStrokes > 0 && _canvas->currentStroke().size() <= 1)
 		numStrokes--;
 
 	out << numStrokes << std::endl;;
 
 	for (unsigned int i = 0; i < numStrokes; i++)
-		writeStroke(out, _strokes->getStroke(i));
+		writeStroke(out, _canvas->getStroke(i));
 }
 
 void
-StrokesWriter::writeStrokePoints(std::ofstream& out, const StrokePoints& points) {
+CanvasWriter::writeStrokePoints(std::ofstream& out, const StrokePoints& points) {
 
 	unsigned long numPoints = points.size();
 	out << numPoints;
@@ -45,7 +45,7 @@ StrokesWriter::writeStrokePoints(std::ofstream& out, const StrokePoints& points)
 }
 
 void
-StrokesWriter::writeStroke(std::ofstream& out, const Stroke& stroke) {
+CanvasWriter::writeStroke(std::ofstream& out, const Stroke& stroke) {
 
 	out << " "
 		<< stroke.begin() << " " << stroke.end() << " "

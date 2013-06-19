@@ -1,134 +1,285 @@
-#include <gui/Modifiers.h>
 #include <util/Logger.h>
 #include "Canvas.h"
 
 logger::LogChannel canvaslog("canvaslog", "[Canvas] ");
 
-Canvas::Canvas() :
-	_penDown(false),
-	_erase(false),
-	_initialStrokesModified(false) {
+util::rect<double>
+Canvas::erase(const util::point<double>& begin, const util::point<double>& end) {
 
-	registerOutput(_strokes, "strokes");
-	registerInput(_penMode, "pen mode");
-	registerInput(_initialStrokes, "initial strokes", pipeline::Optional);
+	//LOG_ALL(canvaslog) << "erasing strokes that intersect line from " << begin << " to " << end << std::endl;
 
-	_strokes.registerForwardSlot(_changedArea);
-	_strokes.registerForwardCallback(&Canvas::onPenDown, this);
-	_strokes.registerForwardCallback(&Canvas::onPenMove, this);
-	_strokes.registerForwardCallback(&Canvas::onPenUp, this);
+	util::rect<double> eraseBoundingBox(
+			begin.x,
+			begin.y,
+			begin.x,
+			begin.y);
+	eraseBoundingBox.fit(end);
 
-	_initialStrokes.registerBackwardCallback(&Canvas::onModified, this);
+	util::rect<double> changedArea(0, 0, 0, 0);
+
+	unsigned int n = numStrokes();
+
+	for (unsigned int i = 0; i < n; i++)
+		if (getStroke(i).boundingBox().intersects(eraseBoundingBox)) {
+
+			//LOG_ALL(canvaslog) << "stroke " << i << " is close to the erase position" << std::endl;
+
+			util::rect<double> changedStrokeArea = erase(&getStroke(i), begin, end);
+
+			if (changedArea.isZero()) {
+
+				changedArea = changedStrokeArea;
+
+			} else {
+
+				if (!changedStrokeArea.isZero()) {
+
+					changedArea.minX = std::min(changedArea.minX, changedStrokeArea.minX);
+					changedArea.minY = std::min(changedArea.minY, changedStrokeArea.minY);
+					changedArea.maxX = std::max(changedArea.maxX, changedStrokeArea.maxX);
+					changedArea.maxY = std::max(changedArea.maxY, changedStrokeArea.maxY);
+				}
+			}
+		}
+
+	LOG_ALL(canvaslog) << "changed area is " << changedArea << std::endl;
+
+	return changedArea;
 }
 
-void
-Canvas::updateOutputs() {
+util::rect<double>
+Canvas::erase(const util::point<double>& position, double radius) {
 
-	if (_initialStrokes && _initialStrokesModified) {
+	//LOG_ALL(canvaslog) << "erasing at " << position << " with radius " << radius << std::endl;
 
-		LOG_DEBUG(canvaslog) << "have initial strokes, loading them" << std::endl;
-		*_strokes = *_initialStrokes;
+	util::rect<double> eraseBoundingBox(
+			position.x - radius,
+			position.y - radius,
+			position.x + radius,
+			position.y + radius);
 
-		_initialStrokesModified = false;
-	}
+	util::rect<double> changedArea(0, 0, 0, 0);
+
+	unsigned int n = numStrokes();
+
+	for (unsigned int i = 0; i < n; i++)
+		if (getStroke(i).boundingBox().intersects(eraseBoundingBox)) {
+
+			//LOG_ALL(canvaslog) << "stroke " << i << " is close to the erase position" << std::endl;
+
+			util::rect<double> changedStrokeArea = erase(&getStroke(i), position, radius*radius);
+
+			if (changedArea.isZero()) {
+
+				changedArea = changedStrokeArea;
+
+			} else {
+
+				if (!changedStrokeArea.isZero()) {
+
+					changedArea.minX = std::min(changedArea.minX, changedStrokeArea.minX);
+					changedArea.minY = std::min(changedArea.minY, changedStrokeArea.minY);
+					changedArea.maxX = std::max(changedArea.maxX, changedStrokeArea.maxX);
+					changedArea.maxY = std::max(changedArea.maxY, changedStrokeArea.maxY);
+				}
+			}
+		}
+
+	LOG_ALL(canvaslog) << "changed area is " << changedArea << std::endl;
+
+	return changedArea;
 }
 
-void
-Canvas::onModified(const pipeline::Modified&) {
+util::rect<double>
+Canvas::erase(Stroke* stroke, const util::point<double>& center, double radius2) {
 
-	_initialStrokesModified = true;
-}
+	util::rect<double> changedArea(0, 0, 0, 0);
 
-void
-Canvas::onPenDown(const gui::PenDown& signal) {
+	if (stroke->begin() == stroke->end())
+		return changedArea;
 
-	LOG_DEBUG(canvaslog) << "pen down (button " << signal.button << ")" << std::endl;
+	unsigned long begin = stroke->begin();
+	unsigned long end   = stroke->end() - 1;
 
-	if (signal.button == gui::buttons::Left) {
+	LOG_ALL(canvaslog) << "testing stroke lines " << begin << " until " << (end - 1) << std::endl;
 
-		_penDown = true;
+	Style style = stroke->getStyle();
+	bool wasErasing = false;
 
-		if (!_erase) {
+	// for each line in the stroke
+	for (unsigned long i = begin; i < end; i++) {
 
-			LOG_DEBUG(canvaslog) << "accepting" << std::endl;
+		// this line should be erased
+		if (intersectsErasorCircle(_strokePoints[i].position, _strokePoints[i+1].position, center, radius2)) {
 
-			_strokes->createNewStroke();
-			_strokes->currentStroke().setStyle(_penMode->getStyle());
-			_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+			LOG_ALL(canvaslog) << "line " << i << " needs to be erased" << std::endl;
+
+			// update the changed area
+			if (changedArea.isZero()) {
+
+				changedArea.minX = _strokePoints[i].position.x;
+				changedArea.minY = _strokePoints[i].position.y;
+				changedArea.maxX = _strokePoints[i].position.x;
+				changedArea.maxY = _strokePoints[i].position.y;
+			}
+
+			changedArea.fit(_strokePoints[i].position);
+			changedArea.fit(_strokePoints[i+1].position);
+
+			if (changedArea.isZero())
+				LOG_ERROR(canvaslog) << "the change area is empty for line " << _strokePoints[i].position << " -- " << _strokePoints[i+1].position << std::endl;
+
+			// if this is the first line to delete, we have to split
+			if (!wasErasing) {
+
+				LOG_ALL(canvaslog) << "this is the first line to erase on this stroke" << std::endl;
+
+				stroke->setEnd(i+1);
+				stroke->finish(_strokePoints);
+				wasErasing = true;
+			}
+
+		// this line should be kept
+		} else if (wasErasing) {
+
+			LOG_ALL(canvaslog) << "line " << i << " is the next line not to erase on this stroke" << std::endl;
+
+			createNewStroke(i);
+			stroke = &(currentStroke());
+			stroke->setStyle(style);
+			wasErasing = false;
 		}
 	}
 
-	if (signal.button == gui::buttons::Middle) {
+	// if we didn't split at all, this is a no-op, otherwise we finish the last 
+	// stroke
+	if (!wasErasing) {
 
-		_erase = true;
-		_previousErasePosition = signal.position;
-
-		if (_penDown) {
-
-			_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
-			_strokes->finishCurrentStroke();
-
-			setDirty(_strokes);
-		}
+		stroke->setEnd(end+1);
+		stroke->finish(_strokePoints);
 	}
+
+	// increase the size of the changedArea (if there is one) by the style width
+	if (!changedArea.isZero()) {
+
+		changedArea.minX -= style.width();
+		changedArea.minY -= style.width();
+		changedArea.maxX += style.width();
+		changedArea.maxY += style.width();
+	}
+
+	LOG_ALL(canvaslog) << "done erasing this stroke, changed area is " << changedArea << std::endl;
+
+	return changedArea;
 }
 
-void
-Canvas::onPenUp(const gui::PenUp& signal) {
+util::rect<double>
+Canvas::erase(Stroke* stroke, const util::point<double>& lineBegin, const util::point<double>& lineEnd) {
 
-	LOG_DEBUG(canvaslog) << "pen up (button " << signal.button << ")" << std::endl;
+	util::rect<double> changedArea(0, 0, 0, 0);
 
-	if (signal.button == gui::buttons::Left) {
+	if (stroke->begin() == stroke->end())
+		return changedArea;
 
-		_penDown = false;
+	unsigned long begin = stroke->begin();
+	unsigned long end   = stroke->end() - 1;
 
-		if (!_erase) {
+	LOG_ALL(canvaslog) << "testing stroke lines " << begin << " until " << (end - 1) << std::endl;
 
-			LOG_DEBUG(canvaslog) << "accepting" << std::endl;
+	// for each line in the stroke
+	for (unsigned long i = begin; i < end; i++) {
 
-			_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
-			_strokes->finishCurrentStroke();
+		// this line should be erased
+		if (intersectLines(
+				_strokePoints[i].position,
+				_strokePoints[i+1].position - _strokePoints[i].position,
+				lineBegin,
+				lineEnd - lineBegin)) {
 
-			setDirty(_strokes);
+			LOG_ALL(canvaslog) << "this stroke needs to be erased" << std::endl;
+
+			changedArea = stroke->boundingBox();
+
+			// make this an empty stroke
+			stroke->setEnd(begin);
+			stroke->finish(_strokePoints);
+
+			break;
 		}
 	}
 
-	if (signal.button == gui::buttons::Middle) {
-
-		_erase = false;
-
-		if (_penDown) {
-
-			_strokes->createNewStroke();
-			_strokes->currentStroke().setStyle(_penMode->getStyle());
-			_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
-		}
-	}
+	return changedArea;
 }
 
-void
-Canvas::onPenMove(const gui::PenMove& signal) {
+bool
+Canvas::intersectsErasorCircle(
+		const util::point<double> lineStart,
+		const util::point<double> lineEnd,
+		const util::point<double> center,
+		double radius2) {
 
-	if (!_penDown)
-		return;
+	// if either of the points are in the circle, the line intersects
+	util::point<double> diff = center - lineStart;
+	if (diff.x*diff.x + diff.y*diff.y < radius2)
+		return true;
+	diff = center - lineEnd;
+	if (diff.x*diff.x + diff.y*diff.y < radius2)
+		return true;
 
-	LOG_ALL(canvaslog) << "pen move with modifiers " << signal.modifiers << std::endl;
+	// see if the closest point on the line is in the circle
 
-	if (_erase) {
+	// the line
+	util::point<double> lineVector = lineEnd - lineStart;
+	double lenLineVector = sqrt(lineVector.x*lineVector.x + lineVector.y*lineVector.y);
 
-		util::rect<double> dirtyArea = _strokes->erase(_previousErasePosition, signal.position);
+	// unit vector in the line's direction
+	util::point<double> lineDirection = lineVector/lenLineVector;
 
-		_previousErasePosition = signal.position;
+	// the direction to the erasor
+	util::point<double> erasorVector = center - lineStart;
+	double lenErasorVector2 = erasorVector.x*erasorVector.x + erasorVector.y*erasorVector.y;
 
-		if (!dirtyArea.isZero()) {
+	// the dotproduct gives the distance from _strokePoints[i] to the closest 
+	// point on the line to the erasor
+	double a = lineDirection.x*erasorVector.x + lineDirection.y*erasorVector.y;
 
-			ChangedArea signal(dirtyArea);
-			_changedArea(signal);
-		}
+	// if a is beyond the beginning of end of the line, the line does not 
+	// intersect the circle (since the beginning and end are not in the circle)
+	if (a <= 0 || a >= lenLineVector)
+		return false;
 
-	} else {
+	// get the distance of the closest point to the center
+	double erasorDistance2 = lenErasorVector2 - a*a;
 
-		_strokes->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
-		setDirty(_strokes);
-	}
+	if (erasorDistance2 < radius2)
+		return true;
+
+	return false;
+}
+
+bool
+Canvas::intersectLines(
+		const util::point<double>& p,
+		const util::point<double>& r,
+		const util::point<double>& q,
+		const util::point<double>& s) {
+
+	// Line 1 is p + t*r, line 2 is q + u*s. We want to find t and u, such that 
+	// p + t*r = q + u*s.
+
+	// cross product between r and s
+	double rXs = r.x*s.y - r.y*s.x;
+
+	// vector from p to q
+	const util::point<double> pq = q - p;
+
+	// cross product of pq with s and r
+	double pqXs = pq.x*s.y - pq.y*s.x;
+	double pqXr = pq.x*r.y - pq.y*r.x;
+
+	double t = pqXs/rXs;
+	double u = pqXr/rXs;
+
+	// only if both t and u are between 0 and 1 the lines intersected
+	return t >= 0 && t <= 1 && u >= 0 && u <= 1;
 }

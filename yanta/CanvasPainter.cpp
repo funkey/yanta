@@ -83,9 +83,9 @@ CanvasPainter::draw(
 		const util::rect<double>&  roi,
 		const util::point<double>& resolution) {
 
-	if (!_strokes) {
+	if (!_canvas) {
 
-		LOG_DEBUG(canvaspainterlog) << "no strokes to paint (yet)" << std::endl;
+		LOG_DEBUG(canvaspainterlog) << "no canvas to paint (yet)" << std::endl;
 		return;
 	}
 
@@ -131,7 +131,7 @@ CanvasPainter::draw(
 		// transformation did not change
 		} else {
 
-			LOG_ALL(canvaspainterlog) << "transformation did not change -- I just quickly update the strokes" << std::endl;
+			LOG_ALL(canvaspainterlog) << "transformation did not change -- I just quickly update the canvas" << std::endl;
 
 			if (pixelRoi != _previousPixelRoi) {
 
@@ -139,7 +139,7 @@ CanvasPainter::draw(
 				prepareDrawing(pixelRoi);
 			}
 
-			updateStrokes(*_strokes, pixelRoi);
+			updateCanvas(*_canvas, pixelRoi);
 		}
 	}
 
@@ -212,17 +212,17 @@ CanvasPainter::refresh() {
 }
 
 void
-CanvasPainter::updateStrokes(const Strokes& strokes, const util::rect<int>& roi) {
+CanvasPainter::updateCanvas(const Canvas& canvas, const util::rect<int>& roi) {
 
 	// is it necessary to draw something?
-	if (_cairoPainter.alreadyDrawn(strokes)) {
+	if (_cairoPainter.alreadyDrawn(canvas)) {
 
 		LOG_ALL(canvaspainterlog) << "nothing changed, skipping redraw" << std::endl;
 		return;
 	}
 
 	_canvasTexture->fill(roi, _cairoPainter);
-	_cairoPainter.rememberDrawnStrokes();
+	_cairoPainter.rememberDrawnCanvas();
 }
 
 void

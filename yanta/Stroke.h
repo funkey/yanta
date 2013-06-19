@@ -51,7 +51,7 @@ public:
 	}
 
 	/**
-	 * Get the bounding box of this stroke. Note that not-finished strokes don't 
+	 * Get the bounding box of this stroke. Note that not-finished canvas don't 
 	 * have a valid bounding box.
 	 */
 	inline const util::rect<double>& boundingBox() const {

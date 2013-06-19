@@ -8,7 +8,7 @@
 
 #include "SkiaCanvasPainter.h"
 #include "PrefetchTexture.h"
-#include "Strokes.h"
+#include "Canvas.h"
 
 extern logger::LogChannel canvaspainterlog;
 
@@ -18,11 +18,11 @@ public:
 
 	CanvasPainter();
 
-	void setStrokes(boost::shared_ptr<Strokes> strokes) {
+	void setCanvas(boost::shared_ptr<Canvas> canvas) {
 
-		_strokes = strokes;
-		_cairoPainter.setStrokes(strokes);
-		_cairoCleanUpPainter.setStrokes(strokes);
+		_canvas = canvas;
+		_cairoPainter.setCanvas(canvas);
+		_cairoCleanUpPainter.setCanvas(canvas);
 	}
 
 	void setCursorPosition(const util::point<double>& position) {
@@ -97,19 +97,19 @@ private:
 	bool prepareTexture(const util::rect<int>& pixelRoi);
 
 	/**
-	 * Update the texture strokes in the specified ROI.
+	 * Update the texture canvas in the specified ROI.
 	 */
-	void updateStrokes(const Strokes& strokes, const util::rect<int>& roi);
+	void updateCanvas(const Canvas& canvas, const util::rect<int>& roi);
 
 	/**
 	 * Draw the texture content that corresponds to roi into roi.
 	 */
 	void drawTexture(const util::rect<int>& roi);
 
-	// the strokes to draw
-	boost::shared_ptr<Strokes> _strokes;
+	// the canvas to draw
+	boost::shared_ptr<Canvas> _canvas;
 
-	// the cairo painter for the strokes
+	// the cairo painter for the canvas
 	SkiaCanvasPainter _cairoPainter;
 
 	// a cairo painter for the background updates

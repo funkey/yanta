@@ -11,10 +11,10 @@ SkiaCanvasPainter::SkiaCanvasPainter(gui::skia_pixel_t clearColor) :
 	_drawnUntilStrokePointTmp(0) {}
 
 bool
-SkiaCanvasPainter::alreadyDrawn(const Strokes& strokes) {
+SkiaCanvasPainter::alreadyDrawn(const Canvas& canvas) {
 
 	// is it necessary to draw something?
-	if (strokes.numStrokes() > 0 && _drawnUntilStrokePoint == strokes.currentStroke().end() - (strokes.currentStroke().finished() ? 0 : 1))
+	if (canvas.numStrokes() > 0 && _drawnUntilStrokePoint == canvas.currentStroke().end() - (canvas.currentStroke().finished() ? 0 : 1))
 		return true;
 
 	return false;
@@ -63,15 +63,15 @@ SkiaCanvasPainter::draw(
 		clearSurface(canvas);
 
 	// make sure reading access to the stroke points are safe
-	boost::shared_lock<boost::shared_mutex> lock(_strokes->getStrokePoints().getMutex());
+	boost::shared_lock<boost::shared_mutex> lock(_canvas->getStrokePoints().getMutex());
 
 	// reset temporal memory about what we drew already
 	_drawnUntilStrokePointTmp = _drawnUntilStrokePoint;
 
-	// draw the (new) strokes in the current part
-	for (unsigned int i = 0; i < _strokes->numStrokes(); i++) {
+	// draw the (new) canvas in the current part
+	for (unsigned int i = 0; i < _canvas->numStrokes(); i++) {
 
-		const Stroke& stroke = _strokes->getStroke(i);
+		const Stroke& stroke = _canvas->getStroke(i);
 
 		// the effective end of a stroke is one less, if the stroke is not 
 		// finished, yet
@@ -133,7 +133,7 @@ SkiaCanvasPainter::drawStroke(
 	unsigned char penColorGreen = stroke.getStyle().getGreen();
 	unsigned char penColorBlue  = stroke.getStyle().getBlue();
 
-	const StrokePoints& strokePoints = _strokes->getStrokePoints();
+	const StrokePoints& strokePoints = _canvas->getStrokePoints();
 
 	SkPaint paint;
 	paint.setStrokeCap(SkPaint::kRound_Cap);

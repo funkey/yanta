@@ -5,7 +5,7 @@
 
 #include <gui/Skia.h>
 #include <util/rect.hpp>
-#include "Strokes.h"
+#include "Canvas.h"
 
 class SkiaCanvasPainter {
 
@@ -13,7 +13,7 @@ public:
 
 	SkiaCanvasPainter(gui::skia_pixel_t clearColor);
 
-	void setStrokes(boost::shared_ptr<Strokes> strokes) { _strokes = strokes; }
+	void setCanvas(boost::shared_ptr<Canvas> canvas) { _canvas = canvas; }
 
 	/**
 	 * Set the transformation to map from canvas units to pixel units.
@@ -35,15 +35,15 @@ public:
 		_drawnUntilStrokePoint = 0;
 	}
 
-	void rememberDrawnStrokes() {
+	void rememberDrawnCanvas() {
 
 		_drawnUntilStrokePoint = _drawnUntilStrokePointTmp;
 	}
 
 	/**
-	 * Return true if the strokes have been drawn by this painter already.
+	 * Return true if the canvas have been drawn by this painter already.
 	 */
-	bool alreadyDrawn(const Strokes& strokes);
+	bool alreadyDrawn(const Canvas& canvas);
 
 	/**
 	 * Draw the whole canvas on the provided context.
@@ -78,7 +78,7 @@ private:
 
 	gui::skia_pixel_t _clearColor;
 
-	boost::shared_ptr<Strokes> _strokes;
+	boost::shared_ptr<Canvas> _canvas;
 
 	util::point<double> _pixelsPerDeviceUnit;
 	util::point<double> _pixelOffset;

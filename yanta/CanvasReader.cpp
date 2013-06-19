@@ -1,14 +1,14 @@
 #include <fstream>
-#include "StrokesReader.h"
+#include "CanvasReader.h"
 
-StrokesReader::StrokesReader(const std::string& filename) :
+CanvasReader::CanvasReader(const std::string& filename) :
 	_filename(filename) {
 
-	registerOutput(_strokes, "strokes");
+	registerOutput(_canvas, "canvas");
 }
 
 void
-StrokesReader::updateOutputs() {
+CanvasReader::updateOutputs() {
 
 	std::ifstream in(_filename.c_str());
 
@@ -29,7 +29,7 @@ StrokesReader::updateOutputs() {
 }
 
 void
-StrokesReader::readStrokePoints(std::ifstream& in) {
+CanvasReader::readStrokePoints(std::ifstream& in) {
 
 	unsigned long numPoints = 0;
 	in >> numPoints;
@@ -37,7 +37,7 @@ StrokesReader::readStrokePoints(std::ifstream& in) {
 	double x, y, pressure;
 	long unsigned int timestamp;
 
-	StrokePoints& points = _strokes->getStrokePoints();
+	StrokePoints& points = _canvas->getStrokePoints();
 
 	for (unsigned int i = 0; i < numPoints; i++) {
 
@@ -47,7 +47,7 @@ StrokesReader::readStrokePoints(std::ifstream& in) {
 }
 
 void
-StrokesReader::readStroke(std::ifstream& in) {
+CanvasReader::readStroke(std::ifstream& in) {
 
 	unsigned long begin, end;
 	double penWidth;
@@ -59,9 +59,9 @@ StrokesReader::readStroke(std::ifstream& in) {
 	style.setWidth(penWidth);
 	style.setColor(red, green, blue, alpha);
 
-	_strokes->createNewStroke();
-	_strokes->currentStroke().setBegin(begin);
-	_strokes->currentStroke().setEnd(end);
-	_strokes->currentStroke().setStyle(style);
-	_strokes->currentStroke().finish(_strokes->getStrokePoints());
+	_canvas->createNewStroke();
+	_canvas->currentStroke().setBegin(begin);
+	_canvas->currentStroke().setEnd(end);
+	_canvas->currentStroke().setStyle(style);
+	_canvas->currentStroke().finish(_canvas->getStrokePoints());
 }

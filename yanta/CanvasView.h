@@ -10,7 +10,7 @@
 
 #include "CanvasPainter.h"
 #include "CanvasSignals.h"
-#include "Strokes.h"
+#include "Canvas.h"
 
 class CanvasView : public pipeline::SimpleProcessNode<>, public gui::PointerSignalFilter {
 
@@ -86,7 +86,7 @@ private:
 	static const double ZoomMinDistance        = 200;
 	static const double DragThreshold2         = 50*50;
 
-	pipeline::Input<Strokes>        _strokes;
+	pipeline::Input<Canvas>        _canvas;
 	pipeline::Output<CanvasPainter> _painter;
 
 	signals::Slot<const gui::ContentChanged>   _contentChanged;

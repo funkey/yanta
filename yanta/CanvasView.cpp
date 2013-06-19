@@ -11,16 +11,16 @@ CanvasView::CanvasView() :
 	_backgroundThread(boost::bind(&CanvasView::cleanDirtyAreas, this)),
 	_mode(Nothing) {
 
-	registerInput(_strokes, "strokes");
+	registerInput(_canvas, "canvas");
 	registerOutput(_painter, "painter");
 
-	_strokes.registerBackwardCallback(&CanvasView::onChangedArea, this);
+	_canvas.registerBackwardCallback(&CanvasView::onChangedArea, this);
 
 	_painter.registerForwardSlot(_contentChanged);
 	_painter.registerForwardSlot(_fullscreen);
 
 	// establish pointer signal filter
-	PointerSignalFilter::filterBackward(_painter, _strokes, this);
+	PointerSignalFilter::filterBackward(_painter, _canvas, this);
 
 	_painter.registerForwardCallback(&CanvasView::onMouseMove, this);
 	_painter.registerForwardCallback(&CanvasView::onPenMove, this);
@@ -44,7 +44,7 @@ CanvasView::~CanvasView() {
 void
 CanvasView::updateOutputs() {
 
-	_painter->setStrokes(_strokes);
+	_painter->setCanvas(_canvas);
 
 	_contentChanged();
 }
