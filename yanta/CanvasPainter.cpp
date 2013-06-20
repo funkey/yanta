@@ -251,12 +251,18 @@ CanvasPainter::markDirty(const util::rect<CanvasPrecision>& area) {
 	// are we currently looking at this area?
 	if (_mode == IncrementalDrawing && pixelArea.intersects(_previousPixelRoi)) {
 
-		LOG_ALL(canvaspainterlog) << "redrawing " << pixelArea << std::endl;
+		LOG_ALL(canvaspainterlog) << "redrawing dirty working area " << (_previousPixelRoi.intersection(pixelArea)) << std::endl;
 
 		gui::OpenGl::Guard guard;
 
-		// in this case, redraw immediately
-		_canvasTexture->fill(pixelArea, _cairoCleanUpPainter);
+		// in this case, redraw immediately the part that got dirty
+		_canvasTexture->fill(_previousPixelRoi.intersection(pixelArea), _cairoCleanUpPainter);
+
+		// send everything beyond the working area to the worker threads
+		_canvasTexture->markDirty(_left.intersection(pixelArea));
+		_canvasTexture->markDirty(_right.intersection(pixelArea));
+		_canvasTexture->markDirty(_top.intersection(pixelArea));
+		_canvasTexture->markDirty(_bottom.intersection(pixelArea));
 
 	} else {
 
@@ -283,17 +289,42 @@ CanvasPainter::prepareDrawing(const util::rect<int>& roi) {
 
 	LOG_DEBUG(canvaspainterlog) << "resetting the incremental memory" << std::endl;
 
+	util::rect<int> workingArea;
+
 	if (roi.isZero()) {
 
 		if (_mode == IncrementalDrawing)
 			return;
 
-		_canvasTexture->setWorkingArea(_previousPixelRoi);
+		workingArea = _previousPixelRoi;
 
 	} else {
 
-		_canvasTexture->setWorkingArea(roi);
+		workingArea = roi;
 	}
+
+	_canvasTexture->setWorkingArea(workingArea);
+
+	_left = util::rect<int>(
+			workingArea.minX - _prefetchLeft,
+			workingArea.minY - _prefetchTop,
+			workingArea.minX,
+			workingArea.maxY + _prefetchBottom);
+	_right = util::rect<int>(
+			workingArea.maxX,
+			workingArea.minY - _prefetchTop,
+			workingArea.maxX + _prefetchRight,
+			workingArea.maxY + _prefetchBottom);
+	_top = util::rect<int>(
+			workingArea.minX,
+			workingArea.minY - _prefetchTop,
+			workingArea.maxX,
+			workingArea.minY);
+	_bottom = util::rect<int>(
+			workingArea.minX,
+			workingArea.maxY,
+			workingArea.maxX,
+			workingArea.maxY + _prefetchBottom);
 
 	_cairoPainter.resetIncrementalMemory();
 

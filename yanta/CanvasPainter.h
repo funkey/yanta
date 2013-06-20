@@ -140,6 +140,12 @@ private:
 
 	util::rect<int> _previousPixelRoi;
 
+	// the prefetch parts
+	util::rect<int> _left;
+	util::rect<int> _right;
+	util::rect<int> _bottom;
+	util::rect<int> _top;
+
 	CanvasPainterMode _mode;
 
 	// the position of the cursor to draw in screen pixels
