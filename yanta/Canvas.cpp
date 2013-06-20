@@ -5,7 +5,8 @@ logger::LogChannel canvaslog("canvaslog", "[Canvas] ");
 
 Canvas::Canvas() {}
 
-Canvas::Canvas(Canvas& other) {
+Canvas::Canvas(Canvas& other) :
+		pipeline::Data() {
 
 	copyFrom(other);
 }
@@ -14,6 +15,8 @@ Canvas&
 Canvas::operator=(Canvas& other) {
 
 	copyFrom(other);
+
+	return *this;
 }
 
 void
