@@ -23,6 +23,7 @@ Page::operator=(const Page& other) {
 
 	// we don't copy the stroke points, since they might belong to another 
 	// canvas
+	return *this;
 }
 
 void
