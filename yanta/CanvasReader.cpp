@@ -21,11 +21,27 @@ CanvasReader::updateOutputs() {
 
 	readStrokePoints(in);
 
-	unsigned int numStrokes = 0;
-	in >> numStrokes;
+	// no pages in version 1
+	if (fileVersion == 1) {
 
-	for (unsigned int i = 0; i < numStrokes; i++)
-		readStroke(in);
+		// create a dummy page
+		_canvas->createPage(util::point<CanvasPrecision>(0, 0), util::point<PagePrecision>(1, 1));
+
+		unsigned int numStrokes = 0;
+		in >> numStrokes;
+
+		for (unsigned int i = 0; i < numStrokes; i++)
+			readStroke(in, 0);
+	}
+
+	if (fileVersion == 2) {
+
+		unsigned int numPages = 0;
+		in >> numPages;
+
+		for (unsigned int i = 0; i < numPages; i++)
+			readPage(in, i);
+	}
 }
 
 void
@@ -47,7 +63,25 @@ CanvasReader::readStrokePoints(std::ifstream& in) {
 }
 
 void
-CanvasReader::readStroke(std::ifstream& in) {
+CanvasReader::readPage(std::ifstream& in, unsigned int page) {
+
+	CanvasPrecision positionX, positionY;
+	in >> positionX >> positionY;
+
+	double width, height;
+	in >> width >> height;
+
+	_canvas->createPage(util::point<CanvasPrecision>(positionX, positionY), util::point<PagePrecision>(width, height));
+
+	unsigned int numStrokes = 0;
+	in >> numStrokes;
+
+	for (unsigned int i = 0; i < numStrokes; i++)
+		readStroke(in, page);
+}
+
+void
+CanvasReader::readStroke(std::ifstream& in, unsigned int page) {
 
 	unsigned long begin, end;
 	double penWidth;
@@ -59,8 +93,8 @@ CanvasReader::readStroke(std::ifstream& in) {
 	style.setWidth(penWidth);
 	style.setColor(red, green, blue, alpha);
 
-	_canvas->getPage(0).createNewStroke(begin);
-	_canvas->getPage(0).currentStroke().setEnd(end);
-	_canvas->getPage(0).currentStroke().setStyle(style);
-	_canvas->getPage(0).currentStroke().finish(_canvas->getStrokePoints());
+	_canvas->getPage(page).createNewStroke(begin);
+	_canvas->getPage(page).currentStroke().setEnd(end);
+	_canvas->getPage(page).currentStroke().setStyle(style);
+	_canvas->getPage(page).currentStroke().finish(_canvas->getStrokePoints());
 }

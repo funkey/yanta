@@ -18,7 +18,9 @@ private:
 
 	void readStrokePoints(std::ifstream& in);
 
-	void readStroke(std::ifstream& in);
+	void readPage(std::ifstream& in, unsigned int page);
+
+	void readStroke(std::ifstream& in, unsigned int page);
 
 	pipeline::Output<Canvas> _canvas;
 

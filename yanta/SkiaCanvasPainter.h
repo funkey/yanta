@@ -64,6 +64,11 @@ private:
 
 	void clearSurface(SkCanvas& context);
 
+	void drawPage(
+			SkCanvas& canvas,
+			const Page& page,
+			const util::rect<double>& canvasRoi);
+
 	bool drawStroke(
 			SkCanvas& context,
 			const Stroke& stroke,

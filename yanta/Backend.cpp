@@ -24,7 +24,10 @@ Backend::Backend() :
 void
 Backend::updateOutputs() {
 
-	if (_initialCanvas && _initialCanvasModified) {
+	if (!_initialCanvasModified)
+		return;
+
+	if (_initialCanvas && _initialCanvas->numPages() > 0) {
 
 		LOG_DEBUG(backendlog) << "have initial canvas, loading them" << std::endl;
 		LOG_ALL(backendlog) << "initial canvas has " << _initialCanvas->numStrokes() << " strokes on " << _initialCanvas->numPages() << " pages" << std::endl;
@@ -33,8 +36,20 @@ Backend::updateOutputs() {
 
 		LOG_ALL(backendlog) << "copy has " << _canvas->numStrokes() << " strokes on " << _canvas->numPages() << " pages" << std::endl;
 
-		_initialCanvasModified = false;
+	} else {
+
+		LOG_DEBUG(backendlog) << "create new canvas with two pages" << std::endl;
+
+		_canvas->createPage(
+				util::point<CanvasPrecision>(0.0, 0.0),
+				util::point<PagePrecision>(210.0, 297.0) /* DIN A4 */);
+
+		_canvas->createPage(
+				util::point<CanvasPrecision>(300.0, 0.0),
+				util::point<PagePrecision>(210.0, 297.0) /* DIN A4 */);
 	}
+
+	_initialCanvasModified = false;
 }
 
 void

@@ -23,6 +23,8 @@ public:
 
 	inline const util::rect<CanvasPrecision>& getPageBoundingBox() const { return _pageBoundingBox; }
 
+	inline const util::point<PagePrecision>& getSize() const { return _size; }
+
 	/**
 	 * Create a new stroke starting behind the existing points.
 	 */

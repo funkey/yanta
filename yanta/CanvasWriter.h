@@ -20,6 +20,8 @@ private:
 
 	void writeStrokePoints(std::ofstream& out, const StrokePoints& points);
 
+	void writePage(std::ofstream& out, const Page& page);
+
 	void writeStroke(std::ofstream& out, const Stroke& stroke);
 
 	pipeline::Input<Canvas> _canvas;

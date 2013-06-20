@@ -12,10 +12,11 @@ class Canvas : public pipeline::Data {
 
 public:
 
-	/**
-	 * Default constructor. Creates one page.
-	 */
 	Canvas();
+
+	Canvas(Canvas& other);
+
+	Canvas& operator=(Canvas& other);
 
 	void createPage(
 			const util::point<CanvasPrecision>& position,
@@ -148,6 +149,8 @@ public:
 	}
 
 private:
+
+	void copyFrom(Canvas& other);
 
 	// global list of stroke points
 	StrokePoints _strokePoints;

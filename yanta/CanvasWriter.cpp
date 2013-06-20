@@ -12,20 +12,16 @@ CanvasWriter::write() {
 
 	std::ofstream out(_filename.c_str());
 
-	// write the file version (currently, we only have one)
-	out << 1 << std::endl;
+	// write the file version
+	out << 2 << std::endl;
 
 	writeStrokePoints(out, _canvas->getStrokePoints());
 
-	// skip the last stroke, if it wasn't started, yet
-	unsigned int numStrokes = _canvas->numStrokes();
-	if (numStrokes > 0 && _canvas->currentStroke().size() <= 1)
-		numStrokes--;
+	unsigned int numPages = _canvas->numPages();
+	out << numPages << std::endl;
 
-	out << numStrokes << std::endl;;
-
-	for (unsigned int i = 0; i < numStrokes; i++)
-		writeStroke(out, _canvas->getPage(0).getStroke(i));
+	for (unsigned int i = 0; i < numPages; i++)
+		writePage(out, _canvas->getPage(i));
 }
 
 void
@@ -40,6 +36,25 @@ CanvasWriter::writeStrokePoints(std::ofstream& out, const StrokePoints& points) 
 				<< points[i].position.y << " "
 				<< points[i].pressure << " "
 				<< points[i].timestamp;
+
+	out << std::endl;
+}
+
+void
+CanvasWriter::writePage(std::ofstream& out, const Page& page) {
+
+	out << page.getPosition().x << " " << page.getPosition().y;
+	out << " " << page.getSize().x << " " << page.getSize().y;
+
+	// skip the last stroke, if it wasn't started, yet
+	unsigned int numStrokes = page.numStrokes();
+	if (numStrokes > 0 && page.currentStroke().size() <= 1)
+		numStrokes--;
+
+	out << " " << numStrokes << std::endl;;
+
+	for (unsigned int i = 0; i < numStrokes; i++)
+		writeStroke(out, page.getStroke(i));
 
 	out << std::endl;
 }
