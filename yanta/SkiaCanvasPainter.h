@@ -64,11 +64,24 @@ private:
 
 	void clearSurface(SkCanvas& context);
 
+	/**
+	 * Draw the paper boundary and lines.
+	 */
+	void drawPaper(
+			SkCanvas& canvas,
+			const util::rect<double>& canvasRoi);
+
+	/**
+	 * Draw the content of a page.
+	 */
 	void drawPage(
 			SkCanvas& canvas,
 			const Page& page,
 			const util::rect<double>& canvasRoi);
 
+	/**
+	 * Draw a single stroke.
+	 */
 	bool drawStroke(
 			SkCanvas& context,
 			const Stroke& stroke,

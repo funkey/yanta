@@ -1,6 +1,7 @@
 #include <gui/OpenGl.h>
 #include <util/Logger.h>
 #include "OsdPainter.h"
+#include "Osd.h"
 
 logger::LogChannel osdpainterlog("osdpainterlog", "[OsdPainter] ");
 
@@ -52,7 +53,7 @@ OsdPainter::draw(
 	glVertex2f(100, 200);
 	glEnd();
 
-	glColor4f(0.0, 0.0, 0.0, std::max(0.0, 0.9 - pow(1.0 - width, 2)) + 0.1);
+	glColor4f(0.0, 0.0, 0.0, (std::abs(Osd::Small - width) > 0.0001 ? 0 : 0.9) + 0.1);
 	double x = 50;
 	double y = 350;
 	glBegin(GL_QUADS);
@@ -62,7 +63,7 @@ OsdPainter::draw(
 	glVertex2f(x + 1, y - 1);
 	glEnd();
 
-	glColor4f(0.0, 0.0, 0.0, std::max(0.0, 0.9 - pow(2.0 - width, 2)) + 0.1);
+	glColor4f(0.0, 0.0, 0.0, (std::abs(Osd::Normal - width) > 0.0001 ? 0 : 0.9) + 0.1);
 	x = 50;
 	y = 450;
 	glBegin(GL_QUADS);
@@ -72,7 +73,7 @@ OsdPainter::draw(
 	glVertex2f(x + 2, y - 2);
 	glEnd();
 
-	glColor4f(0.0, 0.0, 0.0, std::max(0.0, 0.9 - pow(4.0 - width, 2)) + 0.1);
+	glColor4f(0.0, 0.0, 0.0, (std::abs(Osd::Big - width) > 0.0001 ? 0 : 0.9) + 0.1);
 	x = 50;
 	y = 550;
 	glBegin(GL_QUADS);
@@ -82,7 +83,7 @@ OsdPainter::draw(
 	glVertex2f(x + 4, y - 4);
 	glEnd();
 
-	glColor4f(0.0, 0.0, 0.0, std::max(0.0, 0.9 - pow(8.0 - width, 2)) + 0.1);
+	glColor4f(0.0, 0.0, 0.0, (std::abs(Osd::Large - width) > 0.0001 ? 0 : 0.9) + 0.1);
 	x = 50;
 	y = 650;
 	glBegin(GL_QUADS);

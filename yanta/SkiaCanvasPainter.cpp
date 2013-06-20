@@ -59,8 +59,11 @@ SkiaCanvasPainter::draw(
 	canvas.scale(_pixelsPerDeviceUnit.x, _pixelsPerDeviceUnit.y);
 
 	// prepare the background, if we do not draw incrementally
-	if (!incremental)
+	if (!incremental) {
+
 		clearSurface(canvas);
+		drawPaper(canvas, canvasRoi);
+	}
 
 	// make sure reading access to the stroke points are safe
 	boost::shared_lock<boost::shared_mutex> lock(_canvas->getStrokePoints().getMutex());
@@ -86,25 +89,52 @@ SkiaCanvasPainter::clearSurface(SkCanvas& canvas) {
 }
 
 void
+SkiaCanvasPainter::drawPaper(SkCanvas& canvas, const util::rect<double>& canvasRoi) {
+
+	// draw pages
+	for (unsigned int i = 0; i < _canvas->numPages(); i++) {
+
+		const Page& page = _canvas->getPage(i);
+
+		if (!canvasRoi.isZero() && !canvasRoi.intersects(page.getPageBoundingBox()))
+			continue;
+
+		const util::point<CanvasPrecision> pagePosition = page.getPosition();
+
+		// correct for the page position...
+		canvas.save();
+		canvas.translate(pagePosition.x, pagePosition.y); // TODO: precision-problematic conversion
+		util::rect<double> pageRoi = canvasRoi - pagePosition; // TODO: precision-problematic conversion
+
+		SkPaint paint;
+		paint.setStrokeCap(SkPaint::kRound_Cap);
+		paint.setColor(SkColorSetRGB(0, 0, 0));
+		paint.setAntiAlias(true);
+		const util::point<PagePrecision>& pageSize = page.getSize();
+		canvas.drawLine(0, 0, pageSize.x, 0, paint);
+		canvas.drawLine(pageSize.x, 0, pageSize.x, pageSize.y, paint);
+		canvas.drawLine(pageSize.x, pageSize.y, 0, pageSize.y, paint);
+		canvas.drawLine(0, pageSize.y, 0, 0, paint);
+		paint.setColor(SkColorSetRGB(0, 203, 0));
+		paint.setStrokeWidth(0.01);
+		for (int x = 0; x < (int)pageSize.x; x++)
+			canvas.drawLine(x, 0, x, pageSize.y, paint);
+		for (int y = 0; y < (int)pageSize.y; y++)
+			canvas.drawLine(0, y, pageSize.x, y, paint);
+
+		canvas.restore();
+	}
+}
+
+void
 SkiaCanvasPainter::drawPage(SkCanvas& canvas, const Page& page, const util::rect<double>& canvasRoi) {
 
 	const util::point<CanvasPrecision> pagePosition = page.getPosition();
 
-	// ...correct for the page position...
+	// correct for the page position...
 	canvas.save();
 	canvas.translate(pagePosition.x, pagePosition.y); // TODO: precision-problematic conversion
 	util::rect<double> pageRoi = canvasRoi - pagePosition; // TODO: precision-problematic conversion
-
-	// ...draw the page...
-	SkPaint paint;
-	paint.setStrokeCap(SkPaint::kRound_Cap);
-	paint.setColor(SkColorSetRGB(0, 0, 0));
-	paint.setAntiAlias(true);
-	const util::point<PagePrecision>& pageSize = page.getSize();
-	canvas.drawLine(0, 0, pageSize.x, 0, paint);
-	canvas.drawLine(pageSize.x, 0, pageSize.x, pageSize.y, paint);
-	canvas.drawLine(pageSize.x, pageSize.y, 0, pageSize.y, paint);
-	canvas.drawLine(0, pageSize.y, 0, 0, paint);
 
 	// ...and draw every stroke
 	for (unsigned int i = 0; i < page.numStrokes(); i++) {
@@ -193,6 +223,8 @@ SkiaCanvasPainter::drawStroke(
 		util::point<double> nextLineNormal   = getLineNormal(stroke, strokePoints, i+1, length);
 		util::point<double> nextCornerNormal = 0.5*(currentLineNormal + nextLineNormal);
 
+		LOG_ALL(skiacanvaspainterlog) << "length of corner normal is " << sqrt(prevCornerNormal.x*prevCornerNormal.x + prevCornerNormal.y*prevCornerNormal.y) << std::endl;
+
 		SkPath path;
 		path.moveTo(
 				begin.x + widthStart*prevCornerNormal.x - prevCornerNormal.y*eps*length,
@@ -244,8 +276,8 @@ SkiaCanvasPainter::getLineNormal(const Stroke& stroke, const StrokePoints& point
 double
 SkiaCanvasPainter::widthPressureCurve(double pressure) {
 
-	const double minPressure = 0.0;
-	const double maxPressure = 1.5;
+	const double minPressure = 0.5;
+	const double maxPressure = 1;
 
 	pressure /= 2048.0;
 

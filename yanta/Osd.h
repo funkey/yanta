@@ -13,6 +13,11 @@ public:
 
 	Osd();
 
+	static const double Small  = 0.05;
+	static const double Normal = 0.5;
+	static const double Big    = 1;
+	static const double Large  = 2;
+
 private:
 
 	void updateOutputs() { *_penMode = _currentMode; _painter->setPenMode(_currentMode); }

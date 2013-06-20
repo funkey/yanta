@@ -3,9 +3,15 @@
 
 #include <gui/OpenGl.h>
 #include <util/Logger.h>
+#include <util/ProgramOptions.h>
 #include "CanvasPainter.h"
 
 logger::LogChannel canvaspainterlog("canvaspainterlog", "[CanvasPainter] ");
+
+util::ProgramOption optionDpi(
+	util::_long_name        = "dpi",
+	util::_description_text = "The dots per inch of the screen.",
+	util::_default_value    = 96);
 
 CanvasPainter::CanvasPainter() :
 	_cairoPainter(gui::skia_pixel_t(255, 255, 255)),
@@ -15,7 +21,7 @@ CanvasPainter::CanvasPainter() :
 	_prefetchTop(1024),
 	_prefetchBottom(1024),
 	_shift(0, 0),
-	_scale(1.0, 1.0),
+	_scale(optionDpi.as<double>()*0.0393701, optionDpi.as<double>()*0.0393701), // pixel per millimeter
 	_previousShift(0, 0),
 	_previousScale(0, 0),
 	_previousPixelRoi(0, 0, 0, 0),

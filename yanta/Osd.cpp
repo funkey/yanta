@@ -4,7 +4,7 @@
 logger::LogChannel osdlog("osdlog", "[Osd] ");
 
 Osd::Osd() :
-	_previousWidth(2.0),
+	_previousWidth(Osd::Normal),
 	_widthTapTime(0),
 	_penAway(false) {
 
@@ -13,6 +13,8 @@ Osd::Osd() :
 
 	_painter.registerForwardCallback(&Osd::onFingerDown, this);
 	_painter.registerForwardCallback(&Osd::onFingerUp, this);
+
+	_currentMode.getStyle().setWidth(Osd::Normal);
 }
 
 void
@@ -50,25 +52,25 @@ Osd::onFingerDown(gui::FingerDown& signal) {
 
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
-		_currentMode.getStyle().setWidth(1.0);
+		_currentMode.getStyle().setWidth(Small);
 
 	} else if (signal.position.y < 500) {
 
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
-		_currentMode.getStyle().setWidth(2.0);
+		_currentMode.getStyle().setWidth(Normal);
 
 	} else if (signal.position.y < 600) {
 
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
-		_currentMode.getStyle().setWidth(4.0);
+		_currentMode.getStyle().setWidth(Big);
 
 	} else if (signal.position.y < 700) {
 
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
-		_currentMode.getStyle().setWidth(8.0);
+		_currentMode.getStyle().setWidth(Large);
 	}
 
 	signal.processed = true;
