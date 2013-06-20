@@ -23,14 +23,14 @@ SkiaCanvasPainter::alreadyDrawn(const Canvas& canvas) {
 void
 SkiaCanvasPainter::draw(SkCanvas& canvas) {
 
-	util::rect<Canvas::Precision> roi(0, 0, 0, 0);
+	util::rect<CanvasPrecision> roi(0, 0, 0, 0);
 	draw(canvas, roi);
 }
 
 void
 SkiaCanvasPainter::draw(
 		SkCanvas& canvas,
-		const util::rect<Canvas::Precision>& roi) {
+		const util::rect<CanvasPrecision>& roi) {
 
 	bool incremental = (_drawnUntilStrokePoint != 0);
 
@@ -47,14 +47,14 @@ SkiaCanvasPainter::draw(
 
 		// transform roi to canvas units
 		canvasRoi = roi;
-		canvasRoi -= _pixelOffset;
+		canvasRoi -= _pixelOffset; // TODO: precision-problematic conversion
 		canvasRoi /= _pixelsPerDeviceUnit;
 	}
 
 	// apply the given transformation
 
 	// translate should be performed...
-	canvas.translate(_pixelOffset.x, _pixelOffset.y);
+	canvas.translate(_pixelOffset.x, _pixelOffset.y); // TODO: precision-problematic conversion
 	// ...after the scaling
 	canvas.scale(_pixelsPerDeviceUnit.x, _pixelsPerDeviceUnit.y);
 
@@ -68,39 +68,52 @@ SkiaCanvasPainter::draw(
 	// reset temporal memory about what we drew already
 	_drawnUntilStrokePointTmp = _drawnUntilStrokePoint;
 
-	// draw the (new) canvas in the current part
-	for (unsigned int i = 0; i < _canvas->numStrokes(); i++) {
+	// for every page...
+	for (unsigned int page = 0; page < _canvas->numPages(); page++) {
 
-		const Stroke& stroke = _canvas->getStroke(i);
+		// ...correct for the page position...
+		const util::point<CanvasPrecision> pagePosition = _canvas->getPage(page).getPosition();
+		canvas.save();
+		canvas.translate(pagePosition.x, pagePosition.y); // TODO: precision-problematic conversion
 
-		// the effective end of a stroke is one less, if the stroke is not 
-		// finished, yet
-		long begin = std::max((long)_drawnUntilStrokePoint - 1, (long)stroke.begin());
-		long end   = (long)stroke.end() - (stroke.finished() ? 0 : 1);
+		// ...and draw every stroke
+		for (unsigned int i = 0; i < _canvas->getPage(page).numStrokes(); i++) {
 
-		// drawn already?
-		if (end <= (long)_drawnUntilStrokePoint)
-			continue;
+			const Stroke& stroke = _canvas->getPage(page).getStroke(i);
 
-		// remember the biggest point we drew already
-		_drawnUntilStrokePointTmp = std::max(_drawnUntilStrokePointTmp, (unsigned long)end);
+			// the effective end of a stroke is one less, if the stroke is not 
+			// finished, yet
+			long begin = std::max((long)_drawnUntilStrokePoint - 1, (long)stroke.begin());
+			long end   = (long)stroke.end() - (stroke.finished() ? 0 : 1);
 
-		// draw only of no roi given or stroke intersects roi
-		if (canvasRoi.isZero() || !stroke.finished() || stroke.boundingBox().intersects(canvasRoi)) {
-
-			LOG_ALL(skiacanvaspainterlog)
-					<< "drawing stroke " << i << " (" << stroke.begin() << " - " << stroke.end()
-					<< ") , starting from point " << begin << " until " << end << std::endl;
-
-			if (!drawStroke(canvas, stroke, canvasRoi, begin, end))
+			// drawn already?
+			if (end <= (long)_drawnUntilStrokePoint)
 				continue;
 
-		} else {
+			// remember the biggest point we drew already
+			_drawnUntilStrokePointTmp = std::max(_drawnUntilStrokePointTmp, (unsigned long)end);
 
-			LOG_ALL(skiacanvaspainterlog) << "stroke " << i << " is not visible" << std::endl;
+			// draw only of no roi given or stroke intersects roi
+			if (canvasRoi.isZero() || !stroke.finished() || stroke.boundingBox().intersects(canvasRoi)) {
+
+				LOG_ALL(skiacanvaspainterlog)
+						<< "drawing stroke " << i << " (" << stroke.begin() << " - " << stroke.end()
+						<< ") , starting from point " << begin << " until " << end << std::endl;
+
+				if (!drawStroke(canvas, stroke, canvasRoi, begin, end))
+					continue;
+
+			} else {
+
+				LOG_ALL(skiacanvaspainterlog) << "stroke " << i << " is not visible" << std::endl;
+			}
 		}
+
+		// page offset
+		canvas.restore();
 	}
 
+	// canvas to pixels
 	canvas.restore();
 
 	LOG_ALL(skiacanvaspainterlog) << "I drew everything until stroke point " << _drawnUntilStrokePointTmp << std::endl;

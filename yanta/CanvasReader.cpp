@@ -59,9 +59,8 @@ CanvasReader::readStroke(std::ifstream& in) {
 	style.setWidth(penWidth);
 	style.setColor(red, green, blue, alpha);
 
-	_canvas->createNewStroke();
-	_canvas->currentStroke().setBegin(begin);
-	_canvas->currentStroke().setEnd(end);
-	_canvas->currentStroke().setStyle(style);
-	_canvas->currentStroke().finish(_canvas->getStrokePoints());
+	_canvas->getPage(0).createNewStroke(begin);
+	_canvas->getPage(0).currentStroke().setEnd(end);
+	_canvas->getPage(0).currentStroke().setStyle(style);
+	_canvas->getPage(0).currentStroke().finish(_canvas->getStrokePoints());
 }

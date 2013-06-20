@@ -20,7 +20,7 @@ public:
 	 */
 	void setDeviceTransformation(
 			const util::point<double>& pixelsPerDeviceUnit,
-			const util::point<double>& pixelOffset) {
+			const util::point<int>&    pixelOffset) {
 
 		_pixelsPerDeviceUnit = pixelsPerDeviceUnit;
 		_pixelOffset         = pixelOffset;
@@ -41,7 +41,8 @@ public:
 	}
 
 	/**
-	 * Return true if the canvas have been drawn by this painter already.
+	 * Return true if all the strokes of this canvas have been drawn by this 
+	 * painter already.
 	 */
 	bool alreadyDrawn(const Canvas& canvas);
 
@@ -57,7 +58,7 @@ public:
 	 */
 	void draw(
 			SkCanvas& context,
-			const util::rect<Canvas::Precision>& roi);
+			const util::rect<CanvasPrecision>& roi);
 
 private:
 
@@ -66,7 +67,7 @@ private:
 	bool drawStroke(
 			SkCanvas& context,
 			const Stroke& stroke,
-			const util::rect<Canvas::Precision>& roi,
+			const util::rect<CanvasPrecision>& roi,
 			unsigned long beginStroke,
 			unsigned long endStroke);
 
@@ -81,7 +82,7 @@ private:
 	boost::shared_ptr<Canvas> _canvas;
 
 	util::point<double> _pixelsPerDeviceUnit;
-	util::point<double> _pixelOffset;
+	util::point<int>    _pixelOffset;
 
 	// the number of the stroke point until which all have been drawn already
 	unsigned long _drawnUntilStrokePoint;

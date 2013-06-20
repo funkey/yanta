@@ -27,7 +27,11 @@ Backend::updateOutputs() {
 	if (_initialCanvas && _initialCanvasModified) {
 
 		LOG_DEBUG(backendlog) << "have initial canvas, loading them" << std::endl;
+		LOG_ALL(backendlog) << "initial canvas has " << _initialCanvas->numStrokes() << " strokes on " << _initialCanvas->numPages() << " pages" << std::endl;
+
 		*_canvas = *_initialCanvas;
+
+		LOG_ALL(backendlog) << "copy has " << _canvas->numStrokes() << " strokes on " << _canvas->numPages() << " pages" << std::endl;
 
 		_initialCanvasModified = false;
 	}
@@ -52,9 +56,8 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 			LOG_DEBUG(backendlog) << "accepting" << std::endl;
 
-			_canvas->createNewStroke();
+			_canvas->createNewStroke(signal.position, signal.pressure, signal.timestamp);
 			_canvas->currentStroke().setStyle(_penMode->getStyle());
-			_canvas->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
 		}
 	}
 
@@ -65,7 +68,7 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 		if (_penDown) {
 
-			_canvas->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+			_canvas->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
 			_canvas->finishCurrentStroke();
 
 			setDirty(_canvas);
@@ -86,7 +89,7 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 			LOG_DEBUG(backendlog) << "accepting" << std::endl;
 
-			_canvas->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+			_canvas->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
 			_canvas->finishCurrentStroke();
 
 			setDirty(_canvas);
@@ -99,9 +102,8 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 		if (_penDown) {
 
-			_canvas->createNewStroke();
+			_canvas->createNewStroke(signal.position, signal.pressure, signal.timestamp);
 			_canvas->currentStroke().setStyle(_penMode->getStyle());
-			_canvas->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
 		}
 	}
 }
@@ -116,7 +118,7 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	if (_erase) {
 
-		util::rect<Canvas::Precision> dirtyArea = _canvas->erase(_previousErasePosition, signal.position);
+		util::rect<CanvasPrecision> dirtyArea = _canvas->erase(_previousErasePosition, signal.position);
 
 		_previousErasePosition = signal.position;
 
@@ -128,7 +130,7 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	} else {
 
-		_canvas->addStrokePoint(StrokePoint(signal.position, signal.pressure, signal.timestamp));
+		_canvas->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
 		setDirty(_canvas);
 	}
 }

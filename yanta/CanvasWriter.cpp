@@ -25,7 +25,7 @@ CanvasWriter::write() {
 	out << numStrokes << std::endl;;
 
 	for (unsigned int i = 0; i < numStrokes; i++)
-		writeStroke(out, _canvas->getStroke(i));
+		writeStroke(out, _canvas->getPage(0).getStroke(i));
 }
 
 void

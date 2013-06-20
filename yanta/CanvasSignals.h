@@ -11,10 +11,10 @@ public:
 	ChangedArea() :
 		area(0, 0, 0, 0) {}
 
-	ChangedArea(const util::rect<Canvas::Precision>& area_) :
+	ChangedArea(const util::rect<CanvasPrecision>& area_) :
 		area(area_) {}
 
-	util::rect<Canvas::Precision> area;
+	util::rect<CanvasPrecision> area;
 };
 
 #endif // YANTA_CANVAS_SIGNALS_H__
