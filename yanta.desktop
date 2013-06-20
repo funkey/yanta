@@ -1,7 +1,7 @@
 [Desktop Entry]
 Type=Application
 Name=Yet Another Note Taking Application
-Exec=splines %U
-Icon=splines
+Exec=yanta %U
+Icon=yanta
 Terminal=false
-MimeType=application/x-splines
+MimeType=application/x-yanta

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
   <mime-info xmlns='http://www.freedesktop.org/standards/shared-mime-info'>
-    <mime-type type="application/x-splines">  
+    <mime-type type="application/x-yanta">  
     <comment>Yanta Note</comment>
-    <icon name="application-x-splines"/>
+    <icon name="application-x-yanta"/>
     <glob pattern="*.yan"/>
   </mime-type>
 </mime-info>
