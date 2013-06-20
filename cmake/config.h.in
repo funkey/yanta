@@ -5,3 +5,5 @@
 #cmakedefine HAVE_PNG
 #cmakedefine HAVE_CAIRO
 #cmakedefine ENABLE_DEBUG_LOGGING
+
+#define SYSTEM_LINUX
