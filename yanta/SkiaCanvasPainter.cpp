@@ -104,7 +104,6 @@ SkiaCanvasPainter::drawPaper(SkCanvas& canvas, const util::rect<double>& canvasR
 		// correct for the page position...
 		canvas.save();
 		canvas.translate(pagePosition.x, pagePosition.y); // TODO: precision-problematic conversion
-		util::rect<double> pageRoi = canvasRoi - pagePosition; // TODO: precision-problematic conversion
 
 		SkPaint paint;
 		paint.setStrokeCap(SkPaint::kRound_Cap);
@@ -119,8 +118,13 @@ SkiaCanvasPainter::drawPaper(SkCanvas& canvas, const util::rect<double>& canvasR
 		paint.setStrokeWidth(0.01);
 		for (int x = 0; x < (int)pageSize.x; x++)
 			canvas.drawLine(x, 0, x, pageSize.y, paint);
-		for (int y = 0; y < (int)pageSize.y; y++)
+		for (int y = 0; y < (int)pageSize.y; y++) {
+			if (y%10 == 0)
+				paint.setStrokeWidth(0.05);
 			canvas.drawLine(0, y, pageSize.x, y, paint);
+			if (y%10 == 0)
+				paint.setStrokeWidth(0.01);
+		}
 
 		canvas.restore();
 	}
