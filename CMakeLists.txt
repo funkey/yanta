@@ -160,7 +160,9 @@ add_subdirectory(modules/external/skia)
 #####################
 
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -fomit-frame-pointer")
+set(CMAKE_CXX_FLAGS_PROFILING "-O3 -g -fno-omit-frame-pointer -Wall -Wextra" CACHE STRING "Profiling CXX flags" FORCE)
 set(CMAKE_CXX_FLAGS_DEBUG   "-g -Wall -Wextra")
+mark_as_advanced(CMAKE_CXX_FLAGS_PROFILING)
 
 ###############
 # main target #
