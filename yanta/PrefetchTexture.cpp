@@ -198,7 +198,7 @@ PrefetchTexture::setWorkingArea(const util::rect<int>& subarea) {
 		_workingAreaOffsets[i] = offsets[i];
 	}
 
-	_workingArea        = subarea;
+	_workingArea = subarea;
 }
 
 void

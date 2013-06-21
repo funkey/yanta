@@ -80,7 +80,6 @@ Osd::onFingerDown(gui::FingerDown& signal) {
 	}
 
 	signal.processed = true;
-	setDirty(_penMode);
 	setDirty(_painter);
 }
 
@@ -124,7 +123,6 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 		return;
 	}
 
-	setDirty(_penMode);
 	setDirty(_painter);
 }
 

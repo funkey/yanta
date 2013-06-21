@@ -14,6 +14,7 @@ util::ProgramOption optionDpi(
 	util::_default_value    = 96);
 
 CanvasPainter::CanvasPainter() :
+	_canvasChanged(true),
 	_cairoPainter(gui::skia_pixel_t(255, 255, 255)),
 	_cairoCleanUpPainter(gui::skia_pixel_t(255, 255, 255)),
 	_prefetchLeft(1024),
@@ -114,6 +115,14 @@ CanvasPainter::draw(
 	if (prepareTexture(pixelRoi))
 		initiateFullRedraw(pixelRoi);
 
+	if (_canvasChanged) {
+
+		LOG_DEBUG(canvaspainterlog) << "the canvas changed entirely -- resetting incremental memories" << std::endl;
+
+		_cairoPainter.resetIncrementalMemory();
+		_canvasChanged = false;
+	}
+
 	if (_mode == IncrementalDrawing) {
 
 		// scale changed while we are in drawing mode -- texture needs to be 
@@ -195,7 +204,7 @@ CanvasPainter::prepareTexture(const util::rect<int>& pixelRoi) {
 
 	if (_canvasTexture && (_canvasTexture->width() < textureWidth || _canvasTexture->height() < textureHeight)) {
 
-		LOG_ALL(canvaspainterlog) << "texture is of different size, create a new one" << std::endl;
+		LOG_DEBUG(canvaspainterlog) << "texture is of different size, create a new one" << std::endl;
 
 		_canvasTexture.reset();
 	}
@@ -213,7 +222,7 @@ CanvasPainter::prepareTexture(const util::rect<int>& pixelRoi) {
 void
 CanvasPainter::refresh() {
 
-	LOG_ALL(canvaspainterlog) << "refresh requested" << std::endl;
+	LOG_DEBUG(canvaspainterlog) << "refresh requested" << std::endl;
 	_cairoPainter.resetIncrementalMemory();
 }
 
@@ -234,6 +243,8 @@ CanvasPainter::updateCanvas(const Canvas& canvas, const util::rect<int>& roi) {
 void
 CanvasPainter::initiateFullRedraw(const util::rect<int>& roi) {
 
+	LOG_DEBUG(canvaspainterlog) << "initiate full redraw for roi " << roi << std::endl;
+
 	_canvasTexture->reset(roi);
 	_cairoPainter.resetIncrementalMemory();
 }
@@ -251,7 +262,7 @@ CanvasPainter::markDirty(const util::rect<CanvasPrecision>& area) {
 	// are we currently looking at this area?
 	if (_mode == IncrementalDrawing && pixelArea.intersects(_previousPixelRoi)) {
 
-		LOG_ALL(canvaspainterlog) << "redrawing dirty working area " << (_previousPixelRoi.intersection(pixelArea)) << std::endl;
+		LOG_DEBUG(canvaspainterlog) << "redrawing dirty working area " << (_previousPixelRoi.intersection(pixelArea)) << std::endl;
 
 		gui::OpenGl::Guard guard;
 

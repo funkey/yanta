@@ -39,7 +39,8 @@ private:
 
 	bool _initialCanvasModified;
 
-	signals::Slot<ChangedArea> _changedArea;
+	signals::Slot<ChangedArea>      _changedArea;
+	signals::Slot<StrokePointAdded> _strokePointAdded;
 };
 
 #endif // YANTA_BACKEND_H__

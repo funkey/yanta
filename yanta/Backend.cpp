@@ -18,6 +18,7 @@ Backend::Backend() :
 	_osdRequest.registerBackwardCallback(&Backend::onAddPage, this);
 
 	_canvas.registerForwardSlot(_changedArea);
+	_canvas.registerForwardSlot(_strokePointAdded);
 	_canvas.registerForwardCallback(&Backend::onPenDown, this);
 	_canvas.registerForwardCallback(&Backend::onPenMove, this);
 	_canvas.registerForwardCallback(&Backend::onPenUp, this);
@@ -84,7 +85,7 @@ Backend::onPenDown(const gui::PenDown& signal) {
 			_canvas->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
 			_canvas->finishCurrentStroke();
 
-			setDirty(_canvas);
+			_strokePointAdded();
 		}
 	}
 }
@@ -105,7 +106,7 @@ Backend::onPenUp(const gui::PenUp& signal) {
 			_canvas->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
 			_canvas->finishCurrentStroke();
 
-			setDirty(_canvas);
+			_strokePointAdded();
 		}
 	}
 
@@ -144,7 +145,7 @@ Backend::onPenMove(const gui::PenMove& signal) {
 	} else {
 
 		_canvas->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
-		setDirty(_canvas);
+		_strokePointAdded();
 	}
 }
 
@@ -166,5 +167,7 @@ Backend::onAddPage(const AddPage& /*signal*/) {
 
 	_canvas->createPage(position, size);
 
-	setDirty(_canvas);
+	// inform about dirty area
+	ChangedArea signal(util::rect<CanvasPrecision>(position.x, position.y, position.x + size.x, position.y + size.y));
+	_changedArea(signal);
 }

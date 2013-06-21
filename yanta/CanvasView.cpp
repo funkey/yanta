@@ -15,6 +15,7 @@ CanvasView::CanvasView() :
 	registerOutput(_painter, "painter");
 
 	_canvas.registerBackwardCallback(&CanvasView::onChangedArea, this);
+	_canvas.registerBackwardCallback(&CanvasView::onStrokePointAdded, this);
 
 	_painter.registerForwardSlot(_contentChanged);
 	_painter.registerForwardSlot(_fullscreen);
@@ -290,6 +291,14 @@ CanvasView::onChangedArea(const ChangedArea& signal) {
 	LOG_ALL(canvasviewlog) << "area " << signal.area << " changed" << std::endl;
 
 	_painter->markDirty(signal.area);
+	_contentChanged();
+}
+
+void
+CanvasView::onStrokePointAdded(const StrokePointAdded& /*signal*/) {
+
+	LOG_ALL(canvasviewlog) << "a stroke point was added -- initiate a redraw" << std::endl;
+
 	_contentChanged();
 }
 

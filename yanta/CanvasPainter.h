@@ -23,6 +23,7 @@ public:
 		_canvas = canvas;
 		_cairoPainter.setCanvas(canvas);
 		_cairoCleanUpPainter.setCanvas(canvas);
+		_canvasChanged = true;
 	}
 
 	void setCursorPosition(const util::point<CanvasPrecision>& position) {
@@ -108,6 +109,9 @@ private:
 
 	// the canvas to draw
 	boost::shared_ptr<Canvas> _canvas;
+
+	// indicates that the canvas was changed entirely
+	bool _canvasChanged;
 
 	// the cairo painter for the canvas
 	SkiaCanvasPainter _cairoPainter;

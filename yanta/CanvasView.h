@@ -60,6 +60,8 @@ private:
 
 	void onChangedArea(const ChangedArea& signal);
 
+	void onStrokePointAdded(const StrokePointAdded& signal);
+
 	void addFinger(const gui::FingerDown& signal);
 
 	void removeFinger(unsigned int id);
