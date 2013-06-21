@@ -9,7 +9,10 @@ Osd::Osd() :
 	_penAway(false) {
 
 	registerOutput(_penMode, "pen mode");
+	registerOutput(_osdRequest, "osd request");
 	registerOutput(_painter, "osd painter");
+
+	_osdRequest.registerForwardSlot(_addPage);
 
 	_painter.registerForwardCallback(&Osd::onFingerDown, this);
 	_painter.registerForwardCallback(&Osd::onFingerUp, this);
@@ -71,6 +74,9 @@ Osd::onFingerDown(gui::FingerDown& signal) {
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
 		_currentMode.getStyle().setWidth(Large);
+	} else if (signal.position.y < 800) {
+
+		_addPage();
 	}
 
 	signal.processed = true;

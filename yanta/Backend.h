@@ -6,6 +6,8 @@
 #include "CanvasPainter.h"
 #include "CanvasSignals.h"
 #include "PenMode.h"
+#include "OsdRequest.h"
+#include "OsdSignals.h"
 
 class Backend : public pipeline::SimpleProcessNode<> {
 
@@ -23,9 +25,12 @@ private:
 	void onPenUp(const gui::PenUp& signal);
 	void onPenMove(const gui::PenMove& signal);
 
-	pipeline::Output<Canvas> _canvas;
-	pipeline::Input<PenMode>  _penMode;
-	pipeline::Input<Canvas>  _initialCanvas;
+	void onAddPage(const AddPage& signal);
+
+	pipeline::Input<Canvas>     _initialCanvas;
+	pipeline::Input<PenMode>    _penMode;
+	pipeline::Input<OsdRequest> _osdRequest;
+	pipeline::Output<Canvas>    _canvas;
 
 	bool _penDown;
 

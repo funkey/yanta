@@ -6,6 +6,8 @@
 #include <gui/PenSignals.h>
 
 #include "OsdPainter.h"
+#include "OsdRequest.h"
+#include "OsdSignals.h"
 
 class Osd : public pipeline::SimpleProcessNode<> {
 
@@ -29,7 +31,10 @@ private:
 	void onPenAway(const gui::PenAway& signal);
 
 	pipeline::Output<PenMode>    _penMode;
+	pipeline::Output<OsdRequest> _osdRequest;
 	pipeline::Output<OsdPainter> _painter;
+
+	signals::Slot<AddPage> _addPage;
 
 	PenMode _currentMode;
 

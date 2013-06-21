@@ -108,6 +108,7 @@ int main(int optionc, char** optionv) {
 			canvasView->setInput(backend->getOutput("canvas"));
 			backend->setInput("initial canvas", reader->getOutput());
 			backend->setInput("pen mode", osd->getOutput("pen mode"));
+			backend->setInput("osd request", osd->getOutput("osd request"));
 			writer->setInput(backend->getOutput());
 
 			// enter window main loop

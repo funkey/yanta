@@ -9,16 +9,18 @@ Backend::Backend() :
 	_erase(false),
 	_initialCanvasModified(false) {
 
-	registerOutput(_canvas, "canvas");
-	registerInput(_penMode, "pen mode");
 	registerInput(_initialCanvas, "initial canvas", pipeline::Optional);
+	registerInput(_penMode, "pen mode");
+	registerInput(_osdRequest, "osd request", pipeline::Optional);
+	registerOutput(_canvas, "canvas");
+
+	_initialCanvas.registerBackwardCallback(&Backend::onModified, this);
+	_osdRequest.registerBackwardCallback(&Backend::onAddPage, this);
 
 	_canvas.registerForwardSlot(_changedArea);
 	_canvas.registerForwardCallback(&Backend::onPenDown, this);
 	_canvas.registerForwardCallback(&Backend::onPenMove, this);
 	_canvas.registerForwardCallback(&Backend::onPenUp, this);
-
-	_initialCanvas.registerBackwardCallback(&Backend::onModified, this);
 }
 
 void
@@ -42,10 +44,6 @@ Backend::updateOutputs() {
 
 		_canvas->createPage(
 				util::point<CanvasPrecision>(0.0, 0.0),
-				util::point<PagePrecision>(210.0, 297.0) /* DIN A4 */);
-
-		_canvas->createPage(
-				util::point<CanvasPrecision>(300.0, 0.0),
 				util::point<PagePrecision>(210.0, 297.0) /* DIN A4 */);
 	}
 
@@ -148,4 +146,25 @@ Backend::onPenMove(const gui::PenMove& signal) {
 		_canvas->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
 		setDirty(_canvas);
 	}
+}
+
+void
+Backend::onAddPage(const AddPage& /*signal*/) {
+
+	// the number of the new page to add
+	int pageNum = _canvas->numPages();
+
+	// let the new page be of the size of the most recent page
+	const util::point<PagePrecision>& size = _canvas->getPage(pageNum - 1).getSize();
+
+	int pageX = pageNum%2;
+	int pageY = pageNum/2;
+
+	// simple 2-pages layout
+	// TODO: get layout from current OsdRequest input
+	util::point<CanvasPrecision> position(pageX*(size.x + size.x/10), pageY*(size.y + size.y/8));
+
+	_canvas->createPage(position, size);
+
+	setDirty(_canvas);
 }
