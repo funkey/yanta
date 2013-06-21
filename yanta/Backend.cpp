@@ -71,7 +71,7 @@ Backend::onPenDown(const gui::PenDown& signal) {
 			LOG_DEBUG(backendlog) << "accepting" << std::endl;
 
 			_canvas->createNewStroke(signal.position, signal.pressure, signal.timestamp);
-			_canvas->currentStroke().setStyle(_penMode->getStyle());
+			_canvas->setCurrentStrokeStyle(_penMode->getStyle());
 		}
 	}
 
@@ -117,7 +117,7 @@ Backend::onPenUp(const gui::PenUp& signal) {
 		if (_penDown) {
 
 			_canvas->createNewStroke(signal.position, signal.pressure, signal.timestamp);
-			_canvas->currentStroke().setStyle(_penMode->getStyle());
+			_canvas->setCurrentStrokeStyle(_penMode->getStyle());
 		}
 	}
 }

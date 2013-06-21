@@ -14,7 +14,7 @@ bool
 SkiaCanvasPainter::alreadyDrawn(const Canvas& canvas) {
 
 	// is it necessary to draw something?
-	if (canvas.numStrokes() > 0 && _drawnUntilStrokePoint == canvas.currentStroke().end() - (canvas.currentStroke().finished() ? 0 : 1))
+	if (canvas.numStrokes() > 0 && _drawnUntilStrokePoint == canvas.getStrokePoints().size() - (canvas.hasOpenStroke() ? 0 : 1))
 		return true;
 
 	return false;

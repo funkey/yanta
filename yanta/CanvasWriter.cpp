@@ -46,11 +46,7 @@ CanvasWriter::writePage(std::ofstream& out, const Page& page) {
 	out << page.getPosition().x << " " << page.getPosition().y;
 	out << " " << page.getSize().x << " " << page.getSize().y;
 
-	// skip the last stroke, if it wasn't started, yet
 	unsigned int numStrokes = page.numStrokes();
-	if (numStrokes > 0 && page.currentStroke().size() <= 1)
-		numStrokes--;
-
 	out << " " << numStrokes << std::endl;;
 
 	for (unsigned int i = 0; i < numStrokes; i++)

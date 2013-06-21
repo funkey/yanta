@@ -36,10 +36,12 @@ public:
 	}
 
 	/**
-	 * Get the current stroke.
+	 * Set the style of the current stroke.
 	 */
-	inline Stroke& currentStroke() { return _pages[_currentPage].currentStroke(); }
-	const inline Stroke& currentStroke() const { return _pages[_currentPage].currentStroke(); }
+	inline void setCurrentStrokeStyle(const Style& style) {
+
+		_pages[_currentPage].currentStroke().setStyle(style);
+	}
 
 	/**
 	 * Add a new stroke point to the global list and append it to the current 
@@ -59,6 +61,18 @@ public:
 	inline void finishCurrentStroke() {
 
 		_pages[_currentPage].currentStroke().finish(_strokePoints);
+	}
+
+	/**
+	 * Check if there is currently a stroke that has not been finished yet 
+	 * (i.e., the pen still touches the paper).
+	 */
+	inline bool hasOpenStroke() const {
+
+		if (_pages[_currentPage].numStrokes() > 0 && !_pages[_currentPage].currentStroke().finished())
+			return true;
+
+		return false;
 	}
 
 	/**
