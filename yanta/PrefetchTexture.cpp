@@ -214,7 +214,9 @@ PrefetchTexture::render(const util::rect<int>& roi) {
 	_texture->bind();
 
 	// The texture's ROI is in general split into four parts that we have to 
-	// draw individually.
+	// draw individually. On the fly, make sure that the requested region is not 
+	// larger than the one that is covered by this texture by intersecting it 
+	// with the texture area.
 
 	// the texCoords
 	util::rect<double> texCoords;
@@ -222,7 +224,7 @@ PrefetchTexture::render(const util::rect<int>& roi) {
 	util::rect<int>  parts[4];
 	util::point<int> offsets[4];
 
-	split(roi, parts, offsets);
+	split(roi.intersection(_textureArea), parts, offsets);
 
 	for (int i = 0; i < 4; i++) {
 

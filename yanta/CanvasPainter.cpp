@@ -23,6 +23,7 @@ CanvasPainter::CanvasPainter() :
 	_prefetchBottom(1024),
 	_shift(0, 0),
 	_scale(optionDpi.as<double>()*0.0393701, optionDpi.as<double>()*0.0393701), // pixel per millimeter
+	_scaleChange(1, 1),
 	_previousShift(0, 0),
 	_previousScale(0, 0),
 	_previousPixelRoi(0, 0, 0, 0),
@@ -54,12 +55,15 @@ CanvasPainter::zoom(double zoomChange, const util::point<CanvasPrecision>& ancho
 	// convert the anchor from screen coordinates to texture coordinates
 	util::point<double> textureAnchor = anchor - _shift;
 
-	_scale *= zoomChange;
-	_shift  = _shift + (1 - zoomChange)*textureAnchor;
+	if (_mode != Zooming)
+		_scaleChange = util::point<double>(1.0, 1.0);
 
-	// we are taking care of the translation
-	_cairoPainter.setDeviceTransformation(_scale, util::point<CanvasPrecision>(0.0, 0.0));
-	_cairoCleanUpPainter.setDeviceTransformation(_scale, util::point<CanvasPrecision>(0.0, 0.0));
+	_scaleChange *= zoomChange;
+	_scale       *= zoomChange;
+	_shift        = _shift + (1 - zoomChange)*textureAnchor;
+
+	// don't change the canvas painter transformations -- we simulate the zoom 
+	// by stretching the texture (and repaint when we leave the zoom mode)
 
 	_mode = Zooming;
 }
@@ -134,6 +138,16 @@ CanvasPainter::draw(
 			initiateFullRedraw(pixelRoi);
 			prepareDrawing(pixelRoi);
 
+			// everything beyond the working area needs to be updated by the 
+			// background painter
+			_canvasTexture->markDirty(_left);
+			_canvasTexture->markDirty(_right);
+			_canvasTexture->markDirty(_top);
+			_canvasTexture->markDirty(_bottom);
+
+			// update the working area ourselves
+			updateCanvas(*_canvas, pixelRoi);
+
 		// shift changed in incremental drawing mode -- move prefetch texture 
 		// and get back to incremental drawing
 		} else if (_shift != _previousShift) {
@@ -173,7 +187,7 @@ CanvasPainter::draw(
 	if (_mode == Zooming) {
 
 		// TODO: show scaled version of texture
-		initiateFullRedraw(pixelRoi);
+		//initiateFullRedraw(pixelRoi);
 	}
 
 	// draw the canvas
@@ -190,8 +204,12 @@ CanvasPainter::draw(
 
 	// remember configuration for next draw()
 	_previousShift    = _shift;
-	_previousScale    = _scale;
 	_previousPixelRoi = pixelRoi;
+	// remember current scale only if we're not simulating the scaling in 
+	// zooming mode (this allows us to detect a scale change when we're back in 
+	// one of the other modes)
+	if (_mode != Zooming)
+		_previousScale    = _scale;
 }
 
 bool
@@ -338,6 +356,8 @@ CanvasPainter::prepareDrawing(const util::rect<int>& roi) {
 			workingArea.maxY + _prefetchBottom);
 
 	_cairoPainter.resetIncrementalMemory();
+	_cairoPainter.setDeviceTransformation(_scale, util::point<CanvasPrecision>(0.0, 0.0));
+	_cairoCleanUpPainter.setDeviceTransformation(_scale, util::point<CanvasPrecision>(0.0, 0.0));
 
 	_mode = IncrementalDrawing;
 }
@@ -348,18 +368,14 @@ CanvasPainter::drawTexture(const util::rect<int>& roi) {
 	glPushMatrix();
 	glTranslated(_shift.x, _shift.y, 0.0);
 
-	_canvasTexture->render(roi);
+	if (_mode == Zooming) {
 
-	if (_canvasTexture->isDirty(roi)) {
+		glScaled(_scaleChange.x, _scaleChange.y, 1.0);
+		_canvasTexture->render(roi/_scaleChange);
 
-		glColor4f(1.0, 0.3, 1.0, 0.3);
-		glDisable(GL_TEXTURE_2D);
-		glBegin(GL_QUADS);
-		glVertex2d(roi.minX, roi.minY);
-		glVertex2d(roi.maxX, roi.minY);
-		glVertex2d(roi.maxX, roi.maxY);
-		glVertex2d(roi.minX, roi.maxY);
-		glEnd();
+	} else {
+
+		_canvasTexture->render(roi);
 	}
 
 	glPopMatrix();

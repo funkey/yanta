@@ -137,6 +137,8 @@ private:
 	// accuracy.
 	util::point<int>    _shift;
 	util::point<double> _scale;
+	// the scale change during zooming mode
+	util::point<double> _scaleChange;
 
 	// the transform of the last call to draw
 	util::point<int>    _previousShift;

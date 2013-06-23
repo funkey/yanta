@@ -159,8 +159,11 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 		double zoomed = getFingerDistance()/_gestureStartDistance;
 
-		if (std::abs(1.0 - zoomed) > ZoomThreshold)
+		if (std::abs(1.0 - zoomed) > ZoomThreshold) {
+
+			_gestureStartDistance = getFingerDistance();
 			_mode = Zooming;
+		}
 	}
 
 	if (_mode == Zooming) {
@@ -191,8 +194,11 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 		util::point<CanvasPrecision> moved = getFingerCenter() - _gestureStartCenter;
 
-		if (moved.x*moved.x + moved.y*moved.y > DragThreshold2)
+		if (moved.x*moved.x + moved.y*moved.y > DragThreshold2) {
+
+			_gestureStartCenter = getFingerCenter();
 			_mode = Dragging;
+		}
 	}
 
 	if (_mode == Dragging) {
