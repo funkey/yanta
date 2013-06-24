@@ -24,14 +24,15 @@ CanvasPainter::CanvasPainter() :
 	_shift(0, 0),
 	_scale(optionDpi.as<double>()*0.0393701, optionDpi.as<double>()*0.0393701), // pixel per millimeter
 	_scaleChange(1, 1),
+	_zoomAnchor(0, 0),
 	_previousShift(0, 0),
 	_previousScale(0, 0),
 	_previousPixelRoi(0, 0, 0, 0),
 	_mode(IncrementalDrawing),
 	_cursorPosition(0, 0) {
 
-	_cairoPainter.setDeviceTransformation(_scale, _shift);
-	_cairoCleanUpPainter.setDeviceTransformation(_scale, _shift);
+	_cairoPainter.setDeviceTransformation(_scale, util::point<double>(0, 0));
+	_cairoCleanUpPainter.setDeviceTransformation(_scale, util::point<double>(0, 0));
 }
 
 void
@@ -53,14 +54,14 @@ CanvasPainter::zoom(double zoomChange, const util::point<CanvasPrecision>& ancho
 	LOG_ALL(canvaspainterlog) << "changing zoom by " << zoomChange << " keeping " << anchor << " where it is" << std::endl;
 
 	// convert the anchor from screen coordinates to texture coordinates
-	util::point<double> textureAnchor = anchor - _shift;
+	_zoomAnchor = anchor - _shift;
 
 	if (_mode != Zooming)
 		_scaleChange = util::point<double>(1.0, 1.0);
 
 	_scaleChange *= zoomChange;
 	_scale       *= zoomChange;
-	_shift        = _shift + (1 - zoomChange)*textureAnchor;
+	_shift        = _shift + (1 - zoomChange)*_zoomAnchor;
 
 	// don't change the canvas painter transformations -- we simulate the zoom 
 	// by stretching the texture (and repaint when we leave the zoom mode)
@@ -109,8 +110,11 @@ CanvasPainter::draw(
 	pixelRoi.maxX = (int)ceil(roi.maxX);
 	pixelRoi.maxY = (int)ceil(roi.maxY);
 
+	// the current shift in pixel units
+	util::point<int> pixelShift(_shift);
+
 	// convert the pixel roi from screen coordinates to texture coordinates
-	pixelRoi -= _shift;
+	pixelRoi -= pixelShift;
 
 	LOG_ALL(canvaspainterlog) << "pixel roi is " << pixelRoi << std::endl;
 
@@ -150,11 +154,11 @@ CanvasPainter::draw(
 
 		// shift changed in incremental drawing mode -- move prefetch texture 
 		// and get back to incremental drawing
-		} else if (_shift != _previousShift) {
+		} else if (pixelShift != _previousShift) {
 
 			LOG_DEBUG(canvaspainterlog) << "shift changed while we are in drawing mode" << std::endl;
 
-			_canvasTexture->shift(_shift - _previousShift);
+			_canvasTexture->shift(pixelShift - _previousShift);
 			prepareDrawing(pixelRoi);
 
 		// transformation did not change
@@ -175,12 +179,12 @@ CanvasPainter::draw(
 	if (_mode == Moving) {
 
 		// shift changed in move mode -- just move prefetch texture
-		if (_shift != _previousShift) {
+		if (pixelShift != _previousShift) {
 
-			LOG_ALL(canvaspainterlog) << "shift changed by " << (_shift - _previousShift) << std::endl;
+			LOG_ALL(canvaspainterlog) << "shift changed by " << (pixelShift - _previousShift) << std::endl;
 
 			// show a different part of the canvas texture
-			_canvasTexture->shift(_shift - _previousShift);
+			_canvasTexture->shift(pixelShift - _previousShift);
 		}
 	}
 
@@ -203,7 +207,7 @@ CanvasPainter::draw(
 	glEnd();
 
 	// remember configuration for next draw()
-	_previousShift    = _shift;
+	_previousShift    = pixelShift;
 	_previousPixelRoi = pixelRoi;
 	// remember current scale only if we're not simulating the scaling in 
 	// zooming mode (this allows us to detect a scale change when we're back in 

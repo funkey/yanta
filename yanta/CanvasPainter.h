@@ -128,17 +128,18 @@ private:
 	unsigned int _prefetchTop;
 	unsigned int _prefetchBottom;
 
-	// Mapping from canvas untis to pixel units:
+	// Mapping from canvas untis to screen pixel units:
 	//
 	//   [x] = _scale*(x) + _shift,
 	//
-	// where (x) is in canvas untis and [x] is in pixels. The shift is always 
-	// integer, since it is in pixels and we don't want to shift with sub-pixel 
-	// accuracy.
-	util::point<int>    _shift;
+	// where (x) is in canvas untis and [x] is in pixels and [x] = (0, 0) is the 
+	// upper left screen pixel.
+	util::point<double> _shift;
 	util::point<double> _scale;
 	// the scale change during zooming mode
 	util::point<double> _scaleChange;
+	// the center of the zoom during zooming mode
+	util::point<double> _zoomAnchor;
 
 	// the transform of the last call to draw
 	util::point<int>    _previousShift;
