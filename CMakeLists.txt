@@ -147,6 +147,7 @@ include_directories(${PROJECT_BINARY_DIR})
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/modules)
 include_directories(${PROJECT_SOURCE_DIR}/modules/external/skia/include/core)
+include_directories(${PROJECT_SOURCE_DIR}/modules/external/skia/include/pdf)
 include_directories(${PROJECT_SOURCE_DIR}/modules/external/skia/include/config)
 
 add_subdirectory(modules/util)
@@ -159,9 +160,9 @@ add_subdirectory(modules/external/skia)
 # compiler settings #
 #####################
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -fomit-frame-pointer")
-set(CMAKE_CXX_FLAGS_PROFILING "-O3 -g -fno-omit-frame-pointer -Wall -Wextra" CACHE STRING "Profiling CXX flags" FORCE)
-set(CMAKE_CXX_FLAGS_DEBUG   "-g -Wall -Wextra")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -Wall -Wextra -fomit-frame-pointer")
+set(CMAKE_CXX_FLAGS_PROFILING "-O3 -DNDEBUG -g -fno-omit-frame-pointer -Wall -Wextra" CACHE STRING "Profiling CXX flags" FORCE)
+set(CMAKE_CXX_FLAGS_DEBUG   "-g -DNDEBUG -Wall -Wextra")
 mark_as_advanced(CMAKE_CXX_FLAGS_PROFILING)
 
 ###############

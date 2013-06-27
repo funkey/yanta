@@ -9,7 +9,7 @@ file(GLOB skiafiles
   src/utils/*.cpp
   src/pipe/*.cpp)
 
-add_definitions(-DSK_SUPPORT_GPU=0)
+add_definitions(-DSK_SUPPORT_GPU=0 -DNDEBUG)
 
 include_directories(include/core)
 include_directories(include/config)
