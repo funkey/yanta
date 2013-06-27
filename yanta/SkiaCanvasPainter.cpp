@@ -3,7 +3,7 @@
 
 logger::LogChannel skiacanvaspainterlog("skiacanvaspainterlog", "[SkiaCanvasPainter] ");
 
-SkiaCanvasPainter::SkiaCanvasPainter(gui::skia_pixel_t clearColor) :
+SkiaCanvasPainter::SkiaCanvasPainter(const gui::skia_pixel_t& clearColor) :
 	_clearColor(clearColor),
 	_pixelsPerDeviceUnit(1.0, 1.0),
 	_pixelOffset(0, 0),
@@ -72,8 +72,22 @@ SkiaCanvasPainter::draw(
 	_drawnUntilStrokePointTmp = _drawnUntilStrokePoint;
 
 	// for every page...
-	for (unsigned int page = 0; page < _canvas->numPages(); page++)
-		drawPage(canvas, _canvas->getPage(page), canvasRoi);
+	for (unsigned int i = 0; i < _canvas->numPages(); i++) {
+
+		const Page& page = _canvas->getPage(i);
+
+		const util::point<CanvasPrecision> pagePosition = page.getPosition();
+
+		// correct for the page position...
+		canvas.save();
+		canvas.translate(pagePosition.x, pagePosition.y); // TODO: precision-problematic conversion
+		util::rect<double> pageRoi = canvasRoi - pagePosition; // TODO: precision-problematic conversion
+
+		drawPage(canvas, page, pageRoi);
+
+		// page offset
+		canvas.restore();
+	}
 
 	// canvas to pixels
 	canvas.restore();
@@ -131,16 +145,9 @@ SkiaCanvasPainter::drawPaper(SkCanvas& canvas, const util::rect<double>& canvasR
 }
 
 void
-SkiaCanvasPainter::drawPage(SkCanvas& canvas, const Page& page, const util::rect<double>& canvasRoi) {
+SkiaCanvasPainter::drawPage(SkCanvas& canvas, const Page& page, const util::rect<double>& pageRoi) {
 
-	const util::point<CanvasPrecision> pagePosition = page.getPosition();
-
-	// correct for the page position...
-	canvas.save();
-	canvas.translate(pagePosition.x, pagePosition.y); // TODO: precision-problematic conversion
-	util::rect<double> pageRoi = canvasRoi - pagePosition; // TODO: precision-problematic conversion
-
-	// ...and draw every stroke
+	// draw every stroke
 	for (unsigned int i = 0; i < page.numStrokes(); i++) {
 
 		const Stroke& stroke = page.getStroke(i);
@@ -171,9 +178,6 @@ SkiaCanvasPainter::drawPage(SkCanvas& canvas, const Page& page, const util::rect
 			LOG_ALL(skiacanvaspainterlog) << "stroke " << i << " is not visible" << std::endl;
 		}
 	}
-
-	// page offset
-	canvas.restore();
 }
 
 bool

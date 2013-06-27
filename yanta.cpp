@@ -19,6 +19,7 @@
 #include <yanta/Osd.h>
 #include <yanta/CanvasReader.h>
 #include <yanta/CanvasWriter.h>
+#include <yanta/CanvasPdfWriter.h>
 
 util::ProgramOption optionFilename(
 		util::_long_name        = "file",
@@ -103,6 +104,7 @@ int main(int optionc, char** optionv) {
 			pipeline::Process<Backend>                                  backend;
 			pipeline::Process<CanvasReader>                             reader(optionFilename.as<std::string>());
 			pipeline::Process<CanvasWriter>                             writer(optionFilename.as<std::string>());
+			pipeline::Process<CanvasPdfWriter>                          pdfWriter(optionFilename.as<std::string>() + ".pdf");
 
 			// connect process nodes
 			window->setInput(zoomView->getOutput());
@@ -114,6 +116,7 @@ int main(int optionc, char** optionv) {
 			backend->setInput("pen mode", osd->getOutput("pen mode"));
 			backend->setInput("osd request", osd->getOutput("osd request"));
 			writer->setInput(backend->getOutput());
+			pdfWriter->setInput(backend->getOutput());
 
 			// enter window main loop
 			processEvents(window);
@@ -124,6 +127,7 @@ int main(int optionc, char** optionv) {
 
 			// save strokes
 			writer->write();
+			pdfWriter->write();
 
 			// destruct pipeline as long as window still exists (workaround for 
 			// OpenGl-bug)

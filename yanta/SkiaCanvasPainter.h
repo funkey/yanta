@@ -11,7 +11,7 @@ class SkiaCanvasPainter {
 
 public:
 
-	SkiaCanvasPainter(gui::skia_pixel_t clearColor);
+	SkiaCanvasPainter(const gui::skia_pixel_t& clearColor = gui::skia_pixel_t(255, 255, 255));
 
 	void setCanvas(boost::shared_ptr<Canvas> canvas) { _canvas = canvas; }
 
@@ -60,10 +60,6 @@ public:
 			SkCanvas& context,
 			const util::rect<CanvasPrecision>& roi);
 
-private:
-
-	void clearSurface(SkCanvas& context);
-
 	/**
 	 * Draw the paper boundary and lines.
 	 */
@@ -77,7 +73,11 @@ private:
 	void drawPage(
 			SkCanvas& canvas,
 			const Page& page,
-			const util::rect<double>& canvasRoi);
+			const util::rect<double>& pageRoi);
+
+private:
+
+	void clearSurface(SkCanvas& context);
 
 	/**
 	 * Draw a single stroke.
