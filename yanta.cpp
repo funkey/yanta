@@ -27,6 +27,10 @@ util::ProgramOption optionFilename(
 		util::_default_value    = "strokes.dat",
 		util::_is_positional    = true);
 
+util::ProgramOption optionShowMouseCursor(
+		util::_long_name        = "showMouseCursor",
+		util::_description_text = "Show the mouse cursor.");
+
 void handleException(boost::exception& e) {
 
 	LOG_ERROR(logger::out) << "[window thread] caught exception: ";
@@ -86,7 +90,7 @@ int main(int optionc, char** optionv) {
 		// make sure, the window gets destructed as the last process (workaround 
 		// for OpenGl-bug)
 		gui::WindowMode mode;
-		mode.hideCursor = true;
+		mode.hideCursor = !optionShowMouseCursor;
 		mode.fullscreen = true;
 		pipeline::Process<gui::Window>   window("yanta", mode);
 
