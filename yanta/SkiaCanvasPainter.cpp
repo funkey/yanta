@@ -205,51 +205,18 @@ SkiaCanvasPainter::drawStroke(
 	paint.setColor(SkColorSetRGB(penColorBlue, penColorGreen, penColorRed));
 	paint.setAntiAlias(true);
 
-	double length;
-	util::point<double> prevLineNormal    = getLineNormal(stroke, strokePoints, (long)beginStroke - 1, length);
-	util::point<double> currentLineNormal = getLineNormal(stroke, strokePoints, beginStroke, length);
-	util::point<double> prevCornerNormal  = 0.5*(prevLineNormal + currentLineNormal);
-
-	// the factor by which to enlarge the stroke segments to avaid antialising 
-	// lines between them
-	const double eps = 1e-2;
-
 	// for each line in the stroke
 	for (unsigned long i = beginStroke; i < endStroke - 1; i++) {
 
 		//double alpha = alphaPressureCurve(stroke[i].pressure);
-		double widthStart = 0.5*widthPressureCurve(strokePoints[i  ].pressure)*penWidth;
-		double widthEnd   = 0.5*widthPressureCurve(strokePoints[i+1].pressure)*penWidth;
+		double width = widthPressureCurve(strokePoints[i].pressure);
 
-		const util::point<double>& begin = strokePoints[i].position;
-		const util::point<double>& end   = strokePoints[i+1].position;
+		paint.setStrokeWidth(width*penWidth);
 
-		util::point<double> nextLineNormal   = getLineNormal(stroke, strokePoints, i+1, length);
-		util::point<double> nextCornerNormal = 0.5*(currentLineNormal + nextLineNormal);
-
-		LOG_ALL(skiacanvaspainterlog) << "length of corner normal is " << sqrt(prevCornerNormal.x*prevCornerNormal.x + prevCornerNormal.y*prevCornerNormal.y) << std::endl;
-
-		SkPath path;
-		path.moveTo(
-				begin.x + widthStart*prevCornerNormal.x - prevCornerNormal.y*eps*length,
-				begin.y + widthStart*prevCornerNormal.y + prevCornerNormal.x*eps*length);
-		path.lineTo(
-				end.x + widthEnd*nextCornerNormal.x + nextCornerNormal.y*eps*length,
-				end.y + widthEnd*nextCornerNormal.y - nextCornerNormal.x*eps*length);
-		path.lineTo(
-				end.x - widthEnd*nextCornerNormal.x + nextCornerNormal.y*eps*length,
-				end.y - widthEnd*nextCornerNormal.y - nextCornerNormal.x*eps*length);
-		path.lineTo(
-				begin.x - widthStart*prevCornerNormal.x - prevCornerNormal.y*eps*length,
-				begin.y - widthStart*prevCornerNormal.y + prevCornerNormal.x*eps*length);
-		path.lineTo(
-				begin.x + widthStart*prevCornerNormal.x - prevCornerNormal.y*eps*length,
-				begin.y + widthStart*prevCornerNormal.y + prevCornerNormal.x*eps*length);
-
-		canvas.drawPath(path, paint);
-
-		currentLineNormal = nextLineNormal;
-		prevCornerNormal  = nextCornerNormal;
+		canvas.drawLine(
+				strokePoints[i  ].position.x, strokePoints[i  ].position.y,
+				strokePoints[i+1].position.x, strokePoints[i+1].position.y,
+				paint);
 	}
 
 	return true;
