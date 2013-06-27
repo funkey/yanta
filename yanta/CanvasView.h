@@ -64,11 +64,13 @@ private:
 
 	void addFinger(const gui::FingerDown& signal);
 
-	void removeFinger(unsigned int id);
+	void removeFinger(unsigned int id, unsigned long timestamp);
+
+	void clearFingers();
 
 	void setMode();
 
-	void initGesture();
+	void initGesture(unsigned long timestamp);
 
 	CanvasPrecision getFingerDistance();
 
@@ -84,9 +86,19 @@ private:
 
 	// number of pixels to move at once before a window request is sent
 	static const CanvasPrecision WindowRequestThreshold = 100;
+
+	// min zoom change (in either direction) before zoom gets accepted
 	static const CanvasPrecision ZoomThreshold          = 0.2;
+	// min finger distance, before zoom gets accepted
 	static const CanvasPrecision ZoomMinDistance        = 200;
+	// max allowed movement of finger center (normalized by initial finger 
+	// distance) before zoom gets accepted
+	static const CanvasPrecision ZoomMaxCenterMoveRatio = 0.1;
+
+	// max distance to travel before drag gets accepted
 	static const CanvasPrecision DragThreshold2         = 50*50;
+	// max time to hit the threshold before a drag gets accepted
+	static const unsigned long DragTimeout              = 500;
 
 	pipeline::Input<Canvas>        _canvas;
 	pipeline::Output<CanvasPainter> _painter;
@@ -107,6 +119,7 @@ private:
 	// number of fingers on the screen changes)
 	util::point<CanvasPrecision> _gestureStartCenter;
 	CanvasPrecision              _gestureStartDistance;
+	unsigned long                _gestureStartTime;
 
 	// used to stop the background rendering thread
 	bool _backgroundPainterStopped;

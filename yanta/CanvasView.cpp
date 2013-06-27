@@ -128,7 +128,7 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 	if (locked(signal.timestamp, signal.position)) {
 
 		LOG_ALL(canvasviewlog) << "finger " << signal.id << " is locked -- erase it" << std::endl;
-		removeFinger(signal.id);
+		removeFinger(signal.id, signal.timestamp);
 		return;
 	}
 
@@ -163,6 +163,16 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 	if (_mode == StartZooming) {
 
+		util::point<CanvasPrecision> moved = getFingerCenter() - _gestureStartCenter;
+
+		// finger center must not move
+		if (sqrt(moved.x*moved.x + moved.y*moved.y)/_gestureStartDistance > ZoomMaxCenterMoveRatio) {
+
+			clearFingers();
+			return;
+		}
+
+		// fingers must have minimal distance to start
 		if (_gestureStartDistance < ZoomThreshold) {
 
 			_gestureStartDistance = getFingerDistance();
@@ -171,6 +181,14 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 		double zoomed = getFingerDistance()/_gestureStartDistance;
 
+		// scale change shall not be too big
+		if (zoomed > 1.5 || zoomed < 0.75) {
+
+			_gestureStartDistance = getFingerDistance();
+			return;
+		}
+
+		// scale change has to have minimal value
 		if (std::abs(1.0 - zoomed) > ZoomThreshold) {
 
 			_gestureStartDistance = getFingerDistance();
@@ -204,6 +222,13 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 	if (_mode == StartDragging) {
 
+		// don't wait too long
+		if (signal.timestamp - _gestureStartTime > DragTimeout) {
+
+			clearFingers();
+			return;
+		}
+
 		util::point<CanvasPrecision> moved = getFingerCenter() - _gestureStartCenter;
 
 		if (moved.x*moved.x + moved.y*moved.y > DragThreshold2) {
@@ -236,7 +261,7 @@ CanvasView::onFingerUp(const gui::FingerUp& signal) {
 	if (signal.processed)
 		return;
 
-	removeFinger(signal.id);
+	removeFinger(signal.id, signal.timestamp);
 }
 
 void
@@ -245,12 +270,12 @@ CanvasView::addFinger(const gui::FingerDown& signal) {
 	LOG_ALL(canvasviewlog) << "a finger was put down (" << _fingerDown.size() << " fingers now)" << std::endl;
 
 	_fingerDown[signal.id] = signal;
-	initGesture();
+	initGesture(signal.timestamp);
 	setMode();
 }
 
 void
-CanvasView::removeFinger(unsigned int id) {
+CanvasView::removeFinger(unsigned int id, unsigned long timestamp) {
 
 	LOG_ALL(canvasviewlog) << "finger " << id << " finger was moved up" << std::endl;
 
@@ -264,13 +289,20 @@ CanvasView::removeFinger(unsigned int id) {
 		_fingerDown.erase(i);
 		_painter->prepareDrawing();
 		_contentChanged();
-		initGesture();
+		initGesture(timestamp);
 		setMode();
 
 	} else {
 
 		LOG_ALL(canvasviewlog) << "this finger is ignored" << std::endl;
 	}
+}
+
+void
+CanvasView::clearFingers() {
+
+	_fingerDown.clear();
+	setMode();
 }
 
 void
@@ -297,10 +329,11 @@ CanvasView::setMode() {
 }
 
 void
-CanvasView::initGesture() {
+CanvasView::initGesture(unsigned long timestamp) {
 
 	_gestureStartCenter   = getFingerCenter();
 	_gestureStartDistance = getFingerDistance();
+	_gestureStartTime     = timestamp;
 }
 
 void
