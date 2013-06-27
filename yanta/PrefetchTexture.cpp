@@ -428,8 +428,8 @@ PrefetchTexture::createBuffer(unsigned int width, unsigned int height, gui::Buff
 
 	deleteBuffer(buffer);
 
-	GLenum format = gui::detail::pixel_format_traits<gui::cairo_pixel_t>::gl_format;
-	GLenum type   = gui::detail::pixel_format_traits<gui::cairo_pixel_t>::gl_type;
+	GLenum format = gui::detail::pixel_format_traits<gui::skia_pixel_t>::gl_format;
+	GLenum type   = gui::detail::pixel_format_traits<gui::skia_pixel_t>::gl_type;
 
 	*buffer = new gui::Buffer(width, height, format, type);
 }

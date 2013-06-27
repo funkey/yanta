@@ -200,9 +200,7 @@ SkiaCanvasPainter::drawStroke(
 
 	SkPaint paint;
 	paint.setStrokeCap(SkPaint::kRound_Cap);
-	// for skia, red and blue need to be exchanged (skia pixel is RGBA, opengl 
-	// buffer expects BGRA)
-	paint.setColor(SkColorSetRGB(penColorBlue, penColorGreen, penColorRed));
+	paint.setColor(SkColorSetRGB(penColorRed, penColorGreen, penColorBlue));
 	paint.setAntiAlias(true);
 
 	// for each line in the stroke
