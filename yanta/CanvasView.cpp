@@ -1,5 +1,16 @@
 #include <util/Logger.h>
+#include <util/ProgramOptions.h>
 #include "CanvasView.h"
+
+util::ProgramOption optionPenOffsetX(
+	util::_long_name        = "penOffsetX",
+	util::_description_text = "The offset in pixels for the pen tip. Set this value to avoid hiding the virtual pen tip under the pyhsical pen.",
+	util::_default_value    = 0);
+
+util::ProgramOption optionPenOffsetY(
+	util::_long_name        = "penOffsetY",
+	util::_description_text = "The offset in pixels for the pen tip. Set this value to avoid hiding the virtual pen tip under the pyhsical pen.",
+	util::_default_value    = 0);
 
 logger::LogChannel canvasviewlog("canvasviewlog", "[CanvasView] ");
 
@@ -9,7 +20,8 @@ CanvasView::CanvasView() :
 	_gestureStartDistance(0),
 	_backgroundPainterStopped(false),
 	_backgroundThread(boost::bind(&CanvasView::cleanDirtyAreas, this)),
-	_mode(Nothing) {
+	_mode(Nothing),
+	_penOffset(optionPenOffsetX.as<int>(), optionPenOffsetY.as<int>()) {
 
 	registerInput(_canvas, "canvas");
 	registerOutput(_painter, "painter");
@@ -53,7 +65,7 @@ CanvasView::updateOutputs() {
 bool
 CanvasView::filter(gui::PointerSignal& signal) {
 
-	signal.position = _painter->screenToCanvas(signal.position);
+	signal.position = _painter->screenToCanvas(signal.position + _penOffset);
 	return true;
 }
 
@@ -61,7 +73,7 @@ void
 CanvasView::onPenMove(const gui::PenMove& signal) {
 
 	_lastPen = signal.position;
-	_painter->setCursorPosition(signal.position);
+	_painter->setCursorPosition(signal.position + _penOffset);
 	_contentChanged();
 }
 
@@ -70,7 +82,7 @@ CanvasView::onMouseMove(const gui::MouseMove& signal) {
 
 	// the mouse cursor gives hints about the position of the pen (which the 
 	// PenIn cannot tell us)
-	_lastPen = signal.position;
+	_lastPen = signal.position + _penOffset;
 }
 
 void

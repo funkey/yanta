@@ -115,6 +115,10 @@ private:
 	boost::thread _backgroundThread;
 
 	int _mode;
+
+	// a small offset for the virtual pen tip to not be occluded by the pyhsical 
+	// pen
+	util::point<int> _penOffset;
 };
 
 #endif // YANTA_CANVAS_VIEW_H__
