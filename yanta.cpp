@@ -5,6 +5,8 @@
 #include <iostream>
 #include <string>
 #include <boost/thread.hpp>
+#include <boost/timer/timer.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 #include <gui/ContainerView.h>
 #include <gui/Window.h>
@@ -25,12 +27,16 @@ util::ProgramOption optionFilename(
 		util::_long_name        = "file",
 		util::_short_name       = "f",
 		util::_description_text = "The file you want to open/save to",
-		util::_default_value    = "strokes.dat",
+		util::_default_value    = "",
 		util::_is_positional    = true);
 
 util::ProgramOption optionShowMouseCursor(
 		util::_long_name        = "showMouseCursor",
 		util::_description_text = "Show the mouse cursor.");
+
+util::ProgramOption optionExportPdf(
+		util::_long_name        = "exportPdf",
+		util::_description_text = "Export the yanta document as a pdf file.");
 
 void handleException(boost::exception& e) {
 
@@ -53,18 +59,40 @@ void handleException(boost::exception& e) {
 
 void processEvents(pipeline::Process<gui::Window> window) {
 
+	boost::timer::cpu_timer timer;
+
+	const boost::timer::nanosecond_type NanosBusyWait = 1000000LL;  // 1/1000th of a second
+	const boost::timer::nanosecond_type NanosIdleWait = 10000000LL; // 1/100th of a second
+
 	try {
 
 		while (!window->closed()) {
 
-			window->processEvents();
-			usleep(100);
+			bool processedEvents = window->processEvents();
+
+			boost::timer::cpu_times const elapsed(timer.elapsed());
+
+			boost::timer::nanosecond_type waitAtLeast = (processedEvents ? NanosBusyWait : NanosIdleWait);
+
+			if (elapsed.wall <= waitAtLeast)
+				usleep((waitAtLeast - elapsed.wall)/1000);
+
+			timer.stop();
+			timer.start();
 		}
 
 	} catch (boost::exception& e) {
 
 		handleException(e);
 	}
+}
+
+std::string
+dateString() {
+
+	using namespace boost::posix_time;
+
+	return to_simple_string(second_clock::local_time());
 }
 
 int main(int optionc, char** optionv) {
@@ -96,15 +124,16 @@ int main(int optionc, char** optionv) {
 		pipeline::Process<gui::Window>   window("yanta", mode);
 
 		{
+			std::string filename = (strlen(optionFilename.as<std::string>().c_str()) == 0 ? dateString() + ".yan" : optionFilename);
+
 			// create process nodes
 			pipeline::Process<gui::ContainerView<gui::OverlayPlacing> > overlayView;
 			pipeline::Process<gui::ZoomView>                            zoomView;
 			pipeline::Process<CanvasView>                               canvasView;
 			pipeline::Process<Osd>                                      osd;
 			pipeline::Process<Backend>                                  backend;
-			pipeline::Process<CanvasReader>                             reader(optionFilename.as<std::string>());
-			pipeline::Process<CanvasWriter>                             writer(optionFilename.as<std::string>());
-			pipeline::Process<CanvasPdfWriter>                          pdfWriter(optionFilename.as<std::string>() + ".pdf");
+			pipeline::Process<CanvasReader>                             reader(filename);
+			pipeline::Process<CanvasWriter>                             writer(filename);
 
 			// connect process nodes
 			window->setInput(zoomView->getOutput());
@@ -116,7 +145,6 @@ int main(int optionc, char** optionv) {
 			backend->setInput("pen mode", osd->getOutput("pen mode"));
 			backend->setInput("osd request", osd->getOutput("osd request"));
 			writer->setInput(backend->getOutput());
-			pdfWriter->setInput(backend->getOutput());
 
 			// enter window main loop
 			processEvents(window);
@@ -127,7 +155,13 @@ int main(int optionc, char** optionv) {
 
 			// save strokes
 			writer->write();
-			pdfWriter->write();
+
+			if (optionExportPdf) {
+
+				pipeline::Process<CanvasPdfWriter> pdfWriter(optionExportPdf.as<std::string>());
+				pdfWriter->setInput(backend->getOutput());
+				pdfWriter->write();
+			}
 
 			// destruct pipeline as long as window still exists (workaround for 
 			// OpenGl-bug)

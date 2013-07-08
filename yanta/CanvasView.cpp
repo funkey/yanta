@@ -1,3 +1,4 @@
+#include <boost/timer/timer.hpp>
 #include <util/Logger.h>
 #include <util/ProgramOptions.h>
 #include "CanvasView.h"
@@ -404,11 +405,29 @@ CanvasView::locked(unsigned long /*now*/, const util::point<CanvasPrecision>& po
 void
 CanvasView::cleanDirtyAreas() {
 
+	boost::timer::cpu_timer timer;
+
+	const boost::timer::nanosecond_type NanosBusyWait = 100000LL;     // 1/10000th of a second
+	const boost::timer::nanosecond_type NanosIdleWait = 1000000000LL; // 1/1th of a second
+
 	while (!_backgroundPainterStopped) {
 
-		if (_painter && _painter->cleanDirtyAreas(2))
+		bool cleaned = false;
+
+		if (_painter && _painter->cleanDirtyAreas(2)) {
+
+			cleaned = true;
 			_contentChanged();
-		else
-			usleep(10*1000);
+		}
+
+		boost::timer::cpu_times const elapsed(timer.elapsed());
+
+		boost::timer::nanosecond_type waitAtLeast = (cleaned ? NanosBusyWait : NanosIdleWait);
+
+		if (elapsed.wall <= waitAtLeast)
+			usleep((waitAtLeast - elapsed.wall)/1000);
+
+		timer.stop();
+		timer.start();
 	}
 }
