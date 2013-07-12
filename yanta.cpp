@@ -10,7 +10,6 @@
 
 #include <gui/ContainerView.h>
 #include <gui/Window.h>
-#include <gui/ZoomView.h>
 #include <pipeline/Process.h>
 #include <util/exceptions.h>
 #include <util/ProgramOptions.h>
@@ -128,7 +127,6 @@ int main(int optionc, char** optionv) {
 
 			// create process nodes
 			pipeline::Process<gui::ContainerView<gui::OverlayPlacing> > overlayView;
-			pipeline::Process<gui::ZoomView>                            zoomView;
 			pipeline::Process<CanvasView>                               canvasView;
 			pipeline::Process<Osd>                                      osd;
 			pipeline::Process<Backend>                                  backend;
@@ -136,8 +134,7 @@ int main(int optionc, char** optionv) {
 			pipeline::Process<CanvasWriter>                             writer(filename);
 
 			// connect process nodes
-			window->setInput(zoomView->getOutput());
-			zoomView->setInput(overlayView->getOutput());
+			window->setInput(overlayView->getOutput());
 			overlayView->addInput(osd->getOutput("osd painter"));
 			overlayView->addInput(canvasView->getOutput());
 			canvasView->setInput(backend->getOutput("canvas"));
