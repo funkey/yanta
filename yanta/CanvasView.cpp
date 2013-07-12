@@ -410,19 +410,26 @@ CanvasView::cleanDirtyAreas() {
 	const boost::timer::nanosecond_type NanosBusyWait = 100000LL;     // 1/10000th of a second
 	const boost::timer::nanosecond_type NanosIdleWait = 1000000000LL; // 1/1th of a second
 
+	bool isClean = false;
+
 	while (!_backgroundPainterStopped) {
 
-		bool cleaned = false;
-
+		// was there something to clean?
 		if (_painter && _painter->cleanDirtyAreas(2)) {
 
-			cleaned = true;
-			_contentChanged();
+			isClean = false;
+
+		// there was nothing to clean
+		} else {
+
+			if (!isClean)
+				_contentChanged();
+			isClean = true;
 		}
 
 		boost::timer::cpu_times const elapsed(timer.elapsed());
 
-		boost::timer::nanosecond_type waitAtLeast = (cleaned ? NanosBusyWait : NanosIdleWait);
+		boost::timer::nanosecond_type waitAtLeast = (isClean ? NanosIdleWait : NanosBusyWait);
 
 		if (elapsed.wall <= waitAtLeast)
 			usleep((waitAtLeast - elapsed.wall)/1000);
