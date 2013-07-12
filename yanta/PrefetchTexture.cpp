@@ -41,8 +41,6 @@ PrefetchTexture::~PrefetchTexture() {
 	deleteBuffer(&_reloadBufferX);
 	deleteBuffer(&_reloadBufferY);
 
-	//boost::mutex::scoped_lock lock(_textureMutex);
-
 	if (_texture)
 		delete _texture;
 }
@@ -209,8 +207,6 @@ PrefetchTexture::render(const util::rect<int>& roi) {
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	//boost::mutex::scoped_lock lock(_textureMutex);
-
 	_texture->bind();
 
 	// The texture's ROI is in general split into four parts that we have to 
@@ -347,8 +343,6 @@ PrefetchTexture::markDirty(const util::rect<int>& area) {
 
 		CleanUpRequest request(parts[i], offsets[i]);
 
-		boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
-
 		_cleanUpRequests.push_back(request);
 	}
 }
@@ -366,8 +360,6 @@ PrefetchTexture::reset(const util::rect<int>& area) {
 	_splitPoint = _textureArea.upperLeft();
 
 	{
-		boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
-
 		// dismiss all pending clean-up requests
 		_cleanUpRequests.clear();
 	}
@@ -446,8 +438,6 @@ PrefetchTexture::deleteBuffer(gui::Buffer** buffer) {
 bool
 PrefetchTexture::getNextCleanUpRequest(CleanUpRequest& request) {
 
-	boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
-
 	if (_cleanUpRequests.size() == 0)
 		return false;
 
@@ -482,12 +472,8 @@ PrefetchTexture::cleanUp(SkiaCanvasPainter& painter, unsigned int maxNumRequests
 
 		fillBuffer(*buffer, request.area, painter, request.area);
 
-		{
-			//boost::mutex::scoped_lock lock(_textureMutex);
-
-			// update texture with buffer content
-			_texture->loadData(*buffer, request.textureOffset.x, request.textureOffset.y);
-		}
+		// update texture with buffer content
+		_texture->loadData(*buffer, request.textureOffset.x, request.textureOffset.y);
 
 		deleteBuffer(&buffer);
 
@@ -501,16 +487,12 @@ bool
 PrefetchTexture::isDirty(const util::rect<int>& roi) {
 
 	// is it in _cleanUpRequests?
-	{
-		boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
+	for (std::deque<CleanUpRequest>::const_iterator i = _cleanUpRequests.begin(); i != _cleanUpRequests.end(); i++)
+		if (i->area.intersects(roi)) {
 
-		for (std::deque<CleanUpRequest>::const_iterator i = _cleanUpRequests.begin(); i != _cleanUpRequests.end(); i++)
-			if (i->area.intersects(roi)) {
-
-				LOG_ALL(prefetchtexturelog) << "roi " << roi << " is dirty because of request in " << i->area << std::endl;
-				return true;
-			}
-	}
+			LOG_ALL(prefetchtexturelog) << "roi " << roi << " is dirty because of request in " << i->area << std::endl;
+			return true;
+		}
 
 	// is it currently worked on?
 	if (_currentCleanUpArea.intersects(roi)) {
