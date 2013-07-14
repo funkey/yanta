@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 
 #######################
@@ -63,15 +63,26 @@ endif()
 
 find_package(Skia)
 if (SKIA_FOUND)
-  include_directories(${Skia_INCLUDE_DIR}/core)
-  include_directories(${Skia_INCLUDE_DIR}/pdf)
-  include_directories(${Skia_INCLUDE_DIR}/config)
   message(STATUS "Skia found.")
   set(HAVE_SKIA 1)
 else()
-  message(STATUS "Skia *NOT* found.")
-  set(HAVE_SKIA 0)
+  message(STATUS "Skia not found -- will download and build it on demand.")
+  include(ExternalProject)
+  ExternalProject_Add(
+    skia
+    GIT_REPOSITORY gitolite@lego.slyip.net:fun/skia
+    GIT_TAG 55c4b18b0a144e0d0201e3939cf7eb12d5eae4a1
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND "${PROJECT_BINARY_DIR}/skia-prefix/src/skia/build_libskia.sh"
+    INSTALL_COMMAND ""
+  )
+  SET(Skia_INCLUDE_DIR ${PROJECT_BINARY_DIR}/skia-prefix/src/skia/include)
+  SET(Skia_LIBRARY ${PROJECT_BINARY_DIR}/skia-prefix/src/skia/out/Release/libskia.a)
+  set(HAVE_SKIA 1)
 endif()
+include_directories(${Skia_INCLUDE_DIR}/core)
+include_directories(${Skia_INCLUDE_DIR}/pdf)
+include_directories(${Skia_INCLUDE_DIR}/config)
 
 #####################
 # optional packages #

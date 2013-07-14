@@ -19,20 +19,27 @@ Build Instructions
     • libxrandr-dev
     • freeglut3-dev
     • libglew-dev
+    • libfreetype6-dev
+    • libfontconfig1-dev
 
   Skia
   ----
 
-    To compile Skia, you need (at least):
+    To use the version provided by yanta, you don't have to do anything. It
+    will be checked out automatically and compiled.
 
-      • libfreetype6-dev
-      • libfontconfig1-dev
+    You can, however, compile skia on your own. In this case, set the
+    SKIA_BUILD_DIR cmake variable to the directory you compiled skia in. Run
 
-    Check out the sourcode and compile the static library:
-
-      $ git clone gitolite@lego.slyip.net:fun/skia
-      $ cd skia
-      $ make skia_lib BUILDTYPE=Release
       $ ./tools/merge_static_libs.py out/Release/libskia.a out/Release/obj.target/**/*.a
 
+    in the skia build directory to generate a single static library for yanta
+    to use.
 
+  Compile
+  -------
+
+    $ mkdir build
+    $ cd build
+    $ cmake ..
+    $ make
