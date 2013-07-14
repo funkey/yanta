@@ -31,14 +31,6 @@ else()
   message(STATUS "Xrandr *NOT* found")
 endif()
 
-find_package(XCB REQUIRED)
-if (XCB_FOUND)
-  include_directories(${XCB_INCLUDE_PATH})
-  message(STATUS "XCB found")
-else()
-  message(STATUS "XCB *NOT* found")
-endif()
-
 find_package(OpenGL)
 if(OPENGL_FOUND)
   message(STATUS "OpenGL found.")
@@ -62,36 +54,18 @@ else()
   message(STATUS "GLUT *NOT* found.")
 endif()
 
-find_package(Cairo REQUIRED)
-if(Cairo_FOUND)
-  include_directories(${Cairo_INCLUDE_DIR})
-  message(STATUS "Cairo found.")
-  set(HAVE_CAIRO 1)
-else()
-  message(STATUS "Cairo *NOT* found.")
-  set(HAVE_CAIRO 0)
-endif()
-
-find_package(PNG)
-if(PNG_FOUND)
-  message(STATUS "PNG found.")
-  set(HAVE_PNG 1)
-else()
-  message(STATUS "PNG *NOT* found.")
-  set(HAVE_PNG 0)
-endif()
-
 find_package(Freetype)
 if (FREETYPE_FOUND)
   message(STATUS "Freetype found.")
-  include_directories(${FREETYPE_INCLUDE_DIRS})
 else()
   message(STATUS "Freetype *NOT* found.")
 endif()
 
 find_package(Skia)
 if (SKIA_FOUND)
-  include_directories(${Skia_INCLUDE_DIR})
+  include_directories(${Skia_INCLUDE_DIR}/core)
+  include_directories(${Skia_INCLUDE_DIR}/pdf)
+  include_directories(${Skia_INCLUDE_DIR}/config)
   message(STATUS "Skia found.")
   set(HAVE_SKIA 1)
 else()
@@ -136,8 +110,6 @@ configure_file(
 
 set(CORELIBS
   ${X11_X11_LIB}
-  ${X11_XCB}
-  ${XCB_LIBRARIES}
   ${X11_Xrandr_LIB}
   ${X11_Xinput_LIB}
   ${OPENGL_LIBRARY}
@@ -161,9 +133,6 @@ set(skialibs ${PROJECT_SOURCE_DIR}/modules/external/skia/libskia.a)
 include_directories(${PROJECT_BINARY_DIR})
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/modules)
-include_directories(${Skia_INCLUDE_DIR}/core)
-include_directories(${Skia_INCLUDE_DIR}/pdf)
-include_directories(${Skia_INCLUDE_DIR}/config)
 
 add_subdirectory(modules/util)
 add_subdirectory(modules/signals)
