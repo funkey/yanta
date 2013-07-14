@@ -89,6 +89,16 @@ else()
   message(STATUS "Freetype *NOT* found.")
 endif()
 
+find_package(Skia)
+if (SKIA_FOUND)
+  include_directories(${Skia_INCLUDE_DIR})
+  message(STATUS "Skia found.")
+  set(HAVE_SKIA 1)
+else()
+  message(STATUS "Skia *NOT* found.")
+  set(HAVE_SKIA 0)
+endif()
+
 #####################
 # optional packages #
 #####################
@@ -136,8 +146,13 @@ set(CORELIBS
   ${Boost_LIBRARIES}
   ${PNG_LIBRARY}
   ${Cairo_LIBRARY}
+  ${Skia_LIBRARY}
   ${FREETYPE_LIBRARIES}
+  -lz
+  -lfontconfig
 )
+
+set(skialibs ${PROJECT_SOURCE_DIR}/modules/external/skia/libskia.a)
 
 #######################
 # project directories #
@@ -146,15 +161,14 @@ set(CORELIBS
 include_directories(${PROJECT_BINARY_DIR})
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/modules)
-include_directories(${PROJECT_SOURCE_DIR}/modules/external/skia/include/core)
-include_directories(${PROJECT_SOURCE_DIR}/modules/external/skia/include/pdf)
-include_directories(${PROJECT_SOURCE_DIR}/modules/external/skia/include/config)
+include_directories(${Skia_INCLUDE_DIR}/core)
+include_directories(${Skia_INCLUDE_DIR}/pdf)
+include_directories(${Skia_INCLUDE_DIR}/config)
 
 add_subdirectory(modules/util)
 add_subdirectory(modules/signals)
 add_subdirectory(modules/pipeline)
 add_subdirectory(modules/gui)
-add_subdirectory(modules/external/skia)
 
 #####################
 # compiler settings #
@@ -172,4 +186,4 @@ mark_as_advanced(CMAKE_CXX_FLAGS_PROFILING)
 file (GLOB_RECURSE yantafiles yanta/*.cpp)
 
 add_executable(yanta yanta.cpp ${yantafiles})
-target_link_libraries(yanta signals pipeline gui util skia ${CORELIBS})
+target_link_libraries(yanta signals pipeline gui util ${CORELIBS})
