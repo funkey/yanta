@@ -1,7 +1,6 @@
 #ifndef CANVAS_PAINTER_H__
 #define CANVAS_PAINTER_H__
 
-#include <cairo.h>
 #include <gui/Skia.h>
 #include <gui/Painter.h>
 #include <gui/Texture.h>

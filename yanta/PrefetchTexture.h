@@ -3,9 +3,6 @@
 
 #include <deque>
 #include <boost/thread.hpp>
-
-#include <cairo.h>
-
 #include <gui/Texture.h>
 
 #include "SkiaCanvasPainter.h"
