@@ -1,0 +1,38 @@
+Yanta - Yet Another Note Taking Application
+===========================================
+
+Build Instructions
+------------------
+
+  General Dependencies
+  --------------------
+
+    • libboost-*-dev ≥ 1.42 with * being the following compoenents:
+        date_time
+        filesystem
+        program_options
+        signals
+        system
+        thread
+        timer
+    • libx11-dev
+    • libxrandr-dev
+    • freeglut3-dev
+    • libglew-dev
+
+  Skia
+  ----
+
+    To compile Skia, you need (at least):
+
+      • libfreetype6-dev
+      • libfontconfig1-dev
+
+    Check out the sourcode and compile the static library:
+
+      $ git clone gitolite@lego.slyip.net:fun/skia
+      $ cd skia
+      $ make skia_lib BUILDTYPE=Release
+      $ ./tools/merge_static_libs.py out/Release/libskia.a out/Release/obj.target/**/*.a
+
+
