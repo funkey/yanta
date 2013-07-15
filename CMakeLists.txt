@@ -71,14 +71,15 @@ else()
   ExternalProject_Add(
     skia
     GIT_REPOSITORY gitolite@lego.slyip.net:fun/skia
-    GIT_TAG 55c4b18b0a144e0d0201e3939cf7eb12d5eae4a1
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND "${PROJECT_BINARY_DIR}/skia-prefix/src/skia/build_libskia.sh"
+    GIT_TAG 3f9a7e4bfafd8d2f0fef98470adcbbd8f1a2204c
+    PATCH_COMMAND ""
     INSTALL_COMMAND ""
   )
-  SET(Skia_INCLUDE_DIR ${PROJECT_BINARY_DIR}/skia-prefix/src/skia/include)
-  SET(Skia_LIBRARY ${PROJECT_BINARY_DIR}/skia-prefix/src/skia/out/Release/libskia.a)
+  ExternalProject_Get_Property(skia SOURCE_DIR)
+  SET(Skia_INCLUDE_DIR ${SOURCE_DIR}/include)
+  SET(Skia_LIBRARY ${SOURCE_DIR}/out/Release/libskia.a)
   set(HAVE_SKIA 1)
+  set(OWN_SKIA 1)
 endif()
 include_directories(${Skia_INCLUDE_DIR}/core)
 include_directories(${Skia_INCLUDE_DIR}/pdf)
@@ -127,15 +128,12 @@ set(CORELIBS
   ${GLEW_LIBRARY}
   ${GLUT_LIBRARIES}
   ${Boost_LIBRARIES}
-  ${PNG_LIBRARY}
   ${Cairo_LIBRARY}
   ${Skia_LIBRARY}
   ${FREETYPE_LIBRARIES}
   -lz
   -lfontconfig
 )
-
-set(skialibs ${PROJECT_SOURCE_DIR}/modules/external/skia/libskia.a)
 
 #######################
 # project directories #
@@ -157,6 +155,7 @@ add_subdirectory(modules/gui)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -Wall -Wextra -fomit-frame-pointer")
 set(CMAKE_CXX_FLAGS_PROFILING "-O3 -DNDEBUG -g -fno-omit-frame-pointer -Wall -Wextra" CACHE STRING "Profiling CXX flags" FORCE)
 set(CMAKE_CXX_FLAGS_DEBUG   "-g -DNDEBUG -Wall -Wextra")
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_RELEASE})
 mark_as_advanced(CMAKE_CXX_FLAGS_PROFILING)
 
 ###############
@@ -167,3 +166,7 @@ file (GLOB_RECURSE yantafiles yanta/*.cpp)
 
 add_executable(yanta yanta.cpp ${yantafiles})
 target_link_libraries(yanta signals pipeline gui util ${CORELIBS})
+
+if (OWN_SKIA)
+  add_dependencies(yanta skia)
+endif()
