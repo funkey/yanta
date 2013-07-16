@@ -5,6 +5,7 @@
 #include <util/point.hpp>
 #include <util/rect.hpp>
 
+#include "Precision.h"
 #include "StrokePoints.h"
 #include "Style.h"
 
@@ -13,6 +14,8 @@ class Stroke {
 public:
 
 	Stroke(unsigned long begin = 0) :
+		_shift(0, 0),
+		_scale(1, 1),
 		_boundingBox(0, 0, 0, 0),
 		_finished(false),
 		_begin(begin),
@@ -48,6 +51,42 @@ public:
 	inline Style& getStyle() {
 
 		return _style;
+	}
+
+	/**
+	 * Get the shift of this stroke that is applied to the coordinates in the 
+	 * global stroke points list.
+	 */
+	inline const util::point<CanvasPrecision>& getShift() const {
+
+		return _shift;
+	}
+
+	/**
+	 * Get the scale of this stroke that is applied to the coordinats in the 
+	 * global stroke points list.
+	 */
+	inline const util::point<CanvasPrecision>& getScale() const {
+
+		return _scale;
+	}
+
+	/**
+	 * Shift this stroke by changing its internal transformation. The stroke 
+	 * points will remain untouched.
+	 */
+	inline void shift(const util::point<CanvasPrecision>& shift) {
+
+		_shift += shift;
+	}
+
+	/**
+	 * Scale this stroke by changing its internal transformation. The stroke 
+	 * points will remain untouched.
+	 */
+	inline void scale(const util::point<CanvasPrecision>& scale) {
+
+		_scale *= scale;
 	}
 
 	/**
@@ -109,7 +148,9 @@ private:
 
 	Style _style;
 
-	util::rect<double> _boundingBox;
+	util::point<CanvasPrecision> _shift;
+	util::point<CanvasPrecision> _scale;
+	util::rect<CanvasPrecision>  _boundingBox;
 
 	bool _finished;
 
