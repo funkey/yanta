@@ -79,21 +79,7 @@ private:
 
 	void clearSurface(SkCanvas& context);
 
-	/**
-	 * Draw a single stroke.
-	 */
-	bool drawStroke(
-			SkCanvas& context,
-			const Stroke& stroke,
-			const util::rect<CanvasPrecision>& roi,
-			unsigned long beginStroke,
-			unsigned long endStroke);
-
 	util::point<double> getLineNormal(const Stroke& stroke, const StrokePoints& points, long i, double& length);
-
-	double widthPressureCurve(double pressure);
-
-	double alphaPressureCurve(double pressure);
 
 	gui::skia_pixel_t _clearColor;
 

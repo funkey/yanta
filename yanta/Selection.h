@@ -23,18 +23,26 @@ public:
 	 */
 	static Selection CreateFromPath(const Path& path, Canvas& canvas);
 
-	Selection();
+	Selection(const StrokePoints& strokePoints);
 
 	/**
 	 * Add a stroke to the selection.
 	 */
 	void addStroke(const Page& page, const Stroke& stroke);
 
+	Stroke& getStroke(unsigned int i) { return _strokes[i]; }
+	const Stroke& getStroke(unsigned int i) const { return _strokes[i]; }
+
+	unsigned int numStrokes() const { return _strokes.size(); }
+
+	const StrokePoints& getStrokePoints() const { return _strokePoints; }
+
 	void visit(OverlayObjectVisitor& visitor) { visitor.processSelection(*this); }
 
 private:
 
 	std::vector<Stroke> _strokes;
+	const StrokePoints& _strokePoints;
 };
 
 #endif // YANTA_SELECTION_H__

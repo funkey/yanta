@@ -3,12 +3,10 @@
 #include "Selection.h"
 #include "Path.h"
 
-Selection::Selection() {}
-
 Selection
 Selection::CreateFromPath(const Path& path, Canvas& canvas) {
 
-	Selection selection;
+	Selection selection(canvas.getStrokePoints());
 
 	for (unsigned int p = 0; p < canvas.numPages(); p++) {
 
@@ -26,6 +24,9 @@ Selection::CreateFromPath(const Path& path, Canvas& canvas) {
 
 	return selection;
 }
+
+Selection::Selection(const StrokePoints& strokePoints) :
+	_strokePoints(strokePoints) {}
 
 void
 Selection::addStroke(const Page& page, const Stroke& stroke) {

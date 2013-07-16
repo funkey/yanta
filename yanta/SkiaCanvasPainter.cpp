@@ -1,5 +1,6 @@
 #include <util/Logger.h>
 #include "SkiaCanvasPainter.h"
+#include "SkiaStrokePainter.h"
 
 logger::LogChannel skiabackendpainterlog("skiabackendpainterlog", "[SkiaCanvasPainter] ");
 
@@ -165,69 +166,20 @@ SkiaCanvasPainter::drawPage(SkCanvas& canvas, const Page& page, const util::rect
 		_drawnUntilStrokePointTmp = std::max(_drawnUntilStrokePointTmp, (unsigned long)end);
 
 		// draw only of no roi given or stroke intersects roi
+		SkiaStrokePainter strokePainter(canvas, _canvas->getStrokePoints());
 		if (pageRoi.isZero() || !stroke.finished() || stroke.getBoundingBox().intersects(pageRoi)) {
 
 			LOG_ALL(skiabackendpainterlog)
 					<< "drawing stroke " << i << " (" << stroke.begin() << " - " << stroke.end()
 					<< ") , starting from point " << begin << " until " << end << std::endl;
 
-			drawStroke(canvas, stroke, pageRoi, begin, end);
+			strokePainter.draw(stroke, pageRoi, begin, end);
 
 		} else {
 
 			LOG_ALL(skiabackendpainterlog) << "stroke " << i << " is not visible" << std::endl;
 		}
 	}
-}
-
-bool
-SkiaCanvasPainter::drawStroke(
-		SkCanvas& canvas,
-		const Stroke& stroke,
-		const util::rect<double>& /*roi*/,
-		unsigned long beginStroke,
-		unsigned long endStroke) {
-
-	// make sure there are enough points in this stroke to draw it
-	if (stroke.end() - stroke.begin() <= 1) {
-
-		LOG_ALL(skiabackendpainterlog) << "this stroke has less than two points -- skip drawing" << std::endl;
-		return false;
-	}
-
-	canvas.save();
-	canvas.translate(stroke.getShift().x, stroke.getShift().y);
-	canvas.scale(stroke.getScale().x, stroke.getScale().y);
-
-	double penWidth = stroke.getStyle().width();
-	unsigned char penColorRed   = stroke.getStyle().getRed();
-	unsigned char penColorGreen = stroke.getStyle().getGreen();
-	unsigned char penColorBlue  = stroke.getStyle().getBlue();
-
-	const StrokePoints& strokePoints = _canvas->getStrokePoints();
-
-	SkPaint paint;
-	paint.setStrokeCap(SkPaint::kRound_Cap);
-	paint.setColor(SkColorSetRGB(penColorRed, penColorGreen, penColorBlue));
-	paint.setAntiAlias(true);
-
-	// for each line in the stroke
-	for (unsigned long i = beginStroke; i < endStroke - 1; i++) {
-
-		//double alpha = alphaPressureCurve(stroke[i].pressure);
-		double width = widthPressureCurve(strokePoints[i].pressure);
-
-		paint.setStrokeWidth(width*penWidth);
-
-		canvas.drawLine(
-				strokePoints[i  ].position.x, strokePoints[i  ].position.y,
-				strokePoints[i+1].position.x, strokePoints[i+1].position.y,
-				paint);
-	}
-
-	canvas.restore();
-
-	return true;
 }
 
 util::point<double>
@@ -250,26 +202,4 @@ SkiaCanvasPainter::getLineNormal(const Stroke& stroke, const StrokePoints& point
 	normal.y =  diff.x/length;
 
 	return normal;
-}
-
-double
-SkiaCanvasPainter::widthPressureCurve(double pressure) {
-
-	const double minPressure = 0.5;
-	const double maxPressure = 1;
-
-	pressure /= 2048.0;
-
-	return minPressure + pressure*(maxPressure - minPressure);
-}
-
-double
-SkiaCanvasPainter::alphaPressureCurve(double pressure) {
-
-	const double minPressure = 1;
-	const double maxPressure = 1;
-
-	pressure /= 2048.0;
-
-	return minPressure + pressure*(maxPressure - minPressure);
 }

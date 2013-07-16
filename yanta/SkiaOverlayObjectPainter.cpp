@@ -2,6 +2,7 @@
 #include "Lasso.h"
 #include "Selection.h"
 #include "SkiaOverlayObjectPainter.h"
+#include "SkiaStrokePainter.h"
 
 void
 SkiaOverlayObjectPainter::processLasso(const Lasso& lasso) {
@@ -17,6 +18,15 @@ SkiaOverlayObjectPainter::processLasso(const Lasso& lasso) {
 
 void
 SkiaOverlayObjectPainter::processSelection(const Selection& selection) {
+
+	// the strokes in the selection
+
+	SkiaStrokePainter strokePainter(_canvas, selection.getStrokePoints());
+
+	for (unsigned int i = 0; i < selection.numStrokes(); i++)
+		strokePainter.draw(selection.getStroke(i), util::rect<CanvasPrecision>(0, 0, 0, 0));
+
+	// the selection rectangle
 
 	SkPath path;
 	path.moveTo(selection.getBoundingBox().minX, selection.getBoundingBox().minY);
