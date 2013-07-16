@@ -76,7 +76,8 @@ public:
 	/**
 	 * Clean all dirty areas.
 	 */
-	void cleanUp(SkiaCanvasPainter& painter, unsigned int maxNumRequests);
+	template <typename Painter>
+	void cleanUp(Painter& painter, unsigned int maxNumRequests = 0);
 
 	/**
 	 * Check whether a given area is dirty.
@@ -262,6 +263,40 @@ PrefetchTexture::fillBuffer(
 
 	// unmap the buffer
 	buffer.unmap();
+}
+
+template <typename Painter>
+void
+PrefetchTexture::cleanUp(Painter& painter, unsigned int maxNumRequests) {
+
+	gui::OpenGl::Guard guard;
+
+	unsigned int numRequests = _cleanUpRequests.size();
+	
+	if (maxNumRequests != 0)
+		numRequests = std::min(numRequests, maxNumRequests);
+
+	gui::Buffer* buffer = 0;
+	CleanUpRequest request;
+
+	for (unsigned int i = 0; i < numRequests; i++) {
+
+		// the number of requests might have decreased while we were working on 
+		// them, in this case abort and come back later
+		if (!getNextCleanUpRequest(request))
+			return;
+
+		createBuffer(request.area.width(), request.area.height(), &buffer);
+
+		fillBuffer(*buffer, request.area, painter, request.area);
+
+		// update texture with buffer content
+		_texture->loadData(*buffer, request.textureOffset.x, request.textureOffset.y);
+
+		deleteBuffer(&buffer);
+
+		_currentCleanUpArea = util::rect<int>(0, 0, 0, 0);
+	}
 }
 
 #endif // YANTA_PREFETCH_TEXTURE_H__

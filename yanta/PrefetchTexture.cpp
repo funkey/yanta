@@ -361,40 +361,6 @@ PrefetchTexture::getNextCleanUpRequest(CleanUpRequest& request) {
 	return true;
 }
 
-void
-PrefetchTexture::cleanUp(SkiaCanvasPainter& painter, unsigned int maxNumRequests) {
-
-	gui::OpenGl::Guard guard;
-
-	unsigned int numRequests = std::min(static_cast<unsigned int>(_cleanUpRequests.size()), maxNumRequests);
-
-	LOG_DEBUG(prefetchtexturelog) << "processing " << numRequests << " cleanup requests" << std::endl;
-
-	gui::Buffer* buffer = 0;
-	CleanUpRequest request;
-
-	for (unsigned int i = 0; i < numRequests; i++) {
-
-		// the number of requests might have decreased while we were working on 
-		// them, in this case abort and come back later
-		if (!getNextCleanUpRequest(request))
-			return;
-
-		createBuffer(request.area.width(), request.area.height(), &buffer);
-
-		fillBuffer(*buffer, request.area, painter, request.area);
-
-		// update texture with buffer content
-		_texture->loadData(*buffer, request.textureOffset.x, request.textureOffset.y);
-
-		deleteBuffer(&buffer);
-
-		_currentCleanUpArea = util::rect<int>(0, 0, 0, 0);
-	}
-
-	LOG_DEBUG(prefetchtexturelog) << "done cleaning up" << std::endl;
-}
-
 bool
 PrefetchTexture::isDirty(const util::rect<int>& roi) {
 

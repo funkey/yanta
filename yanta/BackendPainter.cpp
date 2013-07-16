@@ -190,6 +190,7 @@ BackendPainter::draw(
 			// show a different part of the canvas texture
 			_canvasTexture->shift(pixelShift - _previousShift);
 			_overlayTexture->shift(pixelShift - _previousShift);
+			_overlayTexture->cleanUp(_overlayPainter);
 		}
 	}
 
