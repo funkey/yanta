@@ -6,6 +6,7 @@ logger::LogChannel osdlog("osdlog", "[Osd] ");
 Osd::Osd() :
 	_previousWidth(Osd::Normal),
 	_widthTapTime(0),
+	_previousMode(PenMode::Drawing),
 	_penAway(false) {
 
 	registerOutput(_penMode, "pen mode");
@@ -18,6 +19,7 @@ Osd::Osd() :
 	_painter.registerForwardCallback(&Osd::onFingerUp, this);
 
 	_currentMode.getStyle().setWidth(Osd::Normal);
+	_currentMode.setMode(PenMode::Drawing);
 }
 
 void
@@ -74,7 +76,14 @@ Osd::onFingerDown(gui::FingerDown& signal) {
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
 		_currentMode.getStyle().setWidth(Large);
+	
 	} else if (signal.position.y < 800) {
+
+		toggleLasso();
+
+		_modeTapTime  = signal.timestamp;
+
+	} else if (signal.position.y < 900) {
 
 		_addPage();
 	}
@@ -108,15 +117,13 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 
 	} else if (signal.position.y < 700) {
 
-		if (signal.timestamp - _widthTapTime > maxTapTime) {
-
-			LOG_ALL(osdlog)
-					<< "released stroke button after long tap ("
-					<< signal.timestamp << "-" << _widthTapTime
-					<< "), resetting previous value ("
-					<< _previousWidth << ")" << std::endl;
+		if (signal.timestamp - _widthTapTime > maxTapTime)
 			_currentMode.getStyle().setWidth(_previousWidth);
-		}
+
+	} else if (signal.position.y < 800) {
+
+		if (signal.timestamp - _modeTapTime > maxTapTime)
+			toggleLasso();
 
 	} else {
 
@@ -136,4 +143,21 @@ void
 Osd::onPenAway(const gui::PenAway& /*signal*/) {
 
 	_penAway = true;
+}
+
+void
+Osd::toggleLasso() {
+
+	PenMode::Mode current = _currentMode.getMode();
+
+	if (current == PenMode::Lasso) {
+
+		_currentMode.setMode(_previousMode);
+
+	} else {
+
+		_currentMode.setMode(PenMode::Lasso);
+	}
+
+	_previousMode = current;
 }

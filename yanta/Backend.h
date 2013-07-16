@@ -3,11 +3,14 @@
 
 #include <gui/PenSignals.h>
 #include <pipeline/all.h>
-#include "CanvasPainter.h"
+#include "BackendPainter.h"
 #include "CanvasSignals.h"
 #include "PenMode.h"
 #include "OsdRequest.h"
 #include "OsdSignals.h"
+#include "Overlay.h"
+#include "OverlaySignals.h"
+#include "Lasso.h"
 
 class Backend : public pipeline::SimpleProcessNode<> {
 
@@ -31,6 +34,7 @@ private:
 	pipeline::Input<PenMode>    _penMode;
 	pipeline::Input<OsdRequest> _osdRequest;
 	pipeline::Output<Canvas>    _canvas;
+	pipeline::Output<Overlay>   _overlay;
 
 	bool _penDown;
 
@@ -39,8 +43,12 @@ private:
 
 	bool _initialCanvasModified;
 
-	signals::Slot<ChangedArea>      _changedArea;
-	signals::Slot<StrokePointAdded> _strokePointAdded;
+	boost::shared_ptr<Lasso> _lasso;
+
+	signals::Slot<CanvasChangedArea>  _canvasChangedArea;
+	signals::Slot<StrokePointAdded>   _strokePointAdded;
+	signals::Slot<OverlayChangedArea> _overlayChangedArea;
+	signals::Slot<LassoPointAdded>    _lassoPointAdded;
 };
 
 #endif // YANTA_BACKEND_H__

@@ -8,17 +8,19 @@
 #include <gui/PointerSignalFilter.h>
 #include <gui/WindowSignals.h>
 
-#include "CanvasPainter.h"
-#include "CanvasSignals.h"
+#include "BackendPainter.h"
 #include "Canvas.h"
+#include "CanvasSignals.h"
+#include "Overlay.h"
+#include "OverlaySignals.h"
 
-class CanvasView : public pipeline::SimpleProcessNode<>, public gui::PointerSignalFilter {
+class BackendView : public pipeline::SimpleProcessNode<>, public gui::PointerSignalFilter {
 
 public:
 
-	CanvasView();
+	BackendView();
 
-	~CanvasView();
+	~BackendView();
 
 private:
 
@@ -58,9 +60,13 @@ private:
 
 	void onFingerUp(const gui::FingerUp& signal);
 
-	void onChangedArea(const ChangedArea& signal);
+	void onCanvasChangedArea(const CanvasChangedArea& signal);
+
+	void onOverlayChangedArea(const OverlayChangedArea& signal);
 
 	void onStrokePointAdded(const StrokePointAdded& signal);
+
+	void onLassoPointAdded(const LassoPointAdded& signal);
 
 	void addFinger(const gui::FingerDown& signal);
 
@@ -100,8 +106,9 @@ private:
 	// max time to hit the threshold before a drag gets accepted
 	static const unsigned long DragTimeout              = 500;
 
-	pipeline::Input<Canvas>        _canvas;
-	pipeline::Output<CanvasPainter> _painter;
+	pipeline::Input<Canvas>          _canvas;
+	pipeline::Input<Overlay>         _overlay;
+	pipeline::Output<BackendPainter> _painter;
 
 	signals::Slot<const gui::ContentChanged>   _contentChanged;
 	signals::Slot<const gui::WindowFullscreen> _fullscreen;

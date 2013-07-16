@@ -49,7 +49,7 @@ public:
 	/**
 	 * Draw the whole canvas on the provided context.
 	 */
-	void draw(SkCanvas& canvas);
+	void draw(SkCanvas& context);
 
 	/**
 	 * Draw the canvas in the given ROI on the provided context. If 

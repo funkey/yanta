@@ -1,7 +1,7 @@
 #include <boost/timer/timer.hpp>
 #include <util/Logger.h>
 #include <util/ProgramOptions.h>
-#include "CanvasView.h"
+#include "BackendView.h"
 
 util::ProgramOption optionPenOffsetX(
 	util::_long_name        = "penOffsetX",
@@ -13,22 +13,25 @@ util::ProgramOption optionPenOffsetY(
 	util::_description_text = "The offset in pixels for the pen tip. Set this value to avoid hiding the virtual pen tip under the pyhsical pen.",
 	util::_default_value    = 0);
 
-logger::LogChannel canvasviewlog("canvasviewlog", "[CanvasView] ");
+logger::LogChannel backendviewlog("backendviewlog", "[BackendView] ");
 
-CanvasView::CanvasView() :
+BackendView::BackendView() :
 	_lastPen(0, 0),
 	_gestureStartCenter(0, 0),
 	_gestureStartDistance(0),
 	_backgroundPainterStopped(false),
-	_backgroundThread(boost::bind(&CanvasView::cleanDirtyAreas, this)),
+	_backgroundThread(boost::bind(&BackendView::cleanDirtyAreas, this)),
 	_mode(Nothing),
 	_penOffset(optionPenOffsetX.as<int>(), optionPenOffsetY.as<int>()) {
 
 	registerInput(_canvas, "canvas");
+	registerInput(_overlay, "overlay");
 	registerOutput(_painter, "painter");
 
-	_canvas.registerBackwardCallback(&CanvasView::onChangedArea, this);
-	_canvas.registerBackwardCallback(&CanvasView::onStrokePointAdded, this);
+	_canvas.registerBackwardCallback(&BackendView::onCanvasChangedArea, this);
+	_canvas.registerBackwardCallback(&BackendView::onStrokePointAdded, this);
+	_overlay.registerBackwardCallback(&BackendView::onOverlayChangedArea, this);
+	_overlay.registerBackwardCallback(&BackendView::onLassoPointAdded, this);
 
 	_painter.registerForwardSlot(_contentChanged);
 	_painter.registerForwardSlot(_fullscreen);
@@ -36,42 +39,43 @@ CanvasView::CanvasView() :
 	// establish pointer signal filter
 	PointerSignalFilter::filterBackward(_painter, _canvas, this);
 
-	_painter.registerForwardCallback(&CanvasView::onMouseMove, this);
-	_painter.registerForwardCallback(&CanvasView::onPenMove, this);
-	_painter.registerForwardCallback(&CanvasView::onPenIn, this);
-	_painter.registerForwardCallback(&CanvasView::onPenOut, this);
-	_painter.registerForwardCallback(&CanvasView::onFingerDown, this);
-	_painter.registerForwardCallback(&CanvasView::onFingerMove, this);
-	_painter.registerForwardCallback(&CanvasView::onFingerUp, this);
+	_painter.registerForwardCallback(&BackendView::onMouseMove, this);
+	_painter.registerForwardCallback(&BackendView::onPenMove, this);
+	_painter.registerForwardCallback(&BackendView::onPenIn, this);
+	_painter.registerForwardCallback(&BackendView::onPenOut, this);
+	_painter.registerForwardCallback(&BackendView::onFingerDown, this);
+	_painter.registerForwardCallback(&BackendView::onFingerMove, this);
+	_painter.registerForwardCallback(&BackendView::onFingerUp, this);
 }
 
-CanvasView::~CanvasView() {
+BackendView::~BackendView() {
 
-	LOG_DEBUG(canvasviewlog) << "tearing down background rendering thread" << std::endl;
+	LOG_DEBUG(backendviewlog) << "tearing down background rendering thread" << std::endl;
 
 	_backgroundPainterStopped = true;
 	_backgroundThread.join();
 
-	LOG_DEBUG(canvasviewlog) << "background rendering thread stopped" << std::endl;
+	LOG_DEBUG(backendviewlog) << "background rendering thread stopped" << std::endl;
 }
 
 void
-CanvasView::updateOutputs() {
+BackendView::updateOutputs() {
 
 	_painter->setCanvas(_canvas);
+	_painter->setOverlay(_overlay);
 
 	_contentChanged();
 }
 
 bool
-CanvasView::filter(gui::PointerSignal& signal) {
+BackendView::filter(gui::PointerSignal& signal) {
 
 	signal.position = _painter->screenToCanvas(signal.position + _penOffset);
 	return true;
 }
 
 void
-CanvasView::onPenMove(const gui::PenMove& signal) {
+BackendView::onPenMove(const gui::PenMove& signal) {
 
 	_lastPen = signal.position;
 	_painter->setCursorPosition(signal.position + _penOffset);
@@ -79,7 +83,7 @@ CanvasView::onPenMove(const gui::PenMove& signal) {
 }
 
 void
-CanvasView::onMouseMove(const gui::MouseMove& signal) {
+BackendView::onMouseMove(const gui::MouseMove& signal) {
 
 	// the mouse cursor gives hints about the position of the pen (which the 
 	// PenIn cannot tell us)
@@ -87,21 +91,21 @@ CanvasView::onMouseMove(const gui::MouseMove& signal) {
 }
 
 void
-CanvasView::onPenIn(const gui::PenIn& /*signal*/) {
+BackendView::onPenIn(const gui::PenIn& /*signal*/) {
 
-	LOG_ALL(canvasviewlog) << "the pen came close to the screen" << std::endl;
+	LOG_ALL(backendviewlog) << "the pen came close to the screen" << std::endl;
 	_penClose = true;
 }
 
 void
-CanvasView::onPenOut(const gui::PenOut& /*signal*/) {
+BackendView::onPenOut(const gui::PenOut& /*signal*/) {
 
-	LOG_ALL(canvasviewlog) << "the pen moved away from the screen" << std::endl;
+	LOG_ALL(backendviewlog) << "the pen moved away from the screen" << std::endl;
 	_penClose = false;
 }
 
 void
-CanvasView::onFingerDown(const gui::FingerDown& signal) {
+BackendView::onFingerDown(const gui::FingerDown& signal) {
 
 	if (signal.processed || locked(signal.timestamp, signal.position))
 		return;
@@ -110,25 +114,25 @@ CanvasView::onFingerDown(const gui::FingerDown& signal) {
 }
 
 void
-CanvasView::onFingerMove(const gui::FingerMove& signal) {
+BackendView::onFingerMove(const gui::FingerMove& signal) {
 
 	if (signal.processed)
 		return;
 
-	LOG_ALL(canvasviewlog) << "a finger is moved" << std::endl;
+	LOG_ALL(backendviewlog) << "a finger is moved" << std::endl;
 
 	// get the moving finger
 	std::map<int, gui::FingerSignal>::iterator i = _fingerDown.find(signal.id);
 	if (i == _fingerDown.end()) {
 
-		LOG_ALL(canvasviewlog) << "got a move from unseen (or ignored) finger " << signal.id << std::endl;
+		LOG_ALL(backendviewlog) << "got a move from unseen (or ignored) finger " << signal.id << std::endl;
 		return;
 	}
 
 	// is there a reason not to accept the drag and zoom?
 	if (locked(signal.timestamp, signal.position)) {
 
-		LOG_ALL(canvasviewlog) << "finger " << signal.id << " is locked -- erase it" << std::endl;
+		LOG_ALL(backendviewlog) << "finger " << signal.id << " is locked -- erase it" << std::endl;
 		removeFinger(signal.id, signal.timestamp);
 		return;
 	}
@@ -138,26 +142,26 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 	if (_mode == WindowRequests) {
 
-		LOG_ALL(canvasviewlog) << "I am in window request mode (number of fingers down == 3)" << std::endl;
+		LOG_ALL(backendviewlog) << "I am in window request mode (number of fingers down == 3)" << std::endl;
 
 		// get the amount by which the fingers where moved
 		util::point<CanvasPrecision> moved = getFingerCenter() - _gestureStartCenter;
 
-		LOG_ALL(canvasviewlog) << "moved by " << moved << " (" << getFingerCenter() << " - " << _gestureStartCenter << ")" << std::endl;
+		LOG_ALL(backendviewlog) << "moved by " << moved << " (" << getFingerCenter() << " - " << _gestureStartCenter << ")" << std::endl;
 
 		CanvasPrecision threshold = WindowRequestThreshold;
 
 		// moved upwards
 		if (moved.y < -threshold) {
 
-			LOG_ALL(canvasviewlog) << "requesting fullscreen" << std::endl;
+			LOG_ALL(backendviewlog) << "requesting fullscreen" << std::endl;
 			_fullscreen(gui::WindowFullscreen(true));
 		}
 
 		// moved downwards
 		if (moved.y > threshold) {
 
-			LOG_ALL(canvasviewlog) << "requesting no fullscreen" << std::endl;
+			LOG_ALL(backendviewlog) << "requesting no fullscreen" << std::endl;
 			_fullscreen(gui::WindowFullscreen(false));
 		}
 	}
@@ -199,17 +203,17 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 
 	if (_mode == Zooming) {
 
-		LOG_ALL(canvasviewlog) << "I am in zooming mode (number of fingers down == 2)" << std::endl;
+		LOG_ALL(backendviewlog) << "I am in zooming mode (number of fingers down == 2)" << std::endl;
 
 		// the previous distance between the fingers
 		CanvasPrecision previousDistance = _gestureStartDistance;
 
-		LOG_ALL(canvasviewlog) << "previous finger distance was " << previousDistance << std::endl;
+		LOG_ALL(backendviewlog) << "previous finger distance was " << previousDistance << std::endl;
 
 		CanvasPrecision distance = getFingerDistance();
 
-		LOG_ALL(canvasviewlog) << "current finger distance is " << distance << std::endl;
-		LOG_ALL(canvasviewlog) << "zooming by " << (distance/previousDistance) << " with center at " << getFingerCenter() << std::endl;
+		LOG_ALL(backendviewlog) << "current finger distance is " << distance << std::endl;
+		LOG_ALL(backendviewlog) << "zooming by " << (distance/previousDistance) << " with center at " << getFingerCenter() << std::endl;
 
 		_painter->zoom(distance/previousDistance, getFingerCenter());
 
@@ -257,7 +261,7 @@ CanvasView::onFingerMove(const gui::FingerMove& signal) {
 }
 
 void
-CanvasView::onFingerUp(const gui::FingerUp& signal) {
+BackendView::onFingerUp(const gui::FingerUp& signal) {
 
 	if (signal.processed)
 		return;
@@ -266,9 +270,9 @@ CanvasView::onFingerUp(const gui::FingerUp& signal) {
 }
 
 void
-CanvasView::addFinger(const gui::FingerDown& signal) {
+BackendView::addFinger(const gui::FingerDown& signal) {
 
-	LOG_ALL(canvasviewlog) << "a finger was put down (" << _fingerDown.size() << " fingers now)" << std::endl;
+	LOG_ALL(backendviewlog) << "a finger was put down (" << _fingerDown.size() << " fingers now)" << std::endl;
 
 	_fingerDown[signal.id] = signal;
 	initGesture(signal.timestamp);
@@ -276,16 +280,16 @@ CanvasView::addFinger(const gui::FingerDown& signal) {
 }
 
 void
-CanvasView::removeFinger(unsigned int id, unsigned long timestamp) {
+BackendView::removeFinger(unsigned int id, unsigned long timestamp) {
 
-	LOG_ALL(canvasviewlog) << "finger " << id << " finger was moved up" << std::endl;
+	LOG_ALL(backendviewlog) << "finger " << id << " finger was moved up" << std::endl;
 
 	std::map<int, gui::FingerSignal>::iterator i = _fingerDown.find(id);
 
 	// is this one of the fingers we are listening to?
 	if (i != _fingerDown.end()) {
 
-		LOG_ALL(canvasviewlog) << "this is one of the fingers I am listening to" << std::endl;
+		LOG_ALL(backendviewlog) << "this is one of the fingers I am listening to" << std::endl;
 
 		_fingerDown.erase(i);
 		_painter->prepareDrawing();
@@ -295,19 +299,19 @@ CanvasView::removeFinger(unsigned int id, unsigned long timestamp) {
 
 	} else {
 
-		LOG_ALL(canvasviewlog) << "this finger is ignored" << std::endl;
+		LOG_ALL(backendviewlog) << "this finger is ignored" << std::endl;
 	}
 }
 
 void
-CanvasView::clearFingers() {
+BackendView::clearFingers() {
 
 	_fingerDown.clear();
 	setMode();
 }
 
 void
-CanvasView::setMode() {
+BackendView::setMode() {
 
 	switch (_fingerDown.size()) {
 
@@ -330,7 +334,7 @@ CanvasView::setMode() {
 }
 
 void
-CanvasView::initGesture(unsigned long timestamp) {
+BackendView::initGesture(unsigned long timestamp) {
 
 	_gestureStartCenter   = getFingerCenter();
 	_gestureStartDistance = getFingerDistance();
@@ -338,24 +342,40 @@ CanvasView::initGesture(unsigned long timestamp) {
 }
 
 void
-CanvasView::onChangedArea(const ChangedArea& signal) {
+BackendView::onCanvasChangedArea(const CanvasChangedArea& signal) {
 
-	LOG_ALL(canvasviewlog) << "area " << signal.area << " changed" << std::endl;
+	LOG_ALL(backendviewlog) << "area " << signal.area << " changed" << std::endl;
 
 	_painter->markDirty(signal.area);
 	_contentChanged();
 }
 
 void
-CanvasView::onStrokePointAdded(const StrokePointAdded& /*signal*/) {
+BackendView::onOverlayChangedArea(const OverlayChangedArea& signal) {
 
-	LOG_ALL(canvasviewlog) << "a stroke point was added -- initiate a redraw" << std::endl;
+	LOG_ALL(backendviewlog) << "overlay area " << signal.area << " changed" << std::endl;
+
+	_contentChanged();
+}
+
+void
+BackendView::onStrokePointAdded(const StrokePointAdded& /*signal*/) {
+
+	LOG_ALL(backendviewlog) << "a stroke point was added -- initiate a redraw" << std::endl;
+
+	_contentChanged();
+}
+
+void
+BackendView::onLassoPointAdded(const LassoPointAdded& /*signal*/) {
+
+	LOG_ALL(backendviewlog) << "a lasso point was added -- initiate a redraw" << std::endl;
 
 	_contentChanged();
 }
 
 CanvasPrecision
-CanvasView::getFingerDistance() {
+BackendView::getFingerDistance() {
 
 	if (_fingerDown.size() != 2)
 		return 0;
@@ -370,7 +390,7 @@ CanvasView::getFingerDistance() {
 }
 
 util::point<CanvasPrecision>
-CanvasView::getFingerCenter() {
+BackendView::getFingerCenter() {
 
 	util::point<CanvasPrecision> center(0, 0);
 	for (std::map<int, gui::FingerSignal>::const_iterator i = _fingerDown.begin(); i != _fingerDown.end(); i++)
@@ -380,13 +400,13 @@ CanvasView::getFingerCenter() {
 }
 
 bool
-CanvasView::locked(unsigned long /*now*/, const util::point<CanvasPrecision>& position) {
+BackendView::locked(unsigned long /*now*/, const util::point<CanvasPrecision>& position) {
 
 	// if there is a pen, allow only dragging and moving from an area that is 
 	// clearly not the palm (of a right-handed person)
 	if (_penClose) {
 
-		LOG_ALL(canvasviewlog) << "the pen is close to the screen" << std::endl;
+		LOG_ALL(backendviewlog) << "the pen is close to the screen" << std::endl;
 
 		if (position.x < _lastPen.x) {
 
@@ -394,7 +414,7 @@ CanvasView::locked(unsigned long /*now*/, const util::point<CanvasPrecision>& po
 
 		} else {
 
-			LOG_ALL(canvasviewlog) << "the pen is locking the canvas" << std::endl;
+			LOG_ALL(backendviewlog) << "the pen is locking the canvas" << std::endl;
 			return true;
 		}
 	}
@@ -403,7 +423,7 @@ CanvasView::locked(unsigned long /*now*/, const util::point<CanvasPrecision>& po
 }
 
 void
-CanvasView::cleanDirtyAreas() {
+BackendView::cleanDirtyAreas() {
 
 	boost::timer::cpu_timer timer;
 

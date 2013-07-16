@@ -14,7 +14,8 @@ public:
 	enum Mode {
 
 		Drawing,
-		Erasing
+		Erasing,
+		Lasso
 	};
 
 	inline void setMode(Mode mode) { _mode = mode; }

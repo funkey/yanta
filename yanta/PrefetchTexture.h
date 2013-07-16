@@ -41,9 +41,10 @@ public:
 	 * Fill a subarea of the texture with whatever the provided painter draws 
 	 * into this area.
 	 */
+	template <typename Painter>
 	void fill(
 			const util::rect<int>& subarea,
-			SkiaCanvasPainter& painter);
+			Painter&               painter);
 
 	/**
 	 * Specify an area as working area. Buffers for this area will be kept in 
@@ -117,10 +118,11 @@ private:
 	 * Fill buffer, representing bufferArea, using painter, but draw only in 
 	 * roi.
 	 */
+	template <typename Painter>
 	void fillBuffer(
 			gui::Buffer&           buffer,
 			const util::rect<int>& bufferArea,
-			SkiaCanvasPainter&     painter,
+			Painter&               painter,
 			const util::rect<int>& roi);
 
 	/**
@@ -181,6 +183,86 @@ private:
 	// the clean-up area a thread is currently working on
 	util::rect<int> _currentCleanUpArea;
 };
+
+template <typename Painter>
+void
+PrefetchTexture::fill(
+		const util::rect<int>& subarea,
+		Painter&               painter) {
+
+	// get the up-to-four parts of the subarea
+	util::rect<int>  parts[4];
+	util::point<int> offsets[4];
+
+	split(subarea, parts, offsets);
+
+	for (int i = 0; i < 4; i++) {
+
+		if (parts[i].area() <= 0)
+			continue;
+
+		unsigned int width  = parts[i].width();
+		unsigned int height = parts[i].height();
+
+		// if we are about to fill the region specified by setWorkingArea(), we 
+		// reuse the already allocated buffers
+		if (_workingArea.contains(subarea)) {
+
+			// fill the _workingBuffers[i], representing area 
+			// _workingAreaParts[i] only in the subarea parts[i]
+			fillBuffer(*_workingBuffers[i], _workingAreaParts[i], painter, parts[i]);
+
+			_texture->loadData(*_workingBuffers[i], _workingAreaOffsets[i].x, _workingAreaOffsets[i].y);
+
+		} else {
+
+			gui::Buffer* buffer = 0;
+
+			createBuffer(width, height, &buffer);
+
+			fillBuffer(*buffer, parts[i], painter, parts[i]);
+
+			_texture->loadData(*buffer, offsets[i].x, offsets[i].y);
+
+			deleteBuffer(&buffer);
+		}
+	}
+}
+
+template <typename Painter>
+void
+PrefetchTexture::fillBuffer(
+		gui::Buffer&           buffer,
+		const util::rect<int>& bufferArea,
+		Painter&               painter,
+		const util::rect<int>& roi) {
+
+	unsigned int width  = bufferArea.width();
+	unsigned int height = bufferArea.height();
+
+	gui::skia_pixel_t* data = buffer.map<gui::skia_pixel_t>();
+
+	// wrap the buffer in a skia bitmap
+	SkBitmap bitmap;
+	bitmap.setConfig(SkBitmap::kARGB_8888_Config, width, height);
+	bitmap.setPixels(data);
+
+	SkCanvas canvas(bitmap);
+
+	// Now, we have a surface of widthxheight, with (0,0) being the upper left 
+	// corner and (width-1,height-1) the lower right. Translate operations, such 
+	// that the upper left is bufferArea.upperLeft() and lower right is 
+	// bufferArea.lowerRight().
+
+	// translate bufferArea.upperLeft() to (0,0)
+	util::point<int> translate = -bufferArea.upperLeft();
+	canvas.translate(translate.x, translate.y);
+
+	painter.draw(canvas, roi);
+
+	// unmap the buffer
+	buffer.unmap();
+}
 
 #endif // YANTA_PREFETCH_TEXTURE_H__
 

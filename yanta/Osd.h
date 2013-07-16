@@ -30,6 +30,8 @@ private:
 	void onPenIn(const gui::PenIn& signal);
 	void onPenAway(const gui::PenAway& signal);
 
+	void toggleLasso();
+
 	pipeline::Output<PenMode>    _penMode;
 	pipeline::Output<OsdRequest> _osdRequest;
 	pipeline::Output<OsdPainter> _painter;
@@ -47,6 +49,9 @@ private:
 
 	double        _previousWidth;
 	unsigned long _widthTapTime;
+
+	PenMode::Mode _previousMode;
+	unsigned long _modeTapTime;
 
 	bool _penAway;
 };

@@ -6,28 +6,36 @@
 #include <gui/Texture.h>
 
 #include "SkiaCanvasPainter.h"
+#include "SkiaOverlayPainter.h"
 #include "PrefetchTexture.h"
 #include "Canvas.h"
+#include "Overlay.h"
 
-extern logger::LogChannel canvaspainterlog;
+extern logger::LogChannel backendpainterlog;
 
-class CanvasPainter : public gui::Painter {
+class BackendPainter : public gui::Painter {
 
 public:
 
-	CanvasPainter();
+	BackendPainter();
 
 	void setCanvas(boost::shared_ptr<Canvas> canvas) {
 
 		_canvas = canvas;
-		_cairoPainter.setCanvas(canvas);
-		_cairoCleanUpPainter.setCanvas(canvas);
+		_canvasPainter.setCanvas(canvas);
+		_canvasCleanUpPainter.setCanvas(canvas);
 		_canvasChanged = true;
+	}
+
+	void setOverlay(boost::shared_ptr<Overlay> overlay) {
+
+		_overlay = overlay;
+		_overlayPainter.setOverlay(overlay);
 	}
 
 	void setCursorPosition(const util::point<CanvasPrecision>& position) {
 
-		LOG_ALL(canvaspainterlog) << "cursor set to position " << position << std::endl;
+		LOG_ALL(backendpainterlog) << "cursor set to position " << position << std::endl;
 
 		_cursorPosition = position;
 	}
@@ -80,9 +88,9 @@ public:
 private:
 
 	/**
-	 * The possible states of the CanvasPainter.
+	 * The possible states of the BackendPainter.
 	 */
-	enum CanvasPainterMode {
+	enum BackendPainterMode {
 
 		IncrementalDrawing,
 		Moving,
@@ -94,7 +102,7 @@ private:
 	/**
 	 * Prepare the texture and buffers of the respective sizes.
 	 */
-	bool prepareTexture(const util::rect<int>& pixelRoi);
+	bool prepareTextures(const util::rect<int>& pixelRoi);
 
 	/**
 	 * Update the texture canvas in the specified ROI.
@@ -102,24 +110,36 @@ private:
 	void updateCanvas(const Canvas& canvas, const util::rect<int>& roi);
 
 	/**
+	 * Update the overlay in the specified ROI.
+	 */
+	void updateOverlay(const util::rect<int>& roi);
+
+	/**
 	 * Draw the texture content that corresponds to roi into roi.
 	 */
-	void drawTexture(const util::rect<int>& roi);
+	void drawTextures(const util::rect<int>& roi);
 
 	// the canvas to draw
 	boost::shared_ptr<Canvas> _canvas;
 
+	// the overlay to draw on top of it
+	boost::shared_ptr<Overlay> _overlay;
+
 	// indicates that the canvas was changed entirely
 	bool _canvasChanged;
 
-	// the cairo painter for the canvas
-	SkiaCanvasPainter _cairoPainter;
+	// the skia painter for the canvas
+	SkiaCanvasPainter _canvasPainter;
 
-	// a cairo painter for the background updates
-	SkiaCanvasPainter _cairoCleanUpPainter;
+	// a skia painter for the background updates
+	SkiaCanvasPainter _canvasCleanUpPainter;
 
-	// the texture to draw to
+	// a skia painter for the overlay
+	SkiaOverlayPainter _overlayPainter;
+
+	// the textures to draw to
 	boost::shared_ptr<PrefetchTexture> _canvasTexture;
+	boost::shared_ptr<PrefetchTexture> _overlayTexture;
 
 	// the number of pixels to add to the visible region for prefetching
 	unsigned int _prefetchLeft;
@@ -152,7 +172,7 @@ private:
 	util::rect<int> _bottom;
 	util::rect<int> _top;
 
-	CanvasPainterMode _mode;
+	BackendPainterMode _mode;
 
 	// the position of the cursor to draw in screen pixels
 	util::point<double> _cursorPosition;

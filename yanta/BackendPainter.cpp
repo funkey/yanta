@@ -4,19 +4,19 @@
 #include <gui/OpenGl.h>
 #include <util/Logger.h>
 #include <util/ProgramOptions.h>
-#include "CanvasPainter.h"
+#include "BackendPainter.h"
 
-logger::LogChannel canvaspainterlog("canvaspainterlog", "[CanvasPainter] ");
+logger::LogChannel backendpainterlog("backendpainterlog", "[BackendPainter] ");
 
 util::ProgramOption optionDpi(
 	util::_long_name        = "dpi",
 	util::_description_text = "The dots per inch of the screen.",
 	util::_default_value    = 96);
 
-CanvasPainter::CanvasPainter() :
+BackendPainter::BackendPainter() :
 	_canvasChanged(true),
-	_cairoPainter(gui::skia_pixel_t(255, 255, 255)),
-	_cairoCleanUpPainter(gui::skia_pixel_t(255, 255, 255)),
+	_canvasPainter(gui::skia_pixel_t(255, 255, 255)),
+	_canvasCleanUpPainter(gui::skia_pixel_t(255, 255, 255)),
 	_prefetchLeft(1024),
 	_prefetchRight(1024),
 	_prefetchTop(1024),
@@ -31,12 +31,13 @@ CanvasPainter::CanvasPainter() :
 	_mode(IncrementalDrawing),
 	_cursorPosition(0, 0) {
 
-	_cairoPainter.setDeviceTransformation(_scale, util::point<double>(0, 0));
-	_cairoCleanUpPainter.setDeviceTransformation(_scale, util::point<double>(0, 0));
+	_canvasPainter.setDeviceTransformation(_scale, util::point<double>(0, 0));
+	_canvasCleanUpPainter.setDeviceTransformation(_scale, util::point<double>(0, 0));
+	_overlayPainter.setDeviceTransformation(_scale, util::point<double>(0, 0));
 }
 
 void
-CanvasPainter::drag(const util::point<CanvasPrecision>& direction) {
+BackendPainter::drag(const util::point<CanvasPrecision>& direction) {
 
 	// the direction is given in (sub)pixel units, but we need integers
 	util::point<int> d;
@@ -49,9 +50,9 @@ CanvasPainter::drag(const util::point<CanvasPrecision>& direction) {
 }
 
 void
-CanvasPainter::zoom(double zoomChange, const util::point<CanvasPrecision>& anchor) {
+BackendPainter::zoom(double zoomChange, const util::point<CanvasPrecision>& anchor) {
 
-	LOG_ALL(canvaspainterlog) << "changing zoom by " << zoomChange << " keeping " << anchor << " where it is" << std::endl;
+	LOG_ALL(backendpainterlog) << "changing zoom by " << zoomChange << " keeping " << anchor << " where it is" << std::endl;
 
 	// convert the anchor from screen coordinates to texture coordinates
 	_zoomAnchor = anchor - _shift;
@@ -70,7 +71,7 @@ CanvasPainter::zoom(double zoomChange, const util::point<CanvasPrecision>& ancho
 }
 
 util::point<CanvasPrecision>
-CanvasPainter::screenToCanvas(const util::point<double>& point) {
+BackendPainter::screenToCanvas(const util::point<double>& point) {
 
 	util::point<CanvasPrecision> inv = point;
 
@@ -81,7 +82,7 @@ CanvasPainter::screenToCanvas(const util::point<double>& point) {
 }
 
 util::point<int>
-CanvasPainter::canvasToTexture(const util::point<CanvasPrecision>& point) {
+BackendPainter::canvasToTexture(const util::point<CanvasPrecision>& point) {
 
 	util::point<double> inv = point;
 
@@ -91,17 +92,17 @@ CanvasPainter::canvasToTexture(const util::point<CanvasPrecision>& point) {
 }
 
 void
-CanvasPainter::draw(
+BackendPainter::draw(
 		const util::rect<double>&  roi,
 		const util::point<double>& resolution) {
 
 	if (!_canvas) {
 
-		LOG_DEBUG(canvaspainterlog) << "no canvas to paint (yet)" << std::endl;
+		LOG_DEBUG(backendpainterlog) << "no canvas to paint (yet)" << std::endl;
 		return;
 	}
 
-	LOG_ALL(canvaspainterlog) << "redrawing in " << roi << " with resolution " << resolution << std::endl;
+	LOG_ALL(backendpainterlog) << "redrawing in " << roi << " with resolution " << resolution << std::endl;
 
 	// the smallest integer pixel roi fitting the desired roi
 	util::rect<int> pixelRoi;
@@ -116,18 +117,18 @@ CanvasPainter::draw(
 	// convert the pixel roi from screen coordinates to texture coordinates
 	pixelRoi -= pixelShift;
 
-	LOG_ALL(canvaspainterlog) << "pixel roi is " << pixelRoi << std::endl;
+	LOG_ALL(backendpainterlog) << "pixel roi is " << pixelRoi << std::endl;
 
 	gui::OpenGl::Guard guard;
 
-	if (prepareTexture(pixelRoi))
+	if (prepareTextures(pixelRoi))
 		initiateFullRedraw(pixelRoi);
 
 	if (_canvasChanged) {
 
-		LOG_DEBUG(canvaspainterlog) << "the canvas changed entirely -- resetting incremental memories" << std::endl;
+		LOG_DEBUG(backendpainterlog) << "the canvas changed entirely -- resetting incremental memories" << std::endl;
 
-		_cairoPainter.resetIncrementalMemory();
+		_canvasPainter.resetIncrementalMemory();
 		_canvasChanged = false;
 	}
 
@@ -137,7 +138,7 @@ CanvasPainter::draw(
 		// redrawn completely
 		if (_scale != _previousScale) {
 
-			LOG_DEBUG(canvaspainterlog) << "scale changed while we are in drawing mode" << std::endl;
+			LOG_DEBUG(backendpainterlog) << "scale changed while we are in drawing mode" << std::endl;
 
 			initiateFullRedraw(pixelRoi);
 			prepareDrawing(pixelRoi);
@@ -151,28 +152,31 @@ CanvasPainter::draw(
 
 			// update the working area ourselves
 			updateCanvas(*_canvas, pixelRoi);
+			updateOverlay(pixelRoi);
 
 		// shift changed in incremental drawing mode -- move prefetch texture 
 		// and get back to incremental drawing
 		} else if (pixelShift != _previousShift) {
 
-			LOG_DEBUG(canvaspainterlog) << "shift changed while we are in drawing mode" << std::endl;
+			LOG_DEBUG(backendpainterlog) << "shift changed while we are in drawing mode" << std::endl;
 
 			_canvasTexture->shift(pixelShift - _previousShift);
+			_overlayTexture->shift(pixelShift - _previousShift);
 			prepareDrawing(pixelRoi);
 
 		// transformation did not change
 		} else {
 
-			LOG_ALL(canvaspainterlog) << "transformation did not change -- I just quickly update the canvas" << std::endl;
+			LOG_ALL(backendpainterlog) << "transformation did not change -- I just quickly update the canvas" << std::endl;
 
 			if (pixelRoi != _previousPixelRoi) {
 
-				LOG_ALL(canvaspainterlog) << "The ROI changed" << std::endl;
+				LOG_ALL(backendpainterlog) << "The ROI changed" << std::endl;
 				prepareDrawing(pixelRoi);
 			}
 
 			updateCanvas(*_canvas, pixelRoi);
+			updateOverlay(pixelRoi);
 		}
 	}
 
@@ -181,21 +185,16 @@ CanvasPainter::draw(
 		// shift changed in move mode -- just move prefetch texture
 		if (pixelShift != _previousShift) {
 
-			LOG_ALL(canvaspainterlog) << "shift changed by " << (pixelShift - _previousShift) << std::endl;
+			LOG_ALL(backendpainterlog) << "shift changed by " << (pixelShift - _previousShift) << std::endl;
 
 			// show a different part of the canvas texture
 			_canvasTexture->shift(pixelShift - _previousShift);
+			_overlayTexture->shift(pixelShift - _previousShift);
 		}
 	}
 
-	if (_mode == Zooming) {
-
-		// TODO: show scaled version of texture
-		//initiateFullRedraw(pixelRoi);
-	}
-
-	// draw the canvas
-	drawTexture(pixelRoi);
+	// draw the canvas and its overlay
+	drawTextures(pixelRoi);
 
 	// draw the cursor
 	glColor3f(0, 0, 0);
@@ -217,16 +216,26 @@ CanvasPainter::draw(
 }
 
 bool
-CanvasPainter::prepareTexture(const util::rect<int>& pixelRoi) {
+BackendPainter::prepareTextures(const util::rect<int>& pixelRoi) {
 
 	unsigned int textureWidth  = pixelRoi.width()  + _prefetchLeft + _prefetchRight;
 	unsigned int textureHeight = pixelRoi.height() + _prefetchTop  + _prefetchBottom;
 
-	LOG_ALL(canvaspainterlog) << "with pre-fetch areas, texture has to be of size " << textureWidth << "x" << textureHeight << std::endl;
+	LOG_ALL(backendpainterlog) << "with pre-fetch areas, texture has to be of size " << textureWidth << "x" << textureHeight << std::endl;
+
+	if (_overlayTexture && (_overlayTexture->width() < (unsigned int)pixelRoi.width() || _overlayTexture->height() < (unsigned int)pixelRoi.height())) {
+
+		_overlayTexture.reset();
+	}
+
+	if (!_overlayTexture) {
+
+		_overlayTexture = boost::make_shared<PrefetchTexture>(pixelRoi, 0, 0, 0, 0);
+	}
 
 	if (_canvasTexture && (_canvasTexture->width() < textureWidth || _canvasTexture->height() < textureHeight)) {
 
-		LOG_DEBUG(canvaspainterlog) << "texture is of different size, create a new one" << std::endl;
+		LOG_DEBUG(backendpainterlog) << "texture is of different size, create a new one" << std::endl;
 
 		_canvasTexture.reset();
 	}
@@ -242,37 +251,44 @@ CanvasPainter::prepareTexture(const util::rect<int>& pixelRoi) {
 }
 
 void
-CanvasPainter::refresh() {
+BackendPainter::refresh() {
 
-	LOG_DEBUG(canvaspainterlog) << "refresh requested" << std::endl;
-	_cairoPainter.resetIncrementalMemory();
+	LOG_DEBUG(backendpainterlog) << "refresh requested" << std::endl;
+	_canvasPainter.resetIncrementalMemory();
 }
 
 void
-CanvasPainter::updateCanvas(const Canvas& canvas, const util::rect<int>& roi) {
+BackendPainter::updateCanvas(const Canvas& canvas, const util::rect<int>& roi) {
 
 	// is it necessary to draw something?
-	if (_cairoPainter.alreadyDrawn(canvas)) {
+	if (_canvasPainter.alreadyDrawn(canvas)) {
 
-		LOG_ALL(canvaspainterlog) << "nothing changed, skipping redraw" << std::endl;
+		LOG_ALL(backendpainterlog) << "nothing changed, skipping redraw" << std::endl;
 		return;
 	}
 
-	_canvasTexture->fill(roi, _cairoPainter);
-	_cairoPainter.rememberDrawnCanvas();
+	_canvasTexture->fill(roi, _canvasPainter);
+	_canvasPainter.rememberDrawnCanvas();
 }
 
 void
-CanvasPainter::initiateFullRedraw(const util::rect<int>& roi) {
+BackendPainter::updateOverlay(const util::rect<int>& roi) {
 
-	LOG_DEBUG(canvaspainterlog) << "initiate full redraw for roi " << roi << std::endl;
+	_overlayTexture->fill(roi, _overlayPainter);
+}
+
+void
+BackendPainter::initiateFullRedraw(const util::rect<int>& roi) {
+
+	LOG_DEBUG(backendpainterlog) << "initiate full redraw for roi " << roi << std::endl;
 
 	_canvasTexture->reset(roi);
-	_cairoPainter.resetIncrementalMemory();
+	_canvasPainter.resetIncrementalMemory();
+	_overlayTexture->reset(roi);
 }
 
 void
-CanvasPainter::markDirty(const util::rect<CanvasPrecision>& area) {
+BackendPainter::markDirty(const util::rect<CanvasPrecision>& area) {
 
 	// area is in canvas units -- transform it to pixel units
 	util::point<int> ul = canvasToTexture(area.upperLeft());
@@ -284,12 +300,12 @@ CanvasPainter::markDirty(const util::rect<CanvasPrecision>& area) {
 	// are we currently looking at this area?
 	if (_mode == IncrementalDrawing && pixelArea.intersects(_previousPixelRoi)) {
 
-		LOG_DEBUG(canvaspainterlog) << "redrawing dirty working area " << (_previousPixelRoi.intersection(pixelArea)) << std::endl;
+		LOG_DEBUG(backendpainterlog) << "redrawing dirty working area " << (_previousPixelRoi.intersection(pixelArea)) << std::endl;
 
 		gui::OpenGl::Guard guard;
 
 		// in this case, redraw immediately the part that got dirty
-		_canvasTexture->fill(_previousPixelRoi.intersection(pixelArea), _cairoCleanUpPainter);
+		_canvasTexture->fill(_previousPixelRoi.intersection(pixelArea), _canvasCleanUpPainter);
 
 		// send everything beyond the working area to the worker threads
 		_canvasTexture->markDirty(_left.intersection(pixelArea));
@@ -305,22 +321,22 @@ CanvasPainter::markDirty(const util::rect<CanvasPrecision>& area) {
 }
 
 bool
-CanvasPainter::cleanDirtyAreas(unsigned int maxNumRequests) {
+BackendPainter::cleanDirtyAreas(unsigned int maxNumRequests) {
 
 	boost::shared_ptr<PrefetchTexture> texture = _canvasTexture;
 
 	if (!texture || !texture->hasDirtyAreas())
 		return false;
 
-	texture->cleanUp(_cairoCleanUpPainter, maxNumRequests);
+	texture->cleanUp(_canvasCleanUpPainter, maxNumRequests);
 
 	return true;
 }
 
 void
-CanvasPainter::prepareDrawing(const util::rect<int>& roi) {
+BackendPainter::prepareDrawing(const util::rect<int>& roi) {
 
-	LOG_DEBUG(canvaspainterlog) << "resetting the incremental memory" << std::endl;
+	LOG_DEBUG(backendpainterlog) << "resetting the incremental memory" << std::endl;
 
 	util::rect<int> workingArea;
 
@@ -337,6 +353,7 @@ CanvasPainter::prepareDrawing(const util::rect<int>& roi) {
 	}
 
 	_canvasTexture->setWorkingArea(workingArea);
+	_overlayTexture->setWorkingArea(workingArea);
 
 	_left = util::rect<int>(
 			workingArea.minX - _prefetchLeft,
@@ -359,15 +376,16 @@ CanvasPainter::prepareDrawing(const util::rect<int>& roi) {
 			workingArea.maxX,
 			workingArea.maxY + _prefetchBottom);
 
-	_cairoPainter.resetIncrementalMemory();
-	_cairoPainter.setDeviceTransformation(_scale, util::point<CanvasPrecision>(0.0, 0.0));
-	_cairoCleanUpPainter.setDeviceTransformation(_scale, util::point<CanvasPrecision>(0.0, 0.0));
+	_canvasPainter.resetIncrementalMemory();
+	_canvasPainter.setDeviceTransformation(_scale, util::point<CanvasPrecision>(0.0, 0.0));
+	_canvasCleanUpPainter.setDeviceTransformation(_scale, util::point<CanvasPrecision>(0.0, 0.0));
+	_overlayPainter.setDeviceTransformation(_scale, util::point<CanvasPrecision>(0.0, 0.0));
 
 	_mode = IncrementalDrawing;
 }
 
 void
-CanvasPainter::drawTexture(const util::rect<int>& roi) {
+BackendPainter::drawTextures(const util::rect<int>& roi) {
 
 	glPushMatrix();
 	glTranslated(_shift.x, _shift.y, 0.0);
@@ -376,10 +394,12 @@ CanvasPainter::drawTexture(const util::rect<int>& roi) {
 
 		glScaled(_scaleChange.x, _scaleChange.y, 1.0);
 		_canvasTexture->render(roi/_scaleChange);
+		_overlayTexture->render(roi/_scaleChange);
 
 	} else {
 
 		_canvasTexture->render(roi);
+		_overlayTexture->render(roi);
 	}
 
 	glPopMatrix();

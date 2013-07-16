@@ -93,9 +93,25 @@ OsdPainter::draw(
 	glVertex2f(x + 8, y - 8);
 	glEnd();
 
-	glColor3f(0.0, 0.0, 0.0);
+	glColor4f(0, 0, 0, _penMode.getMode() == PenMode::Lasso ? 1.0 : 0.1);
 	x = 50;
 	y = 750;
+	glBegin(GL_QUADS);
+	glVertex2f(x - 10, y - 13);
+	glVertex2f(x - 10, y - 7);
+	glVertex2f(x + 10, y - 7);
+	glVertex2f(x + 10, y - 13);
+	glEnd();
+	glBegin(GL_QUADS);
+	glVertex2f(x - 13, y - 10);
+	glVertex2f(x - 13, y + 10);
+	glVertex2f(x - 7, y + 10);
+	glVertex2f(x - 7, y - 10);
+	glEnd();
+
+	glColor3f(0.0, 0.0, 0.0);
+	x = 50;
+	y = 850;
 	glBegin(GL_QUADS);
 	glVertex2f(x - 10, y - 3);
 	glVertex2f(x - 10, y + 3);

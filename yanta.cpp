@@ -16,7 +16,7 @@
 #include <util/SignalHandler.h>
 
 #include <yanta/Backend.h>
-#include <yanta/CanvasView.h>
+#include <yanta/BackendView.h>
 #include <yanta/Osd.h>
 #include <yanta/CanvasReader.h>
 #include <yanta/CanvasWriter.h>
@@ -127,7 +127,7 @@ int main(int optionc, char** optionv) {
 
 			// create process nodes
 			pipeline::Process<gui::ContainerView<gui::OverlayPlacing> > overlayView;
-			pipeline::Process<CanvasView>                               canvasView;
+			pipeline::Process<BackendView>                              backendView;
 			pipeline::Process<Osd>                                      osd;
 			pipeline::Process<Backend>                                  backend;
 			pipeline::Process<CanvasReader>                             reader(filename);
@@ -136,8 +136,9 @@ int main(int optionc, char** optionv) {
 			// connect process nodes
 			window->setInput(overlayView->getOutput());
 			overlayView->addInput(osd->getOutput("osd painter"));
-			overlayView->addInput(canvasView->getOutput());
-			canvasView->setInput(backend->getOutput("canvas"));
+			overlayView->addInput(backendView->getOutput());
+			backendView->setInput("canvas", backend->getOutput("canvas"));
+			backendView->setInput("overlay", backend->getOutput("overlay"));
 			backend->setInput("initial canvas", reader->getOutput());
 			backend->setInput("pen mode", osd->getOutput("pen mode"));
 			backend->setInput("osd request", osd->getOutput("osd request"));

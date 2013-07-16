@@ -1,7 +1,7 @@
 #include <util/Logger.h>
 #include "SkiaCanvasPainter.h"
 
-logger::LogChannel skiacanvaspainterlog("skiacanvaspainterlog", "[SkiaCanvasPainter] ");
+logger::LogChannel skiabackendpainterlog("skiabackendpainterlog", "[SkiaCanvasPainter] ");
 
 SkiaCanvasPainter::SkiaCanvasPainter(const gui::skia_pixel_t& clearColor) :
 	_clearColor(clearColor),
@@ -34,7 +34,7 @@ SkiaCanvasPainter::draw(
 
 	bool incremental = (_drawnUntilStrokePoint != 0);
 
-	LOG_ALL(skiacanvaspainterlog) << "drawing " << (incremental ? "" : "non-") << "incrementally" << std::endl;
+	LOG_ALL(skiabackendpainterlog) << "drawing " << (incremental ? "" : "non-") << "incrementally" << std::endl;
 
 	canvas.save();
 
@@ -92,7 +92,7 @@ SkiaCanvasPainter::draw(
 	// canvas to pixels
 	canvas.restore();
 
-	LOG_ALL(skiacanvaspainterlog) << "I drew everything until stroke point " << _drawnUntilStrokePointTmp << std::endl;
+	LOG_ALL(skiabackendpainterlog) << "I drew everything until stroke point " << _drawnUntilStrokePointTmp << std::endl;
 }
 
 void
@@ -167,7 +167,7 @@ SkiaCanvasPainter::drawPage(SkCanvas& canvas, const Page& page, const util::rect
 		// draw only of no roi given or stroke intersects roi
 		if (pageRoi.isZero() || !stroke.finished() || stroke.boundingBox().intersects(pageRoi)) {
 
-			LOG_ALL(skiacanvaspainterlog)
+			LOG_ALL(skiabackendpainterlog)
 					<< "drawing stroke " << i << " (" << stroke.begin() << " - " << stroke.end()
 					<< ") , starting from point " << begin << " until " << end << std::endl;
 
@@ -175,7 +175,7 @@ SkiaCanvasPainter::drawPage(SkCanvas& canvas, const Page& page, const util::rect
 
 		} else {
 
-			LOG_ALL(skiacanvaspainterlog) << "stroke " << i << " is not visible" << std::endl;
+			LOG_ALL(skiabackendpainterlog) << "stroke " << i << " is not visible" << std::endl;
 		}
 	}
 }
@@ -191,7 +191,7 @@ SkiaCanvasPainter::drawStroke(
 	// make sure there are enough points in this stroke to draw it
 	if (stroke.end() - stroke.begin() <= 1) {
 
-		LOG_ALL(skiacanvaspainterlog) << "this stroke has less than two points -- skip drawing" << std::endl;
+		LOG_ALL(skiabackendpainterlog) << "this stroke has less than two points -- skip drawing" << std::endl;
 		return false;
 	}
 

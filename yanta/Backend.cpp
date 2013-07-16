@@ -13,15 +13,19 @@ Backend::Backend() :
 	registerInput(_penMode, "pen mode");
 	registerInput(_osdRequest, "osd request", pipeline::Optional);
 	registerOutput(_canvas, "canvas");
+	registerOutput(_overlay, "overlay");
 
 	_initialCanvas.registerBackwardCallback(&Backend::onModified, this);
 	_osdRequest.registerBackwardCallback(&Backend::onAddPage, this);
 
-	_canvas.registerForwardSlot(_changedArea);
+	_canvas.registerForwardSlot(_canvasChangedArea);
 	_canvas.registerForwardSlot(_strokePointAdded);
 	_canvas.registerForwardCallback(&Backend::onPenDown, this);
 	_canvas.registerForwardCallback(&Backend::onPenMove, this);
 	_canvas.registerForwardCallback(&Backend::onPenUp, this);
+
+	_overlay.registerForwardSlot(_overlayChangedArea);
+	_overlay.registerForwardSlot(_lassoPointAdded);
 }
 
 void
@@ -66,6 +70,18 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 		_penDown = true;
 
+		if (_penMode->getMode() == PenMode::Lasso) {
+
+			LOG_ALL(backendlog) << "starting a new lasso" << std::endl;
+
+			_lasso = boost::make_shared<Lasso>();
+			_lasso->addPoint(signal.position);
+			_overlay->add(_lasso);
+			_lassoPointAdded();
+
+			return;
+		}
+
 		if (!_erase) {
 
 			LOG_DEBUG(backendlog) << "accepting" << std::endl;
@@ -99,6 +115,16 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 		_penDown = false;
 
+		if (_penMode->getMode() == PenMode::Lasso) {
+
+			_overlay->remove(_lasso);
+			OverlayChangedArea signal(_lasso->getRoi());
+			_overlayChangedArea(signal);
+			_lasso.reset();
+
+			return;
+		}
+
 		if (!_erase) {
 
 			LOG_DEBUG(backendlog) << "accepting" << std::endl;
@@ -130,6 +156,14 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	LOG_ALL(backendlog) << "pen move with modifiers " << signal.modifiers << std::endl;
 
+	if (_penMode->getMode() == PenMode::Lasso) {
+
+		_lasso->addPoint(signal.position);
+		_lassoPointAdded();
+
+		return;
+	}
+
 	if (_erase) {
 
 		util::rect<CanvasPrecision> dirtyArea = _canvas->erase(_previousErasePosition, signal.position);
@@ -138,8 +172,8 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 		if (!dirtyArea.isZero()) {
 
-			ChangedArea signal(dirtyArea);
-			_changedArea(signal);
+			CanvasChangedArea signal(dirtyArea);
+			_canvasChangedArea(signal);
 		}
 
 	} else {
@@ -168,6 +202,6 @@ Backend::onAddPage(const AddPage& /*signal*/) {
 	_canvas->createPage(position, size);
 
 	// inform about dirty area
-	ChangedArea signal(util::rect<CanvasPrecision>(position.x, position.y, position.x + size.x, position.y + size.y));
-	_changedArea(signal);
+	CanvasChangedArea signal(util::rect<CanvasPrecision>(position.x, position.y, position.x + size.x, position.y + size.y));
+	_canvasChangedArea(signal);
 }
