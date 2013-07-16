@@ -72,6 +72,7 @@ else()
     skia
     GIT_REPOSITORY gitolite@lego.slyip.net:fun/skia
     GIT_TAG 3f9a7e4bfafd8d2f0fef98470adcbbd8f1a2204c
+    UPDATE_COMMAND ""
     PATCH_COMMAND ""
     INSTALL_COMMAND ""
   )
