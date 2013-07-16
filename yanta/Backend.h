@@ -6,11 +6,12 @@
 #include "BackendPainter.h"
 #include "CanvasSignals.h"
 #include "PenMode.h"
+#include "Lasso.h"
 #include "OsdRequest.h"
 #include "OsdSignals.h"
 #include "Overlay.h"
 #include "OverlaySignals.h"
-#include "Lasso.h"
+#include "Selection.h"
 
 class Backend : public pipeline::SimpleProcessNode<> {
 
@@ -43,7 +44,8 @@ private:
 
 	bool _initialCanvasModified;
 
-	boost::shared_ptr<Lasso> _lasso;
+	boost::shared_ptr<Lasso>     _lasso;
+	boost::shared_ptr<Selection> _selection;
 
 	signals::Slot<CanvasChangedArea>  _canvasChangedArea;
 	signals::Slot<StrokePointAdded>   _strokePointAdded;

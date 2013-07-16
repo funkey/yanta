@@ -117,9 +117,17 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 		if (_penMode->getMode() == PenMode::Lasso) {
 
+			_selection = boost::make_shared<Selection>(Selection::CreateFromPath(_lasso->getPath(), *_canvas));
+
 			_overlay->remove(_lasso);
-			OverlayChangedArea signal(_lasso->getRoi());
-			_overlayChangedArea(signal);
+			_overlay->add(_selection);
+
+			OverlayChangedArea overlaySignal(_lasso->getBoundingBox());
+			_overlayChangedArea(overlaySignal);
+
+			CanvasChangedArea canvasSignal(_selection->getBoundingBox());
+			_canvasChangedArea(canvasSignal);
+
 			_lasso.reset();
 
 			return;

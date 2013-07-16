@@ -101,6 +101,23 @@ public:
 			const util::point<CanvasPrecision>& begin,
 			const util::point<CanvasPrecision>& end);
 
+	/**
+	 * Remove all the strokes from this page for which the given unary predicate 
+	 * evaluates to true.
+	 *
+	 * @return The removed strokes.
+	 */
+	template <typename Predicate>
+	std::vector<Stroke> removeStrokes(Predicate pred) {
+
+		std::vector<Stroke>::iterator newEnd = std::remove_if(_strokes.begin(), _strokes.end(), pred);
+
+		std::vector<Stroke> removed(newEnd, _strokes.end());
+		_strokes.resize(newEnd - _strokes.begin());
+
+		return removed;
+	}
+
 private:
 
 	/**

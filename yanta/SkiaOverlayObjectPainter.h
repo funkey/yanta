@@ -13,6 +13,8 @@ public:
 
 	void processLasso(const Lasso& lasso);
 
+	void processSelection(const Selection& selection);
+
 private:
 
 	SkCanvas& _canvas;
