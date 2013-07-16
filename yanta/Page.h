@@ -19,10 +19,19 @@ public:
 
 	Page& operator=(const Page& other);
 
+	/**
+	 * Get the position of the space on the canvas.
+	 */
 	inline const util::point<CanvasPrecision>& getPosition() const { return _position; }
 
+	/**
+	 * Get the bounding box of the page, irrespective of its content.
+	 */
 	inline const util::rect<CanvasPrecision>& getPageBoundingBox() const { return _pageBoundingBox; }
 
+	/**
+	 * Get the size of the page, irrespective of its content.
+	 */
 	inline const util::point<PagePrecision>& getSize() const { return _size; }
 
 	/**

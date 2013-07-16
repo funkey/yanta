@@ -8,15 +8,13 @@
 #include "Precision.h"
 #include "StrokePoints.h"
 #include "Style.h"
+#include "Transformable.h"
 
-class Stroke {
+class Stroke : public Transformable<CanvasPrecision> {
 
 public:
 
 	Stroke(unsigned long begin = 0) :
-		_shift(0, 0),
-		_scale(1, 1),
-		_boundingBox(0, 0, 0, 0),
 		_finished(false),
 		_begin(begin),
 		_end(0) {}
@@ -51,51 +49,6 @@ public:
 	inline Style& getStyle() {
 
 		return _style;
-	}
-
-	/**
-	 * Get the shift of this stroke that is applied to the coordinates in the 
-	 * global stroke points list.
-	 */
-	inline const util::point<CanvasPrecision>& getShift() const {
-
-		return _shift;
-	}
-
-	/**
-	 * Get the scale of this stroke that is applied to the coordinats in the 
-	 * global stroke points list.
-	 */
-	inline const util::point<CanvasPrecision>& getScale() const {
-
-		return _scale;
-	}
-
-	/**
-	 * Shift this stroke by changing its internal transformation. The stroke 
-	 * points will remain untouched.
-	 */
-	inline void shift(const util::point<CanvasPrecision>& shift) {
-
-		_shift += shift;
-	}
-
-	/**
-	 * Scale this stroke by changing its internal transformation. The stroke 
-	 * points will remain untouched.
-	 */
-	inline void scale(const util::point<CanvasPrecision>& scale) {
-
-		_scale *= scale;
-	}
-
-	/**
-	 * Get the bounding box of this stroke. Note that not-finished canvas don't 
-	 * have a valid bounding box.
-	 */
-	inline const util::rect<double>& boundingBox() const {
-
-		return _boundingBox;
 	}
 
 	/**
@@ -147,10 +100,6 @@ private:
 	void computeBoundingBox(const StrokePoints& points);
 
 	Style _style;
-
-	util::point<CanvasPrecision> _shift;
-	util::point<CanvasPrecision> _scale;
-	util::rect<CanvasPrecision>  _boundingBox;
 
 	bool _finished;
 

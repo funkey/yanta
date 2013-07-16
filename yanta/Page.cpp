@@ -69,7 +69,7 @@ Page::erase(const util::point<CanvasPrecision>& begin, const util::point<CanvasP
 	unsigned int n = numStrokes();
 
 	for (unsigned int i = 0; i < n; i++)
-		if (getStroke(i).boundingBox().intersects(eraseBoundingBox)) {
+		if (getStroke(i).getBoundingBox().intersects(eraseBoundingBox)) {
 
 			//LOG_ALL(pagelog) << "stroke " << i << " is close to the erase position" << std::endl;
 
@@ -116,7 +116,7 @@ Page::erase(const util::point<PagePrecision>& position, PagePrecision radius) {
 	unsigned int n = numStrokes();
 
 	for (unsigned int i = 0; i < n; i++)
-		if (getStroke(i).boundingBox().intersects(eraseBoundingBox)) {
+		if (getStroke(i).getBoundingBox().intersects(eraseBoundingBox)) {
 
 			//LOG_ALL(pagelog) << "stroke " << i << " is close to the erase pagePosition" << std::endl;
 
@@ -252,7 +252,7 @@ Page::erase(Stroke* stroke, const util::point<PagePrecision>& lineBegin, const u
 
 			LOG_ALL(pagelog) << "this stroke needs to be erased" << std::endl;
 
-			changedArea = stroke->boundingBox();
+			changedArea = stroke->getBoundingBox();
 
 			// make this an empty stroke
 			stroke->setEnd(begin);
