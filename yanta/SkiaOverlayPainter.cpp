@@ -44,7 +44,7 @@ SkiaOverlayPainter::draw(
 
 		OverlayObject& overlayObject = _overlay->getObject(i);
 
-		if (overlayObject.getRoi().intersects(canvasRoi))
+		if (overlayObject.getBoundingBox().intersects(canvasRoi))
 			overlayObject.visit(overlayObjectPainter);
 	}
 

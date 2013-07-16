@@ -79,7 +79,22 @@ public:
 	 */
 	void fitBoundingBox(const util::rect<Precision>& r) {
 
-		_boundingBox.fit(r*_scale + _shift);
+		if (_boundingBox.isZero())
+			_boundingBox = r*_scale + _shift;
+		else
+			_boundingBox.fit(r*_scale + _shift);
+	}
+
+	/**
+	 * Change the bounding box to fit the given point after scaling and 
+	 * shifting.
+	 */
+	void fitBoundingBox(const util::point<Precision>& p) {
+
+		if (_boundingBox.isZero())
+			_boundingBox = util::rect<Precision>(p.x, p.y, p.x, p.y)*_scale + _shift;
+		else
+			_boundingBox.fit(p*_scale + _shift);
 	}
 
 	/**

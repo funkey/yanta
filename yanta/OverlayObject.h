@@ -4,12 +4,11 @@
 #include <util/rect.hpp>
 #include "OverlayObjectVisitor.h"
 #include "Precision.h"
+#include "Transformable.h"
 
-class OverlayObject {
+class OverlayObject : public Transformable<CanvasPrecision> {
 
 public:
-
-	virtual const util::rect<CanvasPrecision>& getRoi() const = 0;
 
 	virtual void visit(OverlayObjectVisitor& visitor) = 0;
 };
