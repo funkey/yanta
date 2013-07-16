@@ -1,6 +1,8 @@
 #ifndef YANTA_PAGE_H__
 #define YANTA_PAGE_H__
 
+#include <boost/bind.hpp>
+#include <boost/lambda/lambda.hpp>
 #include "Precision.h"
 #include "Stroke.h"
 #include "StrokePoints.h"
@@ -110,7 +112,7 @@ public:
 	template <typename Predicate>
 	std::vector<Stroke> removeStrokes(Predicate pred) {
 
-		std::vector<Stroke>::iterator newEnd = std::remove_if(_strokes.begin(), _strokes.end(), pred);
+		std::vector<Stroke>::iterator newEnd = std::partition(_strokes.begin(), _strokes.end(), !boost::bind(pred, boost::lambda::_1));
 
 		std::vector<Stroke> removed(newEnd, _strokes.end());
 		_strokes.resize(newEnd - _strokes.begin());
