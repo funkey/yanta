@@ -6,7 +6,7 @@ logger::LogChannel backendlog("backendlog", "[Backend] ");
 
 Backend::Backend() :
 	_penDown(false),
-	_erase(false),
+	_mode(Draw),
 	_initialCanvasModified(false) {
 
 	registerInput(_initialCanvas, "initial canvas", pipeline::Optional);
@@ -70,6 +70,13 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 		_penDown = true;
 
+		if (_selection && _selection->getBoundingBox().contains(signal.position)) {
+
+			_mode = DragSelection;
+			_previousPosition = signal.position;
+			return;
+		}
+
 		if (_penMode->getMode() == PenMode::Lasso) {
 
 			LOG_ALL(backendlog) << "starting a new lasso" << std::endl;
@@ -82,7 +89,7 @@ Backend::onPenDown(const gui::PenDown& signal) {
 			return;
 		}
 
-		if (!_erase) {
+		if (_mode == Draw) {
 
 			LOG_DEBUG(backendlog) << "accepting" << std::endl;
 
@@ -93,8 +100,8 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 	if (signal.button == gui::buttons::Middle) {
 
-		_erase = true;
-		_previousErasePosition = signal.position;
+		_mode = Erase;
+		_previousPosition = signal.position;
 
 		if (_penDown) {
 
@@ -115,8 +122,22 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 		_penDown = false;
 
+		if (_mode == DragSelection) {
+
+			_mode = Draw;
+			return;
+		}
+
 		if (_penMode->getMode() == PenMode::Lasso) {
 
+			if (_selection) {
+
+				_selection->anchor(*_canvas);
+				_overlay->remove(_selection);
+
+				CanvasChangedArea canvasSignal(_selection->getBoundingBox());
+				_canvasChangedArea(canvasSignal);
+			}
 			_selection = boost::make_shared<Selection>(Selection::CreateFromPath(_lasso->getPath(), *_canvas));
 
 			_overlay->remove(_lasso);
@@ -133,7 +154,7 @@ Backend::onPenUp(const gui::PenUp& signal) {
 			return;
 		}
 
-		if (!_erase) {
+		if (_mode == Draw) {
 
 			LOG_DEBUG(backendlog) << "accepting" << std::endl;
 
@@ -146,7 +167,7 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 	if (signal.button == gui::buttons::Middle) {
 
-		_erase = false;
+		_mode = Draw;
 
 		if (_penDown) {
 
@@ -164,6 +185,21 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	LOG_ALL(backendlog) << "pen move with modifiers " << signal.modifiers << std::endl;
 
+	if (_mode == DragSelection) {
+
+		util::rect<CanvasPrecision> changed = _selection->getBoundingBox();
+
+		_selection->shift(signal.position - _previousPosition);
+		_previousPosition = signal.position;
+
+		changed.fit(_selection->getBoundingBox());
+
+		OverlayChangedArea signal(changed);
+		_overlayChangedArea(signal);
+
+		return;
+	}
+
 	if (_penMode->getMode() == PenMode::Lasso) {
 
 		_lasso->addPoint(signal.position);
@@ -172,11 +208,11 @@ Backend::onPenMove(const gui::PenMove& signal) {
 		return;
 	}
 
-	if (_erase) {
+	if (_mode == Erase) {
 
-		util::rect<CanvasPrecision> dirtyArea = _canvas->erase(_previousErasePosition, signal.position);
+		util::rect<CanvasPrecision> dirtyArea = _canvas->erase(_previousPosition, signal.position);
 
-		_previousErasePosition = signal.position;
+		_previousPosition = signal.position;
 
 		if (!dirtyArea.isZero()) {
 

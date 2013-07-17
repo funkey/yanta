@@ -21,6 +21,13 @@ public:
 
 private:
 
+	enum Mode {
+
+		Draw,
+		Erase,
+		DragSelection
+	};
+
 	void updateOutputs();
 
 	void onModified(const pipeline::Modified&);
@@ -39,8 +46,8 @@ private:
 
 	bool _penDown;
 
-	bool _erase;
-	util::point<CanvasPrecision> _previousErasePosition;
+	Mode _mode;
+	util::point<CanvasPrecision> _previousPosition;
 
 	bool _initialCanvasModified;
 

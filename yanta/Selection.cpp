@@ -40,3 +40,26 @@ Selection::addStroke(const Page& page, const Stroke& stroke) {
 
 	_strokes.push_back(selectionCopy);
 }
+
+void
+Selection::anchor(Canvas& canvas) {
+
+	for (unsigned int i = 0; i < numStrokes(); i++) {
+
+		Stroke& stroke = getStroke(i);
+
+		// get the page that is closest to the center of the stroke
+		unsigned int p = canvas.getPageIndex(stroke.getBoundingBox().center());
+		Page& page = canvas.getPage(p);
+
+		// correct for the transformation applied to the selection
+		stroke.shift(getShift());
+		stroke.scale(getScale());
+
+		// correct for the position of the page
+		stroke.shift(-page.getPosition());
+
+		// add it
+		canvas.getPage(p).addStroke(stroke);
+	}
+}

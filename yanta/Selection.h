@@ -37,6 +37,11 @@ public:
 
 	const StrokePoints& getStrokePoints() const { return _strokePoints; }
 
+	/**
+	 * Place the content of the selection on the canvas.
+	 */
+	void anchor(Canvas& canvas);
+
 	void visit(OverlayObjectVisitor& visitor) { visitor.processSelection(*this); }
 
 private:

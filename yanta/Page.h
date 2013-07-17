@@ -51,6 +51,11 @@ public:
 	void createNewStroke(unsigned long begin);
 
 	/**
+	 * Add a complete stroke to this page.
+	 */
+	void addStroke(const Stroke& stroke) { _strokes.push_back(stroke); }
+
+	/**
 	 * Add a stroke point to the current stroke. This appends the stroke point 
 	 * to the global list of stroke points.
 	 */
