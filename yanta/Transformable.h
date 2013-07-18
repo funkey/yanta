@@ -33,7 +33,7 @@ public:
 	/**
 	 * Get the shift of this object.
 	 */
-	inline void setShift(const util::point<CanvasPrecision>& shift) const {
+	inline void setShift(const util::point<CanvasPrecision>& shift) {
 
 		_boundingBox += shift - _shift;
 		_shift = shift;
@@ -42,7 +42,7 @@ public:
 	/**
 	 * Get the scale of this object.
 	 */
-	inline void setScale(const util::point<CanvasPrecision>& scale) const {
+	inline void setScale(const util::point<CanvasPrecision>& scale) {
 
 		_boundingBox *= scale/_scale;
 		_scale = scale;

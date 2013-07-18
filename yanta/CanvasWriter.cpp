@@ -13,7 +13,7 @@ CanvasWriter::write() {
 	std::ofstream out(_filename.c_str());
 
 	// write the file version
-	out << 2 << std::endl;
+	out << 3 << std::endl;
 
 	writeStrokePoints(out, _canvas->getStrokePoints());
 
@@ -64,6 +64,10 @@ CanvasWriter::writeStroke(std::ofstream& out, const Stroke& stroke) {
 		<< stroke.getStyle().getRed() << " "
 		<< stroke.getStyle().getGreen() << " "
 		<< stroke.getStyle().getBlue() << " "
-		<< stroke.getStyle().getAlpha() << " ";
+		<< stroke.getStyle().getAlpha() << " "
+		<< stroke.getScale().x << " "
+		<< stroke.getScale().y << " "
+		<< stroke.getShift().x << " "
+		<< stroke.getShift().y << " ";
 }
 

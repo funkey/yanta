@@ -31,16 +31,16 @@ CanvasReader::updateOutputs() {
 		in >> numStrokes;
 
 		for (unsigned int i = 0; i < numStrokes; i++)
-			readStroke(in, 0);
+			readStroke(in, 0, fileVersion);
 	}
 
-	if (fileVersion == 2) {
+	if (fileVersion >= 2) {
 
 		unsigned int numPages = 0;
 		in >> numPages;
 
 		for (unsigned int i = 0; i < numPages; i++)
-			readPage(in, i);
+			readPage(in, i, fileVersion);
 	}
 }
 
@@ -63,7 +63,7 @@ CanvasReader::readStrokePoints(std::ifstream& in) {
 }
 
 void
-CanvasReader::readPage(std::ifstream& in, unsigned int page) {
+CanvasReader::readPage(std::ifstream& in, unsigned int page, unsigned int fileVersion) {
 
 	CanvasPrecision positionX, positionY;
 	in >> positionX >> positionY;
@@ -77,17 +77,22 @@ CanvasReader::readPage(std::ifstream& in, unsigned int page) {
 	in >> numStrokes;
 
 	for (unsigned int i = 0; i < numStrokes; i++)
-		readStroke(in, page);
+		readStroke(in, page, fileVersion);
 }
 
 void
-CanvasReader::readStroke(std::ifstream& in, unsigned int page) {
+CanvasReader::readStroke(std::ifstream& in, unsigned int page, unsigned int fileVersion) {
 
 	unsigned long begin, end;
 	double penWidth;
 	unsigned char red, green, blue, alpha;
+	util::point<PagePrecision> scale;
+	util::point<PagePrecision> shift;
 
 	in >> begin >> end >> penWidth >> red >> green >> blue >> alpha;
+
+	if (fileVersion >= 3)
+		in >> scale.x >> scale.y >> shift.x >> shift.y;
 
 	Style style;
 	style.setWidth(penWidth);
@@ -96,5 +101,9 @@ CanvasReader::readStroke(std::ifstream& in, unsigned int page) {
 	_canvas->getPage(page).createNewStroke(begin);
 	_canvas->getPage(page).currentStroke().setEnd(end);
 	_canvas->getPage(page).currentStroke().setStyle(style);
+	if (fileVersion >= 3) {
+		_canvas->getPage(page).currentStroke().setScale(scale);
+		_canvas->getPage(page).currentStroke().setShift(shift);
+	}
 	_canvas->getPage(page).currentStroke().finish(_canvas->getStrokePoints());
 }
