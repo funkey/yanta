@@ -139,7 +139,7 @@ private:
 	 * Erase the given stroke if it intersects the line.
 	 */
 	util::rect<PagePrecision> erase(
-			Stroke* stroke,
+			Stroke& stroke,
 			const util::point<PagePrecision>& lineBegin,
 			const util::point<PagePrecision>& lineEnd);
 

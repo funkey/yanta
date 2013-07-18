@@ -3,6 +3,7 @@
 
 #include <SkPath.h>
 #include "Precision.h"
+#include "Page.h"
 #include "Stroke.h"
 #include "StrokePoints.h"
 
@@ -33,11 +34,14 @@ public:
 	/**
 	 * Test, whether a stroke is fully contained in this path.
 	 */
-	bool contains(const Stroke& stroke, const StrokePoints& points) const {
+	bool contains(const Page& page, const Stroke& stroke, const StrokePoints& points) const {
+
+		if (stroke.size() == 0)
+			return false;
 
 		for (unsigned int i = stroke.begin(); i < stroke.end(); i++) {
 
-			util::point<CanvasPrecision> point = points[i].position*stroke.getScale() + stroke.getShift();
+			util::point<CanvasPrecision> point = points[i].position*stroke.getScale() + stroke.getShift() + page.getPosition();
 
 			if (!contains(point))
 				return false;

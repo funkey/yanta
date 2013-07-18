@@ -73,7 +73,7 @@ Page::erase(const util::point<CanvasPrecision>& begin, const util::point<CanvasP
 
 			//LOG_ALL(pagelog) << "stroke " << i << " is close to the erase position" << std::endl;
 
-			util::rect<PagePrecision> changedStrokeArea = erase(&getStroke(i), pageBegin, pageEnd);
+			util::rect<PagePrecision> changedStrokeArea = erase(getStroke(i), pageBegin, pageEnd);
 
 			if (changedArea.isZero()) {
 
@@ -228,38 +228,44 @@ Page::erase(Stroke* stroke, const util::point<PagePrecision>& center, PagePrecis
 }
 
 util::rect<PagePrecision>
-Page::erase(Stroke* stroke, const util::point<PagePrecision>& lineBegin, const util::point<PagePrecision>& lineEnd) {
+Page::erase(Stroke& stroke, const util::point<PagePrecision>& lineBegin, const util::point<PagePrecision>& lineEnd) {
 
 	util::rect<PagePrecision> changedArea(0, 0, 0, 0);
 
-	if (stroke->begin() == stroke->end())
+	if (stroke.begin() == stroke.end())
 		return changedArea;
 
-	unsigned long begin = stroke->begin();
-	unsigned long end   = stroke->end() - 1;
+	unsigned long begin = stroke.begin();
+	unsigned long end   = stroke.end() - 1;
 
 	LOG_ALL(pagelog) << "testing stroke lines " << begin << " until " << (end - 1) << std::endl;
+
+	util::point<PagePrecision> startPoint = _strokePoints[begin].position*stroke.getScale() + stroke.getShift();
 
 	// for each line in the stroke
 	for (unsigned long i = begin; i < end; i++) {
 
+		util::point<PagePrecision> endPoint = _strokePoints[i+1].position*stroke.getScale() + stroke.getShift();
+
 		// this line should be erased
 		if (intersectLines(
-				_strokePoints[i].position,
-				_strokePoints[i+1].position - _strokePoints[i].position,
+				startPoint,
+				endPoint - startPoint,
 				lineBegin,
 				lineEnd - lineBegin)) {
 
 			LOG_ALL(pagelog) << "this stroke needs to be erased" << std::endl;
 
-			changedArea = stroke->getBoundingBox();
+			changedArea = stroke.getBoundingBox();
 
 			// make this an empty stroke
-			stroke->setEnd(begin);
-			stroke->finish(_strokePoints);
+			stroke.setEnd(begin);
+			stroke.finish(_strokePoints);
 
 			break;
 		}
+
+		startPoint = endPoint;
 	}
 
 	return changedArea;
