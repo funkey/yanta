@@ -151,6 +151,8 @@ int main(int optionc, char** optionv) {
 			// investigate that!
 			window->close();
 
+			backend->cleanup();
+
 			// save strokes
 			writer->write();
 

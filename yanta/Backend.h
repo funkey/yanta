@@ -19,6 +19,12 @@ public:
 
 	Backend();
 
+	/**
+	 * Finish pending operations like anchoring floating selections. This will 
+	 * be called before the application saves and quits.
+	 */
+	void cleanup();
+
 private:
 
 	enum Mode {
@@ -37,6 +43,8 @@ private:
 	void onPenMove(const gui::PenMove& signal);
 
 	void onAddPage(const AddPage& signal);
+
+	void anchorSelection();
 
 	pipeline::Input<Canvas>     _initialCanvas;
 	pipeline::Input<PenMode>    _penMode;

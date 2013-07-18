@@ -29,6 +29,12 @@ Backend::Backend() :
 }
 
 void
+Backend::cleanup() {
+
+	anchorSelection();
+}
+
+void
 Backend::updateOutputs() {
 
 	if (!_initialCanvasModified)
@@ -130,14 +136,8 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 		if (_penMode->getMode() == PenMode::Lasso) {
 
-			if (_selection) {
+			anchorSelection();
 
-				_selection->anchor(*_canvas);
-				_overlay->remove(_selection);
-
-				CanvasChangedArea canvasSignal(_selection->getBoundingBox());
-				_canvasChangedArea(canvasSignal);
-			}
 			_selection = boost::make_shared<Selection>(Selection::CreateFromPath(_lasso->getPath(), *_canvas));
 
 			_overlay->remove(_lasso);
@@ -248,4 +248,17 @@ Backend::onAddPage(const AddPage& /*signal*/) {
 	// inform about dirty area
 	CanvasChangedArea signal(util::rect<CanvasPrecision>(position.x, position.y, position.x + size.x, position.y + size.y));
 	_canvasChangedArea(signal);
+}
+
+void
+Backend::anchorSelection() {
+
+	if (_selection) {
+
+		_selection->anchor(*_canvas);
+		_overlay->remove(_selection);
+
+		CanvasChangedArea canvasSignal(_selection->getBoundingBox());
+		_canvasChangedArea(canvasSignal);
+	}
 }
