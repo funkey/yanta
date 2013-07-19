@@ -25,8 +25,13 @@ Build Instructions
   Skia
   ----
 
+    For the Skia build you need additionally:
+
+    • gyp
+    • libgif-dev
+
     To use the version provided by yanta, you don't have to do anything. It
-    will be checked out automatically and compiled.
+    will be checked out and compiled automatically.
 
     You can, however, compile skia on your own. In this case, set the
     SKIA_BUILD_DIR cmake variable to the directory you compiled skia in. Run
