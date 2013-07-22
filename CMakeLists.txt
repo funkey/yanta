@@ -82,9 +82,10 @@ else()
   set(HAVE_SKIA 1)
   set(OWN_SKIA 1)
 endif()
-include_directories(${Skia_INCLUDE_DIR}/core)
-include_directories(${Skia_INCLUDE_DIR}/pdf)
 include_directories(${Skia_INCLUDE_DIR}/config)
+include_directories(${Skia_INCLUDE_DIR}/core)
+include_directories(${Skia_INCLUDE_DIR}/effects)
+include_directories(${Skia_INCLUDE_DIR}/pdf)
 
 #####################
 # optional packages #
