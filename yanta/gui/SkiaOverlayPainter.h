@@ -2,12 +2,15 @@
 #define YANTA_SKIA_OVERLAY_PAINTER_H__
 
 #include <SkCanvas.h>
+
 #include <util/point.hpp>
 #include <util/rect.hpp>
+
+#include <document/DocumentTreeRoiVisitor.h>
 #include "Overlay.h"
 #include "SkiaOverlayObjectPainter.h"
 
-class SkiaOverlayPainter {
+class SkiaOverlayPainter : public DocumentTreeRoiVisitor {
 
 public:
 
