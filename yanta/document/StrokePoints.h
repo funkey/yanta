@@ -6,6 +6,11 @@
 
 #include "StrokePoint.h"
 
+/**
+ * Central collection of all stroke points in a document. Strokes are defined as 
+ * begin and end indices into this collection plus an optional transformation.  
+ * This way, two strokes can use the same stroke points.
+ */
 class StrokePoints {
 
 	typedef std::vector<StrokePoint> points_t;

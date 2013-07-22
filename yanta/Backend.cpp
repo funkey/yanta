@@ -20,6 +20,7 @@ Backend::Backend() :
 
 	_document.registerForwardSlot(_documentChangedArea);
 	_document.registerForwardSlot(_strokePointAdded);
+	_document.registerForwardSlot(_selectionMoved);
 	_document.registerForwardCallback(&Backend::onPenDown, this);
 	_document.registerForwardCallback(&Backend::onPenMove, this);
 	_document.registerForwardCallback(&Backend::onPenUp, this);
@@ -76,11 +77,16 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 		_penDown = true;
 
-		if (_selection && _selection->getBoundingBox().contains(signal.position)) {
+		for (unsigned int i = 0; i < _document->size<Selection>(); i++) {
 
-			_mode = DragSelection;
-			_previousPosition = signal.position;
-			return;
+			if (_document->get<Selection>(i).getBoundingBox().contains(signal.position)) {
+
+				_mode = DragSelection;
+				_previousPosition = signal.position;
+				_currentElement = i;
+
+				return;
+			}
 		}
 
 		if (_penMode->getMode() == PenMode::Lasso) {
@@ -138,15 +144,14 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 			anchorSelection();
 
-			_selection = boost::make_shared<Selection>(Selection::CreateFromPath(_lasso->getPath(), *_document));
+			_document->add(Selection::CreateFromPath(_lasso->getPath(), *_document));
 
 			_overlay->remove(_lasso);
-			_overlay->add(_selection);
 
 			OverlayChangedArea overlaySignal(_lasso->getBoundingBox());
 			_overlayChangedArea(overlaySignal);
 
-			DocumentChangedArea documentSignal(_selection->getBoundingBox());
+			DocumentChangedArea documentSignal(_document->get<Selection>().back().getBoundingBox());
 			_documentChangedArea(documentSignal);
 
 			_lasso.reset();
@@ -187,15 +192,17 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	if (_mode == DragSelection) {
 
-		util::rect<DocumentPrecision> changed = _selection->getBoundingBox();
+		Selection& selection = _document->get<Selection>(_currentElement);
 
-		_selection->shift(signal.position - _previousPosition);
+		util::point<DocumentPrecision> shift = signal.position - _previousPosition;
 		_previousPosition = signal.position;
 
-		changed.fit(_selection->getBoundingBox());
+		util::rect<DocumentPrecision> changed = selection.getBoundingBox();
+		selection.shift(shift);
+		changed.fit(selection.getBoundingBox());
 
-		OverlayChangedArea signal(changed);
-		_overlayChangedArea(signal);
+		SelectionMoved signal(changed, _currentElement, shift);
+		_selectionMoved(signal);
 
 		return;
 	}
@@ -253,12 +260,13 @@ Backend::onAddPage(const AddPage& /*signal*/) {
 void
 Backend::anchorSelection() {
 
-	if (_selection) {
+	for (unsigned int i = 0; i < _document->size<Selection>(); i++) {
 
-		_selection->anchor(*_document);
-		_overlay->remove(_selection);
+		Selection& selection = _document->get<Selection>(i);
 
-		DocumentChangedArea documentSignal(_selection->getBoundingBox());
+		selection.anchor(*_document);
+
+		DocumentChangedArea documentSignal(selection.getBoundingBox());
 		_documentChangedArea(documentSignal);
 	}
 }

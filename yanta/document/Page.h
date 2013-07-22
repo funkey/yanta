@@ -3,6 +3,11 @@
 
 #include <boost/bind.hpp>
 #include <boost/lambda/lambda.hpp>
+
+#include <util/tree.h>
+#include <util/typelist.h>
+
+#include "DocumentElementContainer.h"
 #include "Precision.h"
 #include "Stroke.h"
 #include "StrokePoints.h"
@@ -10,9 +15,13 @@
 // forward declaration
 class Document;
 
-class Page {
+typedef TYPELIST_1(Stroke) PageElementTypes;
+
+class Page : public DocumentElementContainer<PageElementTypes> {
 
 public:
+
+	YANTA_TREE_VISITABLE();
 
 	Page(
 			Document* document,
@@ -53,7 +62,7 @@ public:
 	/**
 	 * Add a complete stroke to this page.
 	 */
-	void addStroke(const Stroke& stroke) { _strokes.push_back(stroke); }
+	void addStroke(const Stroke& stroke) { add(stroke); }
 
 	/**
 	 * Add a stroke point to the current stroke. This appends the stroke point 
@@ -75,22 +84,22 @@ public:
 	/**
 	 * Get a stroke by its index.
 	 */
-	inline Stroke& getStroke(unsigned int i) { return _strokes[i]; }
-	inline const Stroke& getStroke(unsigned int i) const { return _strokes[i]; }
+	inline Stroke& getStroke(unsigned int i) { return get<Stroke>(i); }
+	inline const Stroke& getStroke(unsigned int i) const { return get<Stroke>(i); }
 
 	/**
 	 * Get the number of strokes.
 	 */
 	inline unsigned int numStrokes() const {
 
-		return _strokes.size();
+		return size<Stroke>();
 	}
 
 	/**
 	 * Get the current stroke of this page.
 	 */
-	Stroke& currentStroke() { return _strokes.back(); }
-	const Stroke& currentStroke() const { return _strokes.back(); }
+	Stroke& currentStroke() { return get<Stroke>().back(); }
+	const Stroke& currentStroke() const { return get<Stroke>().back(); }
 
 	/**
 	 * Virtually erase points within the given postion and radius by splitting 
@@ -117,10 +126,10 @@ public:
 	template <typename Predicate>
 	std::vector<Stroke> removeStrokes(Predicate pred) {
 
-		std::vector<Stroke>::iterator newEnd = std::partition(_strokes.begin(), _strokes.end(), !boost::bind(pred, boost::lambda::_1));
+		std::vector<Stroke>::iterator newEnd = std::partition(get<Stroke>().begin(), get<Stroke>().end(), !boost::bind(pred, boost::lambda::_1));
 
-		std::vector<Stroke> removed(newEnd, _strokes.end());
-		_strokes.resize(newEnd - _strokes.begin());
+		std::vector<Stroke> removed(newEnd, get<Stroke>().end());
+		get<Stroke>().resize(newEnd - get<Stroke>().begin());
 
 		return removed;
 	}
@@ -190,9 +199,6 @@ private:
 
 	// the global list of stroke points
 	StrokePoints& _strokePoints;
-
-	// the strokes on this page
-	std::vector<Stroke> _strokes;
 };
 
 #endif // YANTA_PAGE_H__

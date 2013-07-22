@@ -16,10 +16,12 @@ Page::Page(
 Page&
 Page::operator=(const Page& other) {
 
+	// copy the elements of the container
+	DocumentElementContainer<PageElementTypes>::operator=(other);
+
 	_position        = other._position;
 	_size            = other._size;
 	_pageBoundingBox = other._pageBoundingBox;
-	_strokes         = other._strokes;
 
 	// we don't copy the stroke points, since they might belong to another 
 	// document
@@ -45,7 +47,7 @@ Page::createNewStroke(unsigned long begin) {
 	if (numStrokes() > 0 && !currentStroke().finished())
 		currentStroke().finish(_strokePoints);
 
-	_strokes.push_back(Stroke(begin));
+	add(Stroke(begin));
 }
 
 util::rect<DocumentPrecision>

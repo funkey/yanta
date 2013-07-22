@@ -5,14 +5,15 @@
 #include <util/point.hpp>
 #include <util/rect.hpp>
 
-#include "Precision.h"
+#include "DocumentElement.h"
 #include "StrokePoints.h"
 #include "Style.h"
-#include "Transformable.h"
 
-class Stroke : public Transformable<DocumentPrecision> {
+class Stroke : public DocumentElement {
 
 public:
+
+	YANTA_TREE_VISITABLE();
 
 	Stroke(unsigned long begin = 0) :
 		_finished(false),

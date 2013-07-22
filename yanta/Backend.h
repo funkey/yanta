@@ -57,14 +57,16 @@ private:
 
 	Mode _mode;
 	util::point<DocumentPrecision> _previousPosition;
+	unsigned int                   _currentElement;
 
 	bool _initialDocumentModified;
 
-	boost::shared_ptr<Lasso>     _lasso;
-	boost::shared_ptr<Selection> _selection;
+	boost::shared_ptr<Lasso> _lasso;
 
 	signals::Slot<DocumentChangedArea> _documentChangedArea;
 	signals::Slot<StrokePointAdded>    _strokePointAdded;
+	signals::Slot<SelectionMoved>      _selectionMoved;
+
 	signals::Slot<OverlayChangedArea>  _overlayChangedArea;
 	signals::Slot<LassoPointAdded>     _lassoPointAdded;
 };

@@ -33,5 +33,29 @@ public:
  */
 class StrokePointAdded : public DocumentSignal {};
 
+/**
+ * Signal to send when a selection was moved.
+ */
+class SelectionMoved : public DocumentChangedArea {
+
+public:
+
+	SelectionMoved() :
+		DocumentChangedArea(),
+		index(0), shift(0, 0) {}
+
+	SelectionMoved(
+			const util::rect<DocumentPrecision>& area_,
+			unsigned int index_,
+			const util::point<DocumentPrecision>& shift_) :
+		DocumentChangedArea(area_),
+		index(index_),
+		shift(shift_) {}
+
+	unsigned int index;
+
+	util::point<DocumentPrecision> shift;
+};
+
 #endif // YANTA_DOCUMENT_SIGNALS_H__
 

@@ -1,5 +1,7 @@
 #include <boost/bind.hpp>
+
 #include <util/Logger.h>
+
 #include "Document.h"
 #include "Selection.h"
 #include "Path.h"
@@ -28,6 +30,17 @@ Selection::CreateFromPath(const Path& path, Document& document) {
 Selection::Selection(const StrokePoints& strokePoints) :
 	_strokePoints(strokePoints) {}
 
+Selection&
+Selection::operator=(const Selection& other) {
+
+	// copy the elements of the container
+	DocumentElementContainer<SelectionElementTypes>::operator=(other);
+
+	// we don't copy the stroke points, since they might belong to another 
+	// document
+	return *this;
+}
+
 void
 Selection::addStroke(const Page& page, const Stroke& stroke) {
 
@@ -38,7 +51,7 @@ Selection::addStroke(const Page& page, const Stroke& stroke) {
 
 	fitBoundingBox(selectionCopy.getBoundingBox());
 
-	_strokes.push_back(selectionCopy);
+	add(selectionCopy);
 }
 
 void

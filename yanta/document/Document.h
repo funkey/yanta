@@ -2,15 +2,25 @@
 #define YANTA_DOCUMENT_H__
 
 #include <pipeline/Data.h>
-#include "Precision.h"
-#include "Stroke.h"
-#include "StrokePoint.h"
-#include "StrokePoints.h"
-#include "Page.h"
 
-class Document : public pipeline::Data {
+#include <util/tree.h>
+#include <util/typelist.h>
+
+#include "DocumentElementContainer.h"
+#include "Page.h"
+#include "Precision.h"
+#include "Selection.h"
+#include "Stroke.h"
+#include "StrokePoints.h"
+
+// the types of elements a document can contain
+typedef TYPELIST_2(Page, Selection) DocumentElementTypes;
+
+class Document : public pipeline::Data, public DocumentElementContainer<DocumentElementTypes> {
 
 public:
+
+	YANTA_TREE_VISITABLE();
 
 	Document();
 
@@ -20,19 +30,19 @@ public:
 
 	void createPage(
 			const util::point<DocumentPrecision>& position,
-			const util::point<PagePrecision>&   size);
+			const util::point<PagePrecision>&     size);
 
 	/**
 	 * Create a new stroke starting behind the existing points.
 	 */
 	inline void createNewStroke(
 			const util::point<DocumentPrecision>& start,
-			double                              pressure,
-			unsigned long                       timestamp) {
+			double                                pressure,
+			unsigned long                         timestamp) {
 
 		_currentPage = getPageIndex(start);
 
-		_pages[_currentPage].createNewStroke(start, pressure, timestamp);
+		get<Page>(_currentPage).createNewStroke(start, pressure, timestamp);
 	}
 
 	/**
@@ -40,7 +50,7 @@ public:
 	 */
 	inline void setCurrentStrokeStyle(const Style& style) {
 
-		_pages[_currentPage].currentStroke().setStyle(style);
+		get<Page>(_currentPage).currentStroke().setStyle(style);
 	}
 
 	/**
@@ -49,10 +59,10 @@ public:
 	 */
 	inline void addStrokePoint(
 			const util::point<DocumentPrecision>& position,
-			double                              pressure,
-			unsigned long                       timestamp) {
+			double                                pressure,
+			unsigned long                         timestamp) {
 
-		_pages[_currentPage].addStrokePoint(position, pressure, timestamp);
+		get<Page>(_currentPage).addStrokePoint(position, pressure, timestamp);
 	}
 
 	/**
@@ -60,7 +70,7 @@ public:
 	 */
 	inline void finishCurrentStroke() {
 
-		_pages[_currentPage].currentStroke().finish(_strokePoints);
+		getPage(_currentPage).currentStroke().finish(_strokePoints);
 	}
 
 	/**
@@ -69,7 +79,7 @@ public:
 	 */
 	inline bool hasOpenStroke() const {
 
-		if (_pages[_currentPage].numStrokes() > 0 && !_pages[_currentPage].currentStroke().finished())
+		if (get<Page>(_currentPage).numStrokes() > 0 && !get<Page>(_currentPage).currentStroke().finished())
 			return true;
 
 		return false;
@@ -104,17 +114,17 @@ public:
 
 		// quickly check if there is a page that contains the point (this should 
 		// be true in the vast majority of all cases)
-		for (unsigned int i = 0; i < _pages.size(); i++)
-			if (_pages[i].getPageBoundingBox().contains(position))
+		for (unsigned int i = 0; i < size<Page>(); i++)
+			if (get<Page>(i).getPageBoundingBox().contains(position))
 				return i;
 
 		// if we haven't been successfull, let's get the closest page instead
 		double minDistance = -1;
 		unsigned int closestPage = 0;
 
-		for (unsigned int i = 0; i < _pages.size(); i++) {
+		for (unsigned int i = 0; i < size<Page>(); i++) {
 
-			const util::rect<DocumentPrecision>& bb = _pages[i].getPageBoundingBox();
+			const util::rect<DocumentPrecision>& bb = get<Page>(i).getPageBoundingBox();
 
 			double l = bb.minX - position.x;
 			double r = position.x - bb.maxX;
@@ -141,13 +151,13 @@ public:
 	/**
 	 * Get a page of the document.
 	 */
-	inline Page& getPage(unsigned int i) { return _pages[i]; }
-	inline const Page& getPage(unsigned int i) const { return _pages[i]; }
+	inline Page& getPage(unsigned int i) { return get<Page>(i); }
+	inline const Page& getPage(unsigned int i) const { return get<Page>(i); }
 
 	/**
 	 * Get the number of pages in the document.
 	 */
-	inline unsigned int numPages() const { return _pages.size(); }
+	inline unsigned int numPages() const { return size<Page>(); }
 
 	/**
 	 * Get the number of strokes of all pages.
@@ -157,7 +167,7 @@ public:
 		unsigned int n = 0;
 
 		for (unsigned int i = 0; i < numPages(); i++)
-			n += _pages[i].numStrokes();
+			n += get<Page>(i).numStrokes();
 
 		return n;
 	}
@@ -168,9 +178,6 @@ private:
 
 	// global list of stroke points
 	StrokePoints _strokePoints;
-
-	// the pages on the document
-	std::vector<Page> _pages;
 
 	// the number of the current page
 	unsigned int _currentPage;

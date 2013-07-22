@@ -26,7 +26,7 @@ Document::createPage(
 
 	LOG_DEBUG(documentlog) << "created a new page" << std::endl;
 
-	_pages.push_back(Page(this, position, size));
+	add<Page>(Page(this, position, size));
 }
 
 util::rect<DocumentPrecision>
@@ -34,7 +34,7 @@ Document::erase(const util::point<DocumentPrecision>& begin, const util::point<D
 
 	_currentPage = getPageIndex(begin);
 
-	return _pages[_currentPage].erase(begin, end);
+	return get<Page>(_currentPage).erase(begin, end);
 }
 
 util::rect<DocumentPrecision>
@@ -42,7 +42,7 @@ Document::erase(const util::point<DocumentPrecision>& position, DocumentPrecisio
 
 	_currentPage = getPageIndex(position);
 
-	return _pages[_currentPage].erase(position, radius);
+	return get<Page>(_currentPage).erase(position, radius);
 }
 
 void
@@ -54,11 +54,11 @@ Document::copyFrom(Document& other) {
 	// We can't just copy pages, since they have a reference to the document they 
 	// belong to. Therefore, we properly initialize our pages and copy the 
 	// relevant parts, only.
-	_pages.clear();
+	clear<Page>();
 
 	for (unsigned int i = 0; i < other.numPages(); i++) {
 
 		createPage(other.getPage(i).getPosition(), other.getPage(i).getSize());
-		_pages[i] = other.getPage(i);
+		get<Page>(i) = other.getPage(i);
 	}
 }
