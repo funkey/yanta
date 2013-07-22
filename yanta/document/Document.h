@@ -70,7 +70,7 @@ public:
 	 */
 	inline void finishCurrentStroke() {
 
-		getPage(_currentPage).currentStroke().finish(_strokePoints);
+		getPage(_currentPage).currentStroke().finish();
 	}
 
 	/**

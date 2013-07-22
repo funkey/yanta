@@ -31,9 +31,9 @@ public:
 	Page& operator=(const Page& other);
 
 	/**
-	 * Get the position of the space on the document.
+	 * Get the position of the page on the document.
 	 */
-	inline const util::point<DocumentPrecision>& getPosition() const { return _position; }
+	inline const util::point<DocumentPrecision>& getPosition() const { return getShift(); }
 
 	/**
 	 * Get the bounding box of the page, irrespective of its content.
@@ -75,10 +75,10 @@ public:
 
 		// position is in document units -- transform it into page units and store 
 		// it in global stroke points list
-		util::point<PagePrecision> p = position - _position;
+		util::point<PagePrecision> p = position - getShift();
 
 		_strokePoints.add(StrokePoint(p, pressure, timestamp));
-		currentStroke().setEnd(_strokePoints.size());
+		currentStroke().setEnd(_strokePoints.size(), _strokePoints);
 	}
 
 	/**
@@ -171,27 +171,26 @@ private:
 	inline util::rect<DocumentPrecision> toDocumentCoordinates(const util::rect<PagePrecision>& r) {
 
 		util::rect<DocumentPrecision> result = r;
-		return result + _position;
+		return result + getShift();
 	}
 
 	inline util::point<DocumentPrecision> toDocumentCoordinates(const util::point<PagePrecision>& p) {
 
-		return _position + p;
+		return getShift() + p;
 	}
 
 	inline util::rect<PagePrecision> toPageCoordinates(const util::rect<DocumentPrecision>& r) {
 
-		return r - _position;
+		return r - getShift();
 	}
 
 	inline util::point<PagePrecision> toPageCoordinates(const util::point<DocumentPrecision>& p) {
 
-		return p - _position;
+		return p - getShift();
 	}
 
 
-	// the position and size of this page on the document
-	util::point<DocumentPrecision> _position;
+	// the size of this page on the document
 	util::point<PagePrecision>   _size;
 
 	// the bounding box of the page (not its content) in document units

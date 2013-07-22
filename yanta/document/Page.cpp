@@ -8,10 +8,13 @@ Page::Page(
 		Document* document,
 		const util::point<DocumentPrecision>& position,
 		const util::point<PagePrecision>&   size) :
-	_position(position),
 	_size(size),
 	_pageBoundingBox(position.x, position.y, position.x + size.x, position.y + size.y),
-	_strokePoints(document->getStrokePoints()) {}
+	_strokePoints(document->getStrokePoints()) {
+
+	fitBoundingBox(util::rect<PagePrecision>(0, 0, size.x, size.y));
+	shift(position);
+}
 
 Page&
 Page::operator=(const Page& other) {
@@ -19,7 +22,6 @@ Page::operator=(const Page& other) {
 	// copy the elements of the container
 	DocumentElementContainer<PageElementTypes>::operator=(other);
 
-	_position        = other._position;
 	_size            = other._size;
 	_pageBoundingBox = other._pageBoundingBox;
 
@@ -45,7 +47,7 @@ Page::createNewStroke(unsigned long begin) {
 
 	// if this happens in the middle of a draw, finish the unfinished
 	if (numStrokes() > 0 && !currentStroke().finished())
-		currentStroke().finish(_strokePoints);
+		currentStroke().finish();
 
 	add(Stroke(begin));
 }
@@ -190,8 +192,8 @@ Page::erase(Stroke* stroke, const util::point<PagePrecision>& center, PagePrecis
 
 				LOG_ALL(pagelog) << "this is the first line to erase on this stroke" << std::endl;
 
-				stroke->setEnd(i+1);
-				stroke->finish(_strokePoints);
+				stroke->setEnd(i+1, _strokePoints);
+				stroke->finish();
 				wasErasing = true;
 			}
 
@@ -211,8 +213,8 @@ Page::erase(Stroke* stroke, const util::point<PagePrecision>& center, PagePrecis
 	// stroke
 	if (!wasErasing) {
 
-		stroke->setEnd(end+1);
-		stroke->finish(_strokePoints);
+		stroke->setEnd(end+1, _strokePoints);
+		stroke->finish();
 	}
 
 	// increase the size of the changedArea (if there is one) by the style width
@@ -261,8 +263,8 @@ Page::erase(Stroke& stroke, const util::point<PagePrecision>& lineBegin, const u
 			changedArea = stroke.getBoundingBox();
 
 			// make this an empty stroke
-			stroke.setEnd(begin);
-			stroke.finish(_strokePoints);
+			stroke.setEnd(begin, _strokePoints);
+			stroke.finish();
 
 			break;
 		}

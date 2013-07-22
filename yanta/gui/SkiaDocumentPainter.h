@@ -7,14 +7,31 @@
 #include <util/rect.hpp>
 
 #include <document/Document.h>
+#include <document/DocumentTreeRoiVisitor.h>
 
-class SkiaDocumentPainter {
+class SkiaDocumentPainter : public DocumentTreeRoiVisitor {
 
 public:
 
-	SkiaDocumentPainter(const gui::skia_pixel_t& clearColor = gui::skia_pixel_t(255, 255, 255));
+	/**
+	 * Create a new document painter.
+	 *
+	 * @param clearColor The background color.
+	 * @param drawPaper  If true, the paper (color, lines) will be drawn.
+	 */
+	SkiaDocumentPainter(
+			const gui::skia_pixel_t& clearColor = gui::skia_pixel_t(255, 255, 255),
+			bool drawPaper = true);
 
+	/**
+	 * Set the document that shall be draw by subsequent draw() calls.
+	 */
 	void setDocument(boost::shared_ptr<Document> document) { _document = document; }
+
+	/**
+	 * Set the canvas to draw to.
+	 */
+	void setCanvas(SkCanvas& canvas) { _canvas = &canvas; }
 
 	/**
 	 * Set the transformation to map from document units to pixel units.
@@ -26,26 +43,6 @@ public:
 		_pixelsPerDeviceUnit = pixelsPerDeviceUnit;
 		_pixelOffset         = pixelOffset;
 	}
-
-	/**
-	 * Reset the memory about what has been drawn already. Call this method to 
-	 * re-initialize incremental drawing.
-	 */
-	void resetIncrementalMemory() {
-
-		_drawnUntilStrokePoint = 0;
-	}
-
-	void rememberDrawnDocument() {
-
-		_drawnUntilStrokePoint = _drawnUntilStrokePointTmp;
-	}
-
-	/**
-	 * Return true if all the strokes of this document have been drawn by this 
-	 * painter already.
-	 */
-	bool alreadyDrawn(const Document& document);
 
 	/**
 	 * Draw the whole document on the provided canvas.
@@ -62,30 +59,87 @@ public:
 			const util::rect<DocumentPrecision>& roi);
 
 	/**
-	 * Draw the paper boundary and lines.
+	 * Remember what was drawn already. Call this method prior an incremental 
+	 * draw, to draw only new elements.
 	 */
-	void drawPaper(
-			SkCanvas& canvas,
-			const util::rect<double>& documentRoi);
+	void rememberDrawnDocument() {
+
+		_drawnUntilStrokePoint = _drawnUntilStrokePointTmp;
+		_incremental = true;
+	}
 
 	/**
-	 * Draw the content of a page.
+	 * Return true if all the strokes of this document have been drawn by this 
+	 * painter already.
 	 */
-	void drawPage(
-			SkCanvas& canvas,
-			const Page& page,
-			const util::rect<double>& pageRoi);
+	bool alreadyDrawn(const Document& document);
+
+	/**
+	 * Reset the memory about what has been drawn already. Call this method to 
+	 * re-initialize incremental drawing.
+	 */
+	void resetIncrementalMemory() {
+
+		_drawnUntilStrokePoint = 0;
+		_incremental = false;
+	}
+
+	/**
+	 * Visitor callback to enter a document element. Applies the transformation 
+	 * that is stored in this element.
+	 */
+	void enter(DocumentElement& element);
+
+	/**
+	 * Visitor callback to leave a document element. Restores the transformation 
+	 * that was changed for this element.
+	 */
+	void leave(DocumentElement& element);
+
+	/**
+	 * Top-level visitor callback. Initializes data structures needed for the 
+	 * following drawing operations.
+	 */
+	void visit(Document& document);
+
+	/**
+	 * Visitor callback to draw pages.
+	 */
+	void visit(Page& page);
+
+	/**
+	 * Visitor callback to draw strokes.
+	 */
+	void visit(Stroke& stroke);
+
+	// default callbacks
+	using DocumentTreeVisitor::visit;
 
 private:
 
-	void clearSurface(SkCanvas& context);
+	/**
+	 * Draw the paper boundary and lines.
+	 */
+	void drawPaper(Page& page);
 
-	util::point<double> getLineNormal(const Stroke& stroke, const StrokePoints& points, long i, double& length);
+	/**
+	 * Draw a stroke.
+	 */
+	void drawStroke(Stroke& stroke);
 
+	// the skia canvas to draw to
+	SkCanvas* _canvas;
+
+	// the background color
 	gui::skia_pixel_t _clearColor;
 
+	// shall the paper be drawn as well?
+	bool _drawPaper;
+
+	// the document to draw
 	boost::shared_ptr<Document> _document;
 
+	// the device transformation (document to skia canvas)
 	util::point<double> _pixelsPerDeviceUnit;
 	util::point<int>    _pixelOffset;
 
@@ -95,6 +149,9 @@ private:
 	// temporal memory of the number of the stroke point until which all have 
 	// been drawn already
 	unsigned long _drawnUntilStrokePointTmp;
+
+	// did we remember what we drew?
+	bool _incremental;
 };
 
 #endif // YANTA_SKIA_CANVAS_PAINTER_H__

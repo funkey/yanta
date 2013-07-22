@@ -31,10 +31,6 @@ SkiaStrokePainter::draw(
 		return;
 	}
 
-	_canvas.save();
-	_canvas.translate(stroke.getShift().x, stroke.getShift().y);
-	_canvas.scale(stroke.getScale().x, stroke.getScale().y);
-
 	double penWidth = stroke.getStyle().width();
 	unsigned char penColorRed   = stroke.getStyle().getRed();
 	unsigned char penColorGreen = stroke.getStyle().getGreen();
@@ -58,8 +54,6 @@ SkiaStrokePainter::draw(
 				_strokePoints[i+1].position.x, _strokePoints[i+1].position.y,
 				paint);
 	}
-
-	_canvas.restore();
 
 	return;
 }

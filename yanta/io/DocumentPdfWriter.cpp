@@ -29,10 +29,12 @@ DocumentPdfWriter::write() {
 
 	for (unsigned int i = 0; i < _document->numPages(); i++) {
 
+		Page& page = _document->getPage(i);
+
 		LOG_DEBUG(documentpdfwriterlog) << "rendering pdf page " << i << std::endl;
 
 		// page size in mm
-		util::point<double> pageSize = _document->getPage(i).getSize();
+		util::point<double> pageSize = page.getSize();
 
 		// According to the Skia documentation, there are 72 points/inch, which 
 		// is 2.834646 points/mm.
@@ -45,12 +47,14 @@ DocumentPdfWriter::write() {
 
 		SkCanvas canvas(pdfDevice);
 
+		// make upper left of page (0, 0)
+		canvas.translate(-page.getPosition().x, -page.getPosition().y);
+
 		// Now Skia expects the coordinates in points. We have mm. Scale ours by 
 		// 2.834646.
 		canvas.scale(2.834646, 2.834646);
 
-		//painter.drawPaper(canvas, util::rect<double>(0, 0, pageSize.x, pageSize.y));
-		painter.drawPage(canvas, _document->getPage(i), util::rect<double>(0, 0, pageSize.x, pageSize.y));
+		painter.draw(canvas, page.getPageBoundingBox());
 
 		document.appendPage(pdfDevice);
 	}

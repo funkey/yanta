@@ -100,11 +100,11 @@ DocumentReader::readStroke(std::ifstream& in, unsigned int page, unsigned int fi
 	style.setColor(red, green, blue, alpha);
 
 	_document->getPage(page).createNewStroke(begin);
-	_document->getPage(page).currentStroke().setEnd(end);
+	_document->getPage(page).currentStroke().setEnd(end, _document->getStrokePoints());
 	_document->getPage(page).currentStroke().setStyle(style);
 	if (fileVersion >= 3) {
 		_document->getPage(page).currentStroke().setScale(scale);
 		_document->getPage(page).currentStroke().setShift(shift);
 	}
-	_document->getPage(page).currentStroke().finish(_document->getStrokePoints());
+	_document->getPage(page).currentStroke().finish();
 }

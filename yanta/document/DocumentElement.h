@@ -6,18 +6,7 @@
 #include "Precision.h"
 #include "Transformable.h"
 
-class DocumentElement : public Transformable<DocumentPrecision> {
-
-public:
-
-	/**
-	 * Default implementation of the traverse method -- do nothing. Container 
-	 * classes (i.e., nodes in the tree) should overwrite this method to pass 
-	 * the visitor to children.
-	 */
-	template <typename VisitorType>
-	void traverse(VisitorType& visitor) {}
-};
+class DocumentElement : public Transformable<DocumentPrecision>, public TreeNode {};
 
 #endif // YANTA_DOCUMENT_ELEMENT_H__
 

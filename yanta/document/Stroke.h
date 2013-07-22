@@ -63,8 +63,21 @@ public:
 	/**
 	 * Set the last (exclusive) stroke point of this stroke.
 	 */
-	inline void setEnd(unsigned long index) {
+	inline void setEnd(unsigned long index, const StrokePoints& points) {
 
+		// update bounding box
+		for (unsigned int i = _end; i < index; i++) {
+
+			const StrokePoint& point = points[i];
+
+			fitBoundingBox(util::rect<DocumentPrecision>(
+					point.position.x - _style.width(),
+					point.position.y - _style.width(),
+					point.position.x + _style.width(),
+					point.position.y + _style.width()));
+		}
+
+		// update end pointer
 		_end = index;
 	}
 
@@ -81,11 +94,9 @@ public:
 	/**
 	 * Finish this stroke. Computes the bounding box.
 	 */
-	inline void finish(const StrokePoints& points) {
+	inline void finish() {
 
 		_finished = true;
-
-		computeBoundingBox(points);
 	}
 
 	/**
@@ -97,8 +108,6 @@ public:
 	}
 
 private:
-
-	void computeBoundingBox(const StrokePoints& points);
 
 	Style _style;
 
