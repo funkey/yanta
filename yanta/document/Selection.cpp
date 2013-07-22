@@ -47,7 +47,7 @@ Selection::addStroke(const Page& page, const Stroke& stroke) {
 	// to detach the stroke from the page, we have to shift it by the page 
 	// position
 	Stroke selectionCopy = stroke;
-	selectionCopy.shift(page.getPosition());
+	selectionCopy.shift(page.getShift());
 
 	fitBoundingBox(selectionCopy.getBoundingBox());
 
@@ -74,7 +74,7 @@ Selection::anchor(Document& document) {
 		LOG_DEBUG(selectionlog) << "page " << p << " is closest" << std::endl;
 
 		// correct for the position of the page
-		stroke.shift(-page.getPosition());
+		stroke.shift(-page.getShift());
 
 		LOG_DEBUG(selectionlog) << "relative to page, stroke is now at " << stroke.getShift() << std::endl;
 

@@ -44,7 +44,7 @@ DocumentWriter::writeStrokePoints(std::ofstream& out, const StrokePoints& points
 void
 DocumentWriter::writePage(std::ofstream& out, const Page& page) {
 
-	out << page.getPosition().x << " " << page.getPosition().y;
+	out << page.getShift().x << " " << page.getShift().y;
 	out << " " << page.getSize().x << " " << page.getSize().y;
 
 	unsigned int numStrokes = page.numStrokes();

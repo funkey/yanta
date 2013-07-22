@@ -58,7 +58,7 @@ Document::copyFrom(Document& other) {
 
 	for (unsigned int i = 0; i < other.numPages(); i++) {
 
-		createPage(other.getPage(i).getPosition(), other.getPage(i).getSize());
+		createPage(other.getPage(i).getShift(), other.getPage(i).getSize());
 		get<Page>(i) = other.getPage(i);
 	}
 }

@@ -41,7 +41,7 @@ public:
 
 		for (unsigned int i = stroke.begin(); i < stroke.end(); i++) {
 
-			util::point<DocumentPrecision> point = points[i].position*stroke.getScale() + stroke.getShift() + page.getPosition();
+			util::point<DocumentPrecision> point = points[i].position*stroke.getScale() + stroke.getShift() + page.getShift();
 
 			if (!contains(point))
 				return false;

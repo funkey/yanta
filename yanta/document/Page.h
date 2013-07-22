@@ -31,11 +31,6 @@ public:
 	Page& operator=(const Page& other);
 
 	/**
-	 * Get the position of the page on the document.
-	 */
-	inline const util::point<DocumentPrecision>& getPosition() const { return getShift(); }
-
-	/**
 	 * Get the bounding box of the page, irrespective of its content.
 	 */
 	inline const util::rect<DocumentPrecision>& getPageBoundingBox() const { return _pageBoundingBox; }

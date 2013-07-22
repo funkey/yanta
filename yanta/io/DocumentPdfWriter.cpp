@@ -48,7 +48,7 @@ DocumentPdfWriter::write() {
 		SkCanvas canvas(pdfDevice);
 
 		// make upper left of page (0, 0)
-		canvas.translate(-page.getPosition().x, -page.getPosition().y);
+		canvas.translate(-page.getShift().x, -page.getShift().y);
 
 		// Now Skia expects the coordinates in points. We have mm. Scale ours by 
 		// 2.834646.
