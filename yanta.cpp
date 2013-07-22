@@ -16,11 +16,11 @@
 #include <util/SignalHandler.h>
 
 #include <yanta/Backend.h>
-#include <yanta/BackendView.h>
-#include <yanta/Osd.h>
-#include <yanta/CanvasReader.h>
-#include <yanta/CanvasWriter.h>
-#include <yanta/CanvasPdfWriter.h>
+#include <yanta/gui/BackendView.h>
+#include <yanta/gui/Osd.h>
+#include <yanta/io/DocumentReader.h>
+#include <yanta/io/DocumentWriter.h>
+#include <yanta/io/DocumentPdfWriter.h>
 
 util::ProgramOption optionFilename(
 		util::_long_name        = "file",
@@ -130,16 +130,16 @@ int main(int optionc, char** optionv) {
 			pipeline::Process<BackendView>                              backendView;
 			pipeline::Process<Osd>                                      osd;
 			pipeline::Process<Backend>                                  backend;
-			pipeline::Process<CanvasReader>                             reader(filename);
-			pipeline::Process<CanvasWriter>                             writer(filename);
+			pipeline::Process<DocumentReader>                           reader(filename);
+			pipeline::Process<DocumentWriter>                           writer(filename);
 
 			// connect process nodes
 			window->setInput(overlayView->getOutput());
 			overlayView->addInput(osd->getOutput("osd painter"));
 			overlayView->addInput(backendView->getOutput());
-			backendView->setInput("canvas", backend->getOutput("canvas"));
+			backendView->setInput("document", backend->getOutput("document"));
 			backendView->setInput("overlay", backend->getOutput("overlay"));
-			backend->setInput("initial canvas", reader->getOutput());
+			backend->setInput("initial document", reader->getOutput());
 			backend->setInput("pen mode", osd->getOutput("pen mode"));
 			backend->setInput("osd request", osd->getOutput("osd request"));
 			writer->setInput(backend->getOutput());
@@ -158,7 +158,7 @@ int main(int optionc, char** optionv) {
 
 			if (optionExportPdf) {
 
-				pipeline::Process<CanvasPdfWriter> pdfWriter(optionExportPdf.as<std::string>());
+				pipeline::Process<DocumentPdfWriter> pdfWriter(optionExportPdf.as<std::string>());
 				pdfWriter->setInput(backend->getOutput());
 				pdfWriter->write();
 			}

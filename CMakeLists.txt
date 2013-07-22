@@ -144,6 +144,7 @@ set(CORELIBS
 include_directories(${PROJECT_BINARY_DIR})
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/modules)
+include_directories(${PROJECT_SOURCE_DIR}/yanta)
 
 add_subdirectory(modules/util)
 add_subdirectory(modules/signals)

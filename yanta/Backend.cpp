@@ -7,22 +7,22 @@ logger::LogChannel backendlog("backendlog", "[Backend] ");
 Backend::Backend() :
 	_penDown(false),
 	_mode(Draw),
-	_initialCanvasModified(false) {
+	_initialDocumentModified(false) {
 
-	registerInput(_initialCanvas, "initial canvas", pipeline::Optional);
+	registerInput(_initialDocument, "initial document", pipeline::Optional);
 	registerInput(_penMode, "pen mode");
 	registerInput(_osdRequest, "osd request", pipeline::Optional);
-	registerOutput(_canvas, "canvas");
+	registerOutput(_document, "document");
 	registerOutput(_overlay, "overlay");
 
-	_initialCanvas.registerBackwardCallback(&Backend::onModified, this);
+	_initialDocument.registerBackwardCallback(&Backend::onModified, this);
 	_osdRequest.registerBackwardCallback(&Backend::onAddPage, this);
 
-	_canvas.registerForwardSlot(_canvasChangedArea);
-	_canvas.registerForwardSlot(_strokePointAdded);
-	_canvas.registerForwardCallback(&Backend::onPenDown, this);
-	_canvas.registerForwardCallback(&Backend::onPenMove, this);
-	_canvas.registerForwardCallback(&Backend::onPenUp, this);
+	_document.registerForwardSlot(_documentChangedArea);
+	_document.registerForwardSlot(_strokePointAdded);
+	_document.registerForwardCallback(&Backend::onPenDown, this);
+	_document.registerForwardCallback(&Backend::onPenMove, this);
+	_document.registerForwardCallback(&Backend::onPenUp, this);
 
 	_overlay.registerForwardSlot(_overlayChangedArea);
 	_overlay.registerForwardSlot(_lassoPointAdded);
@@ -37,34 +37,34 @@ Backend::cleanup() {
 void
 Backend::updateOutputs() {
 
-	if (!_initialCanvasModified)
+	if (!_initialDocumentModified)
 		return;
 
-	if (_initialCanvas && _initialCanvas->numPages() > 0) {
+	if (_initialDocument && _initialDocument->numPages() > 0) {
 
-		LOG_DEBUG(backendlog) << "have initial canvas, loading them" << std::endl;
-		LOG_ALL(backendlog) << "initial canvas has " << _initialCanvas->numStrokes() << " strokes on " << _initialCanvas->numPages() << " pages" << std::endl;
+		LOG_DEBUG(backendlog) << "have initial document, loading them" << std::endl;
+		LOG_ALL(backendlog) << "initial document has " << _initialDocument->numStrokes() << " strokes on " << _initialDocument->numPages() << " pages" << std::endl;
 
-		*_canvas = *_initialCanvas;
+		*_document = *_initialDocument;
 
-		LOG_ALL(backendlog) << "copy has " << _canvas->numStrokes() << " strokes on " << _canvas->numPages() << " pages" << std::endl;
+		LOG_ALL(backendlog) << "copy has " << _document->numStrokes() << " strokes on " << _document->numPages() << " pages" << std::endl;
 
 	} else {
 
-		LOG_DEBUG(backendlog) << "create new canvas with two pages" << std::endl;
+		LOG_DEBUG(backendlog) << "create new document with two pages" << std::endl;
 
-		_canvas->createPage(
-				util::point<CanvasPrecision>(0.0, 0.0),
+		_document->createPage(
+				util::point<DocumentPrecision>(0.0, 0.0),
 				util::point<PagePrecision>(210.0, 297.0) /* DIN A4 */);
 	}
 
-	_initialCanvasModified = false;
+	_initialDocumentModified = false;
 }
 
 void
 Backend::onModified(const pipeline::Modified&) {
 
-	_initialCanvasModified = true;
+	_initialDocumentModified = true;
 }
 
 void
@@ -99,8 +99,8 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 			LOG_DEBUG(backendlog) << "accepting" << std::endl;
 
-			_canvas->createNewStroke(signal.position, signal.pressure, signal.timestamp);
-			_canvas->setCurrentStrokeStyle(_penMode->getStyle());
+			_document->createNewStroke(signal.position, signal.pressure, signal.timestamp);
+			_document->setCurrentStrokeStyle(_penMode->getStyle());
 		}
 	}
 
@@ -111,8 +111,8 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 		if (_penDown) {
 
-			_canvas->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
-			_canvas->finishCurrentStroke();
+			_document->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
+			_document->finishCurrentStroke();
 
 			_strokePointAdded();
 		}
@@ -138,7 +138,7 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 			anchorSelection();
 
-			_selection = boost::make_shared<Selection>(Selection::CreateFromPath(_lasso->getPath(), *_canvas));
+			_selection = boost::make_shared<Selection>(Selection::CreateFromPath(_lasso->getPath(), *_document));
 
 			_overlay->remove(_lasso);
 			_overlay->add(_selection);
@@ -146,8 +146,8 @@ Backend::onPenUp(const gui::PenUp& signal) {
 			OverlayChangedArea overlaySignal(_lasso->getBoundingBox());
 			_overlayChangedArea(overlaySignal);
 
-			CanvasChangedArea canvasSignal(_selection->getBoundingBox());
-			_canvasChangedArea(canvasSignal);
+			DocumentChangedArea documentSignal(_selection->getBoundingBox());
+			_documentChangedArea(documentSignal);
 
 			_lasso.reset();
 
@@ -158,8 +158,8 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 			LOG_DEBUG(backendlog) << "accepting" << std::endl;
 
-			_canvas->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
-			_canvas->finishCurrentStroke();
+			_document->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
+			_document->finishCurrentStroke();
 
 			_strokePointAdded();
 		}
@@ -171,8 +171,8 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 		if (_penDown) {
 
-			_canvas->createNewStroke(signal.position, signal.pressure, signal.timestamp);
-			_canvas->setCurrentStrokeStyle(_penMode->getStyle());
+			_document->createNewStroke(signal.position, signal.pressure, signal.timestamp);
+			_document->setCurrentStrokeStyle(_penMode->getStyle());
 		}
 	}
 }
@@ -187,7 +187,7 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	if (_mode == DragSelection) {
 
-		util::rect<CanvasPrecision> changed = _selection->getBoundingBox();
+		util::rect<DocumentPrecision> changed = _selection->getBoundingBox();
 
 		_selection->shift(signal.position - _previousPosition);
 		_previousPosition = signal.position;
@@ -210,19 +210,19 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	if (_mode == Erase) {
 
-		util::rect<CanvasPrecision> dirtyArea = _canvas->erase(_previousPosition, signal.position);
+		util::rect<DocumentPrecision> dirtyArea = _document->erase(_previousPosition, signal.position);
 
 		_previousPosition = signal.position;
 
 		if (!dirtyArea.isZero()) {
 
-			CanvasChangedArea signal(dirtyArea);
-			_canvasChangedArea(signal);
+			DocumentChangedArea signal(dirtyArea);
+			_documentChangedArea(signal);
 		}
 
 	} else {
 
-		_canvas->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
+		_document->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
 		_strokePointAdded();
 	}
 }
@@ -231,23 +231,23 @@ void
 Backend::onAddPage(const AddPage& /*signal*/) {
 
 	// the number of the new page to add
-	int pageNum = _canvas->numPages();
+	int pageNum = _document->numPages();
 
 	// let the new page be of the size of the most recent page
-	const util::point<PagePrecision>& size = _canvas->getPage(pageNum - 1).getSize();
+	const util::point<PagePrecision>& size = _document->getPage(pageNum - 1).getSize();
 
 	int pageX = pageNum%2;
 	int pageY = pageNum/2;
 
 	// simple 2-pages layout
 	// TODO: get layout from current OsdRequest input
-	util::point<CanvasPrecision> position(pageX*(size.x + size.x/10), pageY*(size.y + size.y/8));
+	util::point<DocumentPrecision> position(pageX*(size.x + size.x/10), pageY*(size.y + size.y/8));
 
-	_canvas->createPage(position, size);
+	_document->createPage(position, size);
 
 	// inform about dirty area
-	CanvasChangedArea signal(util::rect<CanvasPrecision>(position.x, position.y, position.x + size.x, position.y + size.y));
-	_canvasChangedArea(signal);
+	DocumentChangedArea signal(util::rect<DocumentPrecision>(position.x, position.y, position.x + size.x, position.y + size.y));
+	_documentChangedArea(signal);
 }
 
 void
@@ -255,10 +255,10 @@ Backend::anchorSelection() {
 
 	if (_selection) {
 
-		_selection->anchor(*_canvas);
+		_selection->anchor(*_document);
 		_overlay->remove(_selection);
 
-		CanvasChangedArea canvasSignal(_selection->getBoundingBox());
-		_canvasChangedArea(canvasSignal);
+		DocumentChangedArea documentSignal(_selection->getBoundingBox());
+		_documentChangedArea(documentSignal);
 	}
 }

@@ -3,15 +3,16 @@
 
 #include <gui/PenSignals.h>
 #include <pipeline/all.h>
-#include "BackendPainter.h"
-#include "CanvasSignals.h"
-#include "PenMode.h"
-#include "Lasso.h"
-#include "OsdRequest.h"
-#include "OsdSignals.h"
-#include "Overlay.h"
-#include "OverlaySignals.h"
-#include "Selection.h"
+
+#include <document/DocumentSignals.h>
+#include <document/Selection.h>
+#include <gui/BackendPainter.h>
+#include <gui/OsdRequest.h>
+#include <gui/OsdSignals.h>
+#include <gui/Overlay.h>
+#include <gui/OverlaySignals.h>
+#include <tools/PenMode.h>
+#include <tools/Lasso.h>
 
 class Backend : public pipeline::SimpleProcessNode<> {
 
@@ -46,26 +47,26 @@ private:
 
 	void anchorSelection();
 
-	pipeline::Input<Canvas>     _initialCanvas;
+	pipeline::Input<Document>   _initialDocument;
 	pipeline::Input<PenMode>    _penMode;
 	pipeline::Input<OsdRequest> _osdRequest;
-	pipeline::Output<Canvas>    _canvas;
+	pipeline::Output<Document>  _document;
 	pipeline::Output<Overlay>   _overlay;
 
 	bool _penDown;
 
 	Mode _mode;
-	util::point<CanvasPrecision> _previousPosition;
+	util::point<DocumentPrecision> _previousPosition;
 
-	bool _initialCanvasModified;
+	bool _initialDocumentModified;
 
 	boost::shared_ptr<Lasso>     _lasso;
 	boost::shared_ptr<Selection> _selection;
 
-	signals::Slot<CanvasChangedArea>  _canvasChangedArea;
-	signals::Slot<StrokePointAdded>   _strokePointAdded;
-	signals::Slot<OverlayChangedArea> _overlayChangedArea;
-	signals::Slot<LassoPointAdded>    _lassoPointAdded;
+	signals::Slot<DocumentChangedArea> _documentChangedArea;
+	signals::Slot<StrokePointAdded>    _strokePointAdded;
+	signals::Slot<OverlayChangedArea>  _overlayChangedArea;
+	signals::Slot<LassoPointAdded>     _lassoPointAdded;
 };
 
 #endif // YANTA_BACKEND_H__
