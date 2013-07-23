@@ -9,8 +9,7 @@
 #include <gui/BackendPainter.h>
 #include <gui/OsdRequest.h>
 #include <gui/OsdSignals.h>
-#include <gui/Overlay.h>
-#include <gui/OverlaySignals.h>
+#include <tools/ToolSignals.h>
 #include <tools/PenMode.h>
 #include <tools/Lasso.h>
 
@@ -51,7 +50,7 @@ private:
 	pipeline::Input<PenMode>    _penMode;
 	pipeline::Input<OsdRequest> _osdRequest;
 	pipeline::Output<Document>  _document;
-	pipeline::Output<Overlay>   _overlay;
+	pipeline::Output<Tools>     _tools;
 
 	bool _penDown;
 
@@ -63,12 +62,11 @@ private:
 
 	boost::shared_ptr<Lasso> _lasso;
 
-	signals::Slot<DocumentChangedArea> _documentChangedArea;
-	signals::Slot<StrokePointAdded>    _strokePointAdded;
-	signals::Slot<SelectionMoved>      _selectionMoved;
-
-	signals::Slot<OverlayChangedArea>  _overlayChangedArea;
-	signals::Slot<LassoPointAdded>     _lassoPointAdded;
+	signals::Slot<ChangedArea>      _documentChangedArea;
+	signals::Slot<StrokePointAdded> _strokePointAdded;
+	signals::Slot<SelectionMoved>   _selectionMoved;
+	signals::Slot<ChangedArea>      _toolsChangedArea;
+	signals::Slot<LassoPointAdded>  _lassoPointAdded;
 };
 
 #endif // YANTA_BACKEND_H__

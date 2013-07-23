@@ -2,12 +2,12 @@
 #define YANTA_LASSO_H__
 
 #include <document/Path.h>
-#include <gui/OverlayObject.h>
+#include "Tool.h"
 
 /**
  * A lasso for the selection of document entities.
  */
-class Lasso : public OverlayObject {
+class Lasso : public Tool {
 
 public:
 
@@ -24,7 +24,10 @@ public:
 	Path& getPath() { return _path; }
 	const Path& getPath() const { return _path; }
 
-	void visit(OverlayObjectVisitor& visitor) { visitor.processLasso(*this); }
+	/**
+	 * Draw this tool on the given canvas.
+	 */
+	void draw(SkCanvas& canvas);
 
 private:
 

@@ -13,7 +13,7 @@ Backend::Backend() :
 	registerInput(_penMode, "pen mode");
 	registerInput(_osdRequest, "osd request", pipeline::Optional);
 	registerOutput(_document, "document");
-	registerOutput(_overlay, "overlay");
+	registerOutput(_tools, "tools");
 
 	_initialDocument.registerBackwardCallback(&Backend::onModified, this);
 	_osdRequest.registerBackwardCallback(&Backend::onAddPage, this);
@@ -25,8 +25,8 @@ Backend::Backend() :
 	_document.registerForwardCallback(&Backend::onPenMove, this);
 	_document.registerForwardCallback(&Backend::onPenUp, this);
 
-	_overlay.registerForwardSlot(_overlayChangedArea);
-	_overlay.registerForwardSlot(_lassoPointAdded);
+	_tools.registerForwardSlot(_toolsChangedArea);
+	_tools.registerForwardSlot(_lassoPointAdded);
 }
 
 void
@@ -95,7 +95,7 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 			_lasso = boost::make_shared<Lasso>();
 			_lasso->addPoint(signal.position);
-			_overlay->add(_lasso);
+			_tools->add(_lasso);
 			_lassoPointAdded();
 
 			return;
@@ -146,12 +146,12 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 			_document->add(Selection::CreateFromPath(_lasso->getPath(), *_document));
 
-			_overlay->remove(_lasso);
+			_tools->remove(_lasso);
 
-			OverlayChangedArea overlaySignal(_lasso->getBoundingBox());
-			_overlayChangedArea(overlaySignal);
+			ChangedArea toolsSignal(_lasso->getBoundingBox());
+			_toolsChangedArea(toolsSignal);
 
-			DocumentChangedArea documentSignal(_document->get<Selection>().back().getBoundingBox());
+			ChangedArea documentSignal(_document->get<Selection>().back().getBoundingBox());
 			_documentChangedArea(documentSignal);
 
 			_lasso.reset();
@@ -223,7 +223,7 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 		if (!dirtyArea.isZero()) {
 
-			DocumentChangedArea signal(dirtyArea);
+			ChangedArea signal(dirtyArea);
 			_documentChangedArea(signal);
 		}
 
@@ -253,7 +253,7 @@ Backend::onAddPage(const AddPage& /*signal*/) {
 	_document->createPage(position, size);
 
 	// inform about dirty area
-	DocumentChangedArea signal(util::rect<DocumentPrecision>(position.x, position.y, position.x + size.x, position.y + size.y));
+	ChangedArea signal(util::rect<DocumentPrecision>(position.x, position.y, position.x + size.x, position.y + size.y));
 	_documentChangedArea(signal);
 }
 
@@ -266,7 +266,9 @@ Backend::anchorSelection() {
 
 		selection.anchor(*_document);
 
-		DocumentChangedArea documentSignal(selection.getBoundingBox());
+		ChangedArea documentSignal(selection.getBoundingBox());
 		_documentChangedArea(documentSignal);
 	}
+
+	_document->clear<Selection>();
 }

@@ -6,10 +6,11 @@
 #include <gui/Texture.h>
 
 #include <document/Document.h>
+#include <document/DocumentSignals.h>
+#include <tools/Tools.h>
 #include "SkiaDocumentPainter.h"
 #include "SkiaOverlayPainter.h"
 #include "PrefetchTexture.h"
-#include "Overlay.h"
 
 extern logger::LogChannel backendpainterlog;
 
@@ -21,16 +22,15 @@ public:
 
 	void setDocument(boost::shared_ptr<Document> document) {
 
-		_document = document;
 		_documentPainter.setDocument(document);
+		_overlayPainter.setDocument(document);
 		_documentCleanUpPainter.setDocument(document);
 		_documentChanged = true;
 	}
 
-	void setOverlay(boost::shared_ptr<Overlay> overlay) {
+	void setTools(boost::shared_ptr<Tools> tools) {
 
-		_overlay = overlay;
-		_overlayPainter.setOverlay(overlay);
+		_overlayPainter.setTools(tools);
 	}
 
 	void setCursorPosition(const util::point<DocumentPrecision>& position) {
@@ -85,6 +85,11 @@ public:
 	 */
 	bool cleanDirtyAreas(unsigned int maxNumRequests);
 
+	/**
+	 * Initiate a redraw of a moved selection.
+	 */
+	void moveSelection(const SelectionMoved& signal);
+
 private:
 
 	/**
@@ -105,9 +110,9 @@ private:
 	bool prepareTextures(const util::rect<int>& pixelRoi);
 
 	/**
-	 * Update the texture document in the specified ROI.
+	 * Update the document in the specified ROI.
 	 */
-	void updateDocument(const Document& document, const util::rect<int>& roi);
+	void updateDocument(const util::rect<int>& roi);
 
 	/**
 	 * Update the overlay in the specified ROI.
@@ -118,12 +123,6 @@ private:
 	 * Draw the texture content that corresponds to roi into roi.
 	 */
 	void drawTextures(const util::rect<int>& roi);
-
-	// the document to draw
-	boost::shared_ptr<Document> _document;
-
-	// the overlay to draw on top of it
-	boost::shared_ptr<Overlay> _overlay;
 
 	// indicates that the document was changed entirely
 	bool _documentChanged;

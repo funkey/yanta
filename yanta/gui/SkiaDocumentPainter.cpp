@@ -32,13 +32,13 @@ SkiaDocumentPainter::draw(SkCanvas& canvas, const util::rect<DocumentPrecision>&
 }
 
 bool
-SkiaDocumentPainter::alreadyDrawn(const Document& document) {
+SkiaDocumentPainter::needRedraw() {
 
 	// is it necessary to draw something?
-	if (document.numStrokes() > 0 && _drawnUntilStrokePoint == document.getStrokePoints().size() - (document.hasOpenStroke() ? 0 : 1))
-		return true;
+	if (getDocument().numStrokes() > 0 && _drawnUntilStrokePoint == getDocument().getStrokePoints().size() - (getDocument().hasOpenStroke() ? 0 : 1))
+		return false;
 
-	return false;
+	return true;
 }
 
 void

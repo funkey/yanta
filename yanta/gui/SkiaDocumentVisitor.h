@@ -23,6 +23,11 @@ public:
 	void setDocument(boost::shared_ptr<Document> document) { _document = document; }
 
 	/**
+	 * Check whether a document was set for this visitor already.
+	 */
+	bool hasDocument() { return _document; }
+
+	/**
 	 * Set the transformation to map from document units to pixel units.
 	 */
 	void setDeviceTransformation(

@@ -6,6 +6,7 @@
 #include <util/tree.h>
 #include <util/typelist.h>
 
+#include <tools/Tool.h>
 #include "DocumentElementContainer.h"
 #include "Page.h"
 #include "Precision.h"

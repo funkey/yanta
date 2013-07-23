@@ -1,52 +1,73 @@
+#include <SkDashPathEffect.h>
+
+#include <util/Logger.h>
+#include "SkiaDocumentPainter.h"
 #include "SkiaOverlayPainter.h"
 
-void
-SkiaOverlayPainter::draw(SkCanvas& canvas) {
-
-	util::rect<DocumentPrecision> roi(0, 0, 0, 0);
-	draw(canvas, roi);
-}
+logger::LogChannel skiaoverlaypainterlog("skiaoverlaypainterlog", "[SkiaOverlayPainter] ");
 
 void
 SkiaOverlayPainter::draw(
 		SkCanvas& canvas,
 		const util::rect<DocumentPrecision>& roi) {
 
-	canvas.save();
+	setCanvas(canvas);
+	setRoi(roi);
+
+	prepare();
 
 	// clear the surface, respecting the clipping
 	canvas.clear(SkColorSetARGB(0, 255, 255, 255));
 
-	util::rect<double> canvasRoi(0, 0, 0, 0);
+	{
+		// make sure reading access to the stroke points are safe
+		boost::shared_lock<boost::shared_mutex> lock(getDocument().getStrokePoints().getMutex());
 
-	if (!roi.isZero()) {
+		LOG_DEBUG(skiaoverlaypainterlog) << "starting to visit document" << std::endl;
 
-		// clip outside our responsibility
-		canvas.clipRect(SkRect::MakeLTRB(roi.minX, roi.minY, roi.maxX, roi.maxY));
+		// go visit the document to draw overlay elements
+		getDocument().accept(*this);
 
-		// transform roi to canvas units
-		canvasRoi = roi;
-		canvasRoi -= _pixelOffset; // TODO: precision-problematic conversion
-		canvasRoi /= _pixelsPerDeviceUnit;
+		LOG_DEBUG(skiaoverlaypainterlog) << "done to visiting document" << std::endl;
 	}
 
-	// apply the given transformation
+	// draw the tools
+	for (Tools::iterator i = _tools->begin(); i != _tools->end(); i++) {
 
-	// translate should be performed...
-	canvas.translate(_pixelOffset.x, _pixelOffset.y); // TODO: precision-problematic conversion
-	// ...after the scaling
-	canvas.scale(_pixelsPerDeviceUnit.x, _pixelsPerDeviceUnit.y);
+		Tool& tool = *(*i);
 
-	SkiaOverlayObjectPainter overlayObjectPainter(canvas);
-
-	// draw the overlay objects
-	for (unsigned int i = 0; i < _overlay->numObjects(); i++) {
-
-		OverlayObject& overlayObject = _overlay->getObject(i);
-
-		if (overlayObject.getBoundingBox().intersects(canvasRoi))
-			overlayObject.visit(overlayObjectPainter);
+		if (tool.getBoundingBox().intersects(getRoi()))
+			tool.draw(canvas);
 	}
 
-	canvas.restore();
+	finish();
+}
+
+void
+SkiaOverlayPainter::visit(Selection& selection) {
+
+	// draw the outline of the selection
+
+	util::rect<PagePrecision> bb = (selection.getBoundingBox() - selection.getShift())/selection.getScale();
+
+	SkPath path;
+	path.moveTo(bb.minX, bb.minY);
+	path.lineTo(bb.maxX, bb.minY);
+	path.lineTo(bb.maxX, bb.maxY);
+	path.lineTo(bb.minX, bb.maxY);
+	path.lineTo(bb.minX, bb.minY);
+
+	SkPaint paint;
+	paint.setColor(SkColorSetARGB(80, 0, 0, 0));
+	paint.setAntiAlias(true);
+	paint.setStyle(SkPaint::kFill_Style);
+	getCanvas().drawPath(path, paint);
+
+	SkScalar intervals[] = {3, 2};
+	SkDashPathEffect dash(intervals, 2, 0);
+	paint.setStrokeWidth(0.5);
+	paint.setColor(SkColorSetARGB(255, 0, 0, 0));
+	paint.setPathEffect(&dash);
+	paint.setStyle(SkPaint::kStroke_Style);
+	getCanvas().drawPath(path, paint);
 }

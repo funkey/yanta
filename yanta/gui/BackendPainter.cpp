@@ -96,7 +96,7 @@ BackendPainter::draw(
 		const util::rect<double>&  roi,
 		const util::point<double>& resolution) {
 
-	if (!_document) {
+	if (!_documentPainter.hasDocument()) {
 
 		LOG_DEBUG(backendpainterlog) << "no document to paint (yet)" << std::endl;
 		return;
@@ -151,7 +151,7 @@ BackendPainter::draw(
 			_documentTexture->markDirty(_bottom);
 
 			// update the working area ourselves
-			updateDocument(*_document, pixelRoi);
+			updateDocument(pixelRoi);
 			updateOverlay(pixelRoi);
 
 		// shift changed in incremental drawing mode -- move prefetch texture 
@@ -175,7 +175,7 @@ BackendPainter::draw(
 				prepareDrawing(pixelRoi);
 			}
 
-			updateDocument(*_document, pixelRoi);
+			updateDocument(pixelRoi);
 			updateOverlay(pixelRoi);
 		}
 	}
@@ -259,22 +259,23 @@ BackendPainter::refresh() {
 }
 
 void
-BackendPainter::updateDocument(const Document& document, const util::rect<int>& roi) {
+BackendPainter::updateDocument(const util::rect<int>& roi) {
 
 	// is it necessary to draw something?
-	if (_documentPainter.alreadyDrawn(document)) {
+	if (!_documentPainter.needRedraw()) {
 
 		LOG_ALL(backendpainterlog) << "nothing changed, skipping redraw" << std::endl;
 		return;
 	}
 
 	_documentTexture->fill(roi, _documentPainter);
-	_documentPainter.rememberDrawnDocument();
+	_documentPainter.rememberDrawnElements();
 }
 
 void
 BackendPainter::updateOverlay(const util::rect<int>& roi) {
 
+	// TODO: clean only dirty parts
 	_overlayTexture->fill(roi, _overlayPainter);
 }
 
@@ -332,6 +333,12 @@ BackendPainter::cleanDirtyAreas(unsigned int maxNumRequests) {
 	texture->cleanUp(_documentCleanUpPainter, maxNumRequests);
 
 	return true;
+}
+
+void
+BackendPainter::moveSelection(const SelectionMoved& signal) {
+
+	_overlayTexture->markDirty(signal.area);
 }
 
 void

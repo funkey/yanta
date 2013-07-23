@@ -7,46 +7,58 @@
 #include <util/rect.hpp>
 
 #include <document/DocumentTreeRoiVisitor.h>
-#include "Overlay.h"
-#include "SkiaOverlayObjectPainter.h"
+#include <tools/Tools.h>
+#include "SkiaDocumentPainter.h"
 
-class SkiaOverlayPainter : public DocumentTreeRoiVisitor {
+class SkiaOverlayPainter : public SkiaDocumentPainter {
 
 public:
 
-	void setOverlay(boost::shared_ptr<Overlay> overlay) { _overlay = overlay; }
-
 	/**
-	 * Set the transformation to map from canvas units to pixel units.
+	 * Set the tools to draw in the overlay.
 	 */
-	void setDeviceTransformation(
-			const util::point<double>& pixelsPerDeviceUnit,
-			const util::point<int>&    pixelOffset) {
-
-		_pixelsPerDeviceUnit = pixelsPerDeviceUnit;
-		_pixelOffset         = pixelOffset;
-	}
+	void setTools(boost::shared_ptr<Tools> tools) { _tools = tools; }
 
 	/**
-	 * Draw the whole canvas on the provided context.
-	 */
-	void draw(SkCanvas& context);
-
-	/**
-	 * Draw the canvas in the given ROI on the provided context. If 
+	 * Draw the document in the given ROI on the provided canvas. If 
 	 * drawnUntilStroke is non-zero, only an incremental draw is performed, 
 	 * starting from stroke drawnUntilStroke with point drawnUntilStrokePoint.
 	 */
 	void draw(
-			SkCanvas& context,
-			const util::rect<DocumentPrecision>& roi);
+			SkCanvas& canvas,
+			const util::rect<DocumentPrecision>& roi = util::rect<DocumentPrecision>(0, 0, 0, 0));
+
+	/**
+	 * Overload of the traverse method for this document visitor. Calls accept() 
+	 * only on selections in a document.
+	 */
+	template <typename VisitorType>
+	void traverse(Document& document, VisitorType& visitor) {
+
+		RoiTraverser<VisitorType> traverser(visitor, getRoi());
+		std::for_each(document.get<Selection>().begin(), document.get<Selection>().end(), traverser);
+	}
+
+	// proceed with others as defined in SkiaDocumentVisitor (not 
+	// SkiaOverlayPainter, since this one doesn't traverse into Selections)
+	using SkiaDocumentVisitor::traverse;
+
+	/**
+	 * Visitor callback for Documents. Do nothing.
+	 */
+	void visit(Document&) {}
+
+	/**
+	 * Visitor callback for Selections.
+	 */
+	void visit(Selection& selection);
+
+	// fallback implementation
+	using SkiaDocumentPainter::visit;
 
 private:
 
-	boost::shared_ptr<Overlay> _overlay;
-
-	util::point<double> _pixelsPerDeviceUnit;
-	util::point<int>    _pixelOffset;
+	boost::shared_ptr<Tools> _tools;
 };
 
 #endif // YANTA_SKIA_OVERLAY_PAINTER_H__

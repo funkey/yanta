@@ -34,17 +34,18 @@ public:
 	 * Remember what was drawn already. Call this method prior an incremental 
 	 * draw, to draw only new elements.
 	 */
-	void rememberDrawnDocument() {
+	void rememberDrawnElements() {
 
 		_drawnUntilStrokePoint = _drawnUntilStrokePointTmp;
 		_incremental = true;
 	}
 
 	/**
-	 * Return true if all the strokes of this document have been drawn by this 
-	 * painter already.
+	 * Returns false if there are no more elements in this document then the 
+	 * ones rememembered to be drawn already with a call to 
+	 * rememberDrawnElements().
 	 */
-	bool alreadyDrawn(const Document& document);
+	bool needRedraw();
 
 	/**
 	 * Reset the memory about what has been drawn already. Call this method to 
@@ -55,6 +56,17 @@ public:
 		_drawnUntilStrokePoint = 0;
 		_incremental = false;
 	}
+
+	/**
+	 * Overload of the traverse method for this document visitor. Does not 
+	 * process the content of Selections (this is handled by the 
+	 * SkiaOverlayPainter).
+	 */
+	template <typename VisitorType>
+	void traverse(Selection&, VisitorType&) {}
+
+	// other business as usual
+	using SkiaDocumentVisitor::traverse;
 
 	/**
 	 * Top-level visitor callback. Initializes data structures needed for the 

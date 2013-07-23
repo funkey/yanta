@@ -66,7 +66,7 @@ public:
 	inline void setEnd(unsigned long index, const StrokePoints& points) {
 
 		// update bounding box
-		for (unsigned int i = _end; i < index; i++) {
+		for (unsigned int i = std::max(_begin, _end); i < index; i++) {
 
 			const StrokePoint& point = points[i];
 

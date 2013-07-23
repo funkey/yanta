@@ -10,9 +10,9 @@
 
 #include <document/Document.h>
 #include <document/DocumentSignals.h>
+#include <tools/Tools.h>
+#include <tools/ToolSignals.h>
 #include "BackendPainter.h"
-#include "Overlay.h"
-#include "OverlaySignals.h"
 
 class BackendView : public pipeline::SimpleProcessNode<>, public gui::PointerSignalFilter {
 
@@ -46,6 +46,8 @@ private:
 	 */
 	bool filter(gui::PointerSignal&);
 
+	// callbacks from user
+
 	void onMouseMove(const gui::MouseMove& signal);
 
 	void onPenMove(const gui::PenMove& signal);
@@ -60,13 +62,22 @@ private:
 
 	void onFingerUp(const gui::FingerUp& signal);
 
-	void onDocumentChangedArea(const DocumentChangedArea& signal);
 
-	void onOverlayChangedArea(const OverlayChangedArea& signal);
+	// callbacks from backend for document
+
+	void onDocumentChangedArea(const ChangedArea& signal);
 
 	void onStrokePointAdded(const StrokePointAdded& signal);
 
+	void onSelectionMoved(const SelectionMoved& signal);
+
+
+	// callbacks from backend for tools
+
+	void onToolsChangedArea(const ChangedArea& signal);
+
 	void onLassoPointAdded(const LassoPointAdded& signal);
+
 
 	void addFinger(const gui::FingerDown& signal);
 
@@ -107,7 +118,7 @@ private:
 	static const unsigned long DragTimeout              = 500;
 
 	pipeline::Input<Document>        _document;
-	pipeline::Input<Overlay>         _overlay;
+	pipeline::Input<Tools>           _tools;
 	pipeline::Output<BackendPainter> _painter;
 
 	signals::Slot<const gui::ContentChanged>   _contentChanged;
@@ -126,7 +137,7 @@ private:
 	// number of fingers on the screen changes)
 	util::point<DocumentPrecision> _gestureStartCenter;
 	DocumentPrecision              _gestureStartDistance;
-	unsigned long                _gestureStartTime;
+	unsigned long                  _gestureStartTime;
 
 	// used to stop the background rendering thread
 	bool _backgroundPainterStopped;

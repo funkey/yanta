@@ -25,13 +25,14 @@ BackendView::BackendView() :
 	_penOffset(optionPenOffsetX.as<int>(), optionPenOffsetY.as<int>()) {
 
 	registerInput(_document, "document");
-	registerInput(_overlay, "overlay");
+	registerInput(_tools, "tools");
 	registerOutput(_painter, "painter");
 
 	_document.registerBackwardCallback(&BackendView::onDocumentChangedArea, this);
 	_document.registerBackwardCallback(&BackendView::onStrokePointAdded, this);
-	_overlay.registerBackwardCallback(&BackendView::onOverlayChangedArea, this);
-	_overlay.registerBackwardCallback(&BackendView::onLassoPointAdded, this);
+	_document.registerBackwardCallback(&BackendView::onSelectionMoved, this);
+	_tools.registerBackwardCallback(&BackendView::onToolsChangedArea, this);
+	_tools.registerBackwardCallback(&BackendView::onLassoPointAdded, this);
 
 	_painter.registerForwardSlot(_contentChanged);
 	_painter.registerForwardSlot(_fullscreen);
@@ -62,7 +63,7 @@ void
 BackendView::updateOutputs() {
 
 	_painter->setDocument(_document);
-	_painter->setOverlay(_overlay);
+	_painter->setTools(_tools);
 
 	_contentChanged();
 }
@@ -342,18 +343,18 @@ BackendView::initGesture(unsigned long timestamp) {
 }
 
 void
-BackendView::onDocumentChangedArea(const DocumentChangedArea& signal) {
+BackendView::onDocumentChangedArea(const ChangedArea& signal) {
 
-	LOG_ALL(backendviewlog) << "area " << signal.area << " changed" << std::endl;
+	LOG_ALL(backendviewlog) << "document area " << signal.area << " changed" << std::endl;
 
 	_painter->markDirty(signal.area);
 	_contentChanged();
 }
 
 void
-BackendView::onOverlayChangedArea(const OverlayChangedArea& signal) {
+BackendView::onToolsChangedArea(const ChangedArea& signal) {
 
-	LOG_ALL(backendviewlog) << "overlay area " << signal.area << " changed" << std::endl;
+	LOG_ALL(backendviewlog) << "tools area " << signal.area << " changed" << std::endl;
 
 	_contentChanged();
 }
@@ -362,6 +363,14 @@ void
 BackendView::onStrokePointAdded(const StrokePointAdded& /*signal*/) {
 
 	LOG_ALL(backendviewlog) << "a stroke point was added -- initiate a redraw" << std::endl;
+
+	_contentChanged();
+}
+
+void
+BackendView::onSelectionMoved(const SelectionMoved& signal) {
+
+	_painter->moveSelection(signal);
 
 	_contentChanged();
 }

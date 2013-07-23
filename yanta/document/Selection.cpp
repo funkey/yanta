@@ -13,15 +13,23 @@ Selection::CreateFromPath(const Path& path, Document& document) {
 
 	Selection selection(document.getStrokePoints());
 
+	LOG_ALL(selectionlog) << "created new selection in " << selection.getBoundingBox() << std::endl;
+
 	for (unsigned int p = 0; p < document.numPages(); p++) {
+
+		LOG_ALL(selectionlog) << "parsing page " << p << " for selection content" <<  std::endl;
 
 		Page& page = document.getPage(p);
 
 		// get all the strokes that are fully contained in the path
 		std::vector<Stroke> selectedStrokes = page.removeStrokes(boost::bind(&Path::contains, &path, boost::ref(page), _1, boost::ref(document.getStrokePoints())));
 
-		for (std::vector<Stroke>::iterator i = selectedStrokes.begin(); i != selectedStrokes.end(); i++)
+		for (std::vector<Stroke>::iterator i = selectedStrokes.begin(); i != selectedStrokes.end(); i++) {
+
+			LOG_ALL(selectionlog) << "adding a stroke at " << (*i).getBoundingBox() << std::endl;
 			selection.addStroke(page, *i);
+			LOG_ALL(selectionlog) << "selection is now " << selection.getBoundingBox() << std::endl;
+		}
 	}
 
 	return selection;

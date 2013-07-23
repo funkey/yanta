@@ -138,7 +138,7 @@ int main(int optionc, char** optionv) {
 			overlayView->addInput(osd->getOutput("osd painter"));
 			overlayView->addInput(backendView->getOutput());
 			backendView->setInput("document", backend->getOutput("document"));
-			backendView->setInput("overlay", backend->getOutput("overlay"));
+			backendView->setInput("tools", backend->getOutput("tools"));
 			backend->setInput("initial document", reader->getOutput());
 			backend->setInput("pen mode", osd->getOutput("pen mode"));
 			backend->setInput("osd request", osd->getOutput("osd request"));
