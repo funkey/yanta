@@ -79,6 +79,8 @@ DocumentReader::readPage(std::ifstream& in, unsigned int page, unsigned int file
 
 	for (unsigned int i = 0; i < numStrokes; i++)
 		readStroke(in, page, fileVersion);
+
+	_document->getPage(page).recomputeBoundingBox();
 }
 
 void

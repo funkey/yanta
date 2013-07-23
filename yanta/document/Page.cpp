@@ -52,6 +52,14 @@ Page::createNewStroke(unsigned long begin) {
 	add(Stroke(begin));
 }
 
+void
+Page::recomputeBoundingBox() {
+
+	resetBoundingBox();
+
+	for_each(UpdateBoundingBox(*this));
+}
+
 util::rect<DocumentPrecision>
 Page::erase(const util::point<DocumentPrecision>& begin, const util::point<DocumentPrecision>& end) {
 

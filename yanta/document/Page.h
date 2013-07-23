@@ -74,6 +74,8 @@ public:
 
 		_strokePoints.add(StrokePoint(p, pressure, timestamp));
 		currentStroke().setEnd(_strokePoints.size(), _strokePoints);
+
+		fitBoundingBox(position);
 	}
 
 	/**
@@ -126,10 +128,30 @@ public:
 		std::vector<Stroke> removed(newEnd, get<Stroke>().end());
 		get<Stroke>().resize(newEnd - get<Stroke>().begin());
 
+		recomputeBoundingBox();
+
 		return removed;
 	}
 
+	/**
+	 * Recompute the bounding box of this page to fit its content.
+	 */
+	void recomputeBoundingBox();
+
 private:
+
+	struct UpdateBoundingBox {
+
+		UpdateBoundingBox(Page& page_) : page(page_) {}
+
+		template <typename T>
+		void operator()(T& t) {
+
+			page.fitBoundingBox(t.getBoundingBox());
+		}
+
+		Page& page;
+	};
 
 	/**
 	 * Erase points from a stroke by splitting. Reports the changed area.
