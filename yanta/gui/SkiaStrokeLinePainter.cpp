@@ -2,17 +2,15 @@
 
 #include <document/Stroke.h>
 #include <document/StrokePoints.h>
-#include "SkiaStrokePainter.h"
+#include "SkiaStrokeLinePainter.h"
 #include "util/Logger.h"
 
-logger::LogChannel skiastrokepainterlog("skiastrokepainterlog", "[SkiaStrokePainter] ");
-
-SkiaStrokePainter::SkiaStrokePainter(SkCanvas& canvas, const StrokePoints& strokePoints) :
+SkiaStrokeLinePainter::SkiaStrokeLinePainter(SkCanvas& canvas, const StrokePoints& strokePoints) :
 	_canvas(canvas),
 	_strokePoints(strokePoints) {}
 
 void
-SkiaStrokePainter::draw(
+SkiaStrokeLinePainter::draw(
 		const Stroke& stroke,
 		const util::rect<double>& /*roi*/,
 		unsigned long beginStroke,
@@ -25,11 +23,8 @@ SkiaStrokePainter::draw(
 	}
 
 	// make sure there are enough points in this stroke to draw it
-	if (stroke.end() - stroke.begin() <= 1) {
-
-		LOG_ALL(skiastrokepainterlog) << "this stroke has less than two points -- skip drawing" << std::endl;
+	if (stroke.end() - stroke.begin() <= 1)
 		return;
-	}
 
 	double penWidth = stroke.getStyle().width();
 	unsigned char penColorRed   = stroke.getStyle().getRed();
@@ -59,7 +54,7 @@ SkiaStrokePainter::draw(
 }
 
 double
-SkiaStrokePainter::widthPressureCurve(double pressure) {
+SkiaStrokeLinePainter::widthPressureCurve(double pressure) {
 
 	const double minPressure = 0.5;
 	const double maxPressure = 1;
@@ -70,7 +65,7 @@ SkiaStrokePainter::widthPressureCurve(double pressure) {
 }
 
 double
-SkiaStrokePainter::alphaPressureCurve(double pressure) {
+SkiaStrokeLinePainter::alphaPressureCurve(double pressure) {
 
 	const double minPressure = 1;
 	const double maxPressure = 1;

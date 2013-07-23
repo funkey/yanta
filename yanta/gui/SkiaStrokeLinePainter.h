@@ -1,5 +1,5 @@
-#ifndef YANTA_SKIA_STROKE_PAINTER_H__
-#define YANTA_SKIA_STROKE_PAINTER_H__
+#ifndef YANTA_SKIA_STROKE_LINE_PAINTER_H__
+#define YANTA_SKIA_STROKE_LINE_PAINTER_H__
 
 #include <util/rect.hpp>
 
@@ -8,11 +8,11 @@ class SkCanvas;
 class Stroke;
 class StrokePoints;
 
-class SkiaStrokePainter {
+class SkiaStrokeLinePainter {
 
 public:
 
-	SkiaStrokePainter(SkCanvas& canvas, const StrokePoints& strokePoints);
+	SkiaStrokeLinePainter(SkCanvas& canvas, const StrokePoints& strokePoints);
 
 	void draw(
 		const Stroke& stroke,

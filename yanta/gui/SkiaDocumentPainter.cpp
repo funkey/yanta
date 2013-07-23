@@ -1,6 +1,7 @@
 #include <util/Logger.h>
 #include "SkiaDocumentPainter.h"
-#include "SkiaStrokePainter.h"
+#include "SkiaStrokeBallPainter.h"
+#include "SkiaStrokePathEffectPainter.h"
 
 logger::LogChannel skiadocumentpainterlog("skiadocumentpainterlog", "[SkiaDocumentPainter] ");
 
@@ -110,7 +111,7 @@ SkiaDocumentPainter::visit(Stroke& stroke) {
 	// remember the biggest point we drew already
 	_drawnUntilStrokePointTmp = std::max(_drawnUntilStrokePointTmp, (unsigned long)end);
 
-	SkiaStrokePainter strokePainter(getCanvas(), getDocument().getStrokePoints());
+	SkiaStrokePathEffectPainter strokePainter(getCanvas(), getDocument().getStrokePoints());
 
 	LOG_ALL(skiadocumentpainterlog)
 			<< "drawing stroke (" << stroke.begin() << " - " << stroke.end()
