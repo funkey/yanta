@@ -12,9 +12,11 @@ class SkiaStrokeBallPainter {
 
 public:
 
-	SkiaStrokeBallPainter(SkCanvas& canvas, const StrokePoints& strokePoints);
+	SkiaStrokeBallPainter();
 
 	void draw(
+		SkCanvas& canvas,
+		const StrokePoints& strokePoints,
 		const Stroke& stroke,
 		const util::rect<double>& roi,
 		unsigned long beginStroke = 0,
@@ -23,11 +25,7 @@ public:
 private:
 
 	double widthPressureCurve(double pressure);
-
 	double alphaPressureCurve(double pressure);
-
-	SkCanvas&           _canvas;
-	const StrokePoints& _strokePoints;
 };
 
 #endif // YANTA_SKIA_STROKE_BALL_PAINTER_H__
