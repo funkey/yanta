@@ -43,7 +43,7 @@ SkiaStrokeBallPainter::draw(
 	util::point<PagePrecision> previousPosition = strokePoints[beginStroke].position;
 	double pos = 0;
 	double length = 0;
-	const double step = 0.1;
+	const double step = 0.1*penWidth;
 
 	// if we start drawing in the middle of the stroke, we need to get the 
 	// length of the stroke until our beginning
