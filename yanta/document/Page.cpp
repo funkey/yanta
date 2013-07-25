@@ -7,7 +7,7 @@ logger::LogChannel pagelog("pagelog", "[Page] ");
 Page::Page(
 		Document* document,
 		const util::point<DocumentPrecision>& position,
-		const util::point<PagePrecision>&   size) :
+		const util::point<PagePrecision>&     size) :
 	_size(size),
 	_pageBoundingBox(position.x, position.y, position.x + size.x, position.y + size.y),
 	_strokePoints(document->getStrokePoints()) {
@@ -56,7 +56,7 @@ void
 Page::recomputeBoundingBox() {
 
 	resetBoundingBox();
-
+	fitBoundingBox(util::rect<PagePrecision>(0, 0, _size.x, _size.y));
 	for_each(UpdateBoundingBox(*this));
 }
 
