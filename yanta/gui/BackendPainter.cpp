@@ -307,7 +307,9 @@ BackendPainter::markDirty(const util::rect<DocumentPrecision>& area) {
 		gui::OpenGl::Guard guard;
 
 		// in this case, redraw immediately the part that got dirty
-		_documentTexture->fill(_previousPixelRoi.intersection(pixelArea), _documentCleanUpPainter);
+		_documentPainter.setIncremental(false);
+		_documentTexture->fill(_previousPixelRoi.intersection(pixelArea), _documentPainter);
+		_documentPainter.setIncremental(true);
 
 		// send everything beyond the working area to the worker threads
 		_documentTexture->markDirty(_left.intersection(pixelArea));
@@ -384,6 +386,7 @@ BackendPainter::prepareDrawing(const util::rect<int>& roi) {
 			workingArea.maxX,
 			workingArea.maxY + _prefetchBottom);
 
+	_documentPainter.setIncremental(true);
 	_documentPainter.resetIncrementalMemory();
 	_documentPainter.setDeviceTransformation(_scale, util::point<DocumentPrecision>(0.0, 0.0));
 	_documentCleanUpPainter.setDeviceTransformation(_scale, util::point<DocumentPrecision>(0.0, 0.0));

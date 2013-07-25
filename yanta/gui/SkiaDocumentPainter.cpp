@@ -1,7 +1,5 @@
 #include <util/Logger.h>
 #include "SkiaDocumentPainter.h"
-#include "SkiaStrokeBallPainter.h"
-#include "SkiaStrokePathEffectPainter.h"
 
 logger::LogChannel skiadocumentpainterlog("skiadocumentpainterlog", "[SkiaDocumentPainter] ");
 
@@ -11,7 +9,11 @@ SkiaDocumentPainter::SkiaDocumentPainter(
 	_clearColor(clearColor),
 	_drawPaper(drawPaper),
 	_drawnUntilStrokePoint(0),
-	_drawnUntilStrokePointTmp(0) {}
+	_drawnUntilStrokePointTmp(0),
+	_canvasCleared(false),
+	_canvasClearedTmp(false),
+	_paperDrawn(false),
+	_paperDrawnTmp(false) {}
 
 void
 SkiaDocumentPainter::draw(SkCanvas& canvas, const util::rect<DocumentPrecision>& roi) {
@@ -35,8 +37,14 @@ SkiaDocumentPainter::draw(SkCanvas& canvas, const util::rect<DocumentPrecision>&
 bool
 SkiaDocumentPainter::needRedraw() {
 
-	// is it necessary to draw something?
-	if (getDocument().numStrokes() > 0 && _drawnUntilStrokePoint == getDocument().getStrokePoints().size() - (getDocument().hasOpenStroke() ? 0 : 1))
+	if (!_canvasCleared || !_paperDrawn)
+		return true;
+
+	if (getDocument().numStrokes() == 0)
+		return false;
+
+	// did we draw all the stroke points?
+	if (_drawnUntilStrokePoint == getDocument().getStrokePoints().size())
 		return false;
 
 	return true;
@@ -49,10 +57,14 @@ SkiaDocumentPainter::visit(Document&) {
 
 	// reset temporal memory about what we drew already
 	_drawnUntilStrokePointTmp = _drawnUntilStrokePoint;
+	_canvasClearedTmp = _canvasCleared;
+	_paperDrawnTmp = _paperDrawn;
 
 	// clear the surface, respecting the clipping
-	if (!_incremental)
+	if (!_incremental || !_canvasCleared) {
 		getCanvas().drawColor(SkColorSetRGB(_clearColor.blue, _clearColor.green, _clearColor.red));
+		_canvasClearedTmp = true;
+	}
 }
 
 void
@@ -60,7 +72,7 @@ SkiaDocumentPainter::visit(Page& page) {
 
 	LOG_ALL(skiadocumentpainterlog) << "visiting page" << std::endl;
 
-	if (_incremental || !_drawPaper)
+	if ((_incremental && _paperDrawn) || !_drawPaper)
 		return;
 
 	// even though the roi might intersect the page's content, it might not 
@@ -85,39 +97,45 @@ SkiaDocumentPainter::visit(Page& page) {
 	double endX   = getRoi().isZero() ? pageSize.x : std::min(getRoi().maxX, pageSize.x);
 	double endY   = getRoi().isZero() ? pageSize.y : std::min(getRoi().maxY, pageSize.y);
 
-	for (int x = (int)startX; x < (int)endX; x++)
+	for (int x = (int)ceil(startX); x <= (int)floor(endX); x++)
 		getCanvas().drawLine(x, startY, x, endY, paint);
-	for (int y = (int)startY; y < (int)endY; y++) {
+	for (int y = (int)ceil(startY); y <= (int)floor(endY); y++) {
 		if (y%10 == 0)
 			paint.setStrokeWidth(0.05);
 		getCanvas().drawLine(startX, y, endX, y, paint);
 		if (y%10 == 0)
 			paint.setStrokeWidth(0.01);
 	}
+
+	_paperDrawnTmp = true;
 }
 
 void
 SkiaDocumentPainter::visit(Stroke& stroke) {
 
-	// the effective end of a stroke is one less, if the stroke is not finished, 
-	// yet
-	long begin = std::max((long)_drawnUntilStrokePoint - 1, (long)stroke.begin());
-	long end   = (long)stroke.end() - (stroke.finished() ? 0 : 1);
+	unsigned long end = stroke.end();
+
+	// end is one beyond the last point of the stroke. _drawnUntilStrokePoint is 
+	// one beyond the last point until which we drew already.  If end is less or 
+	// equal what we drew, there is nothing to do.
 
 	// drawn already?
-	if (end <= (long)_drawnUntilStrokePoint)
+	if (_incremental && end <= _drawnUntilStrokePoint)
 		return;
 
-	// remember the biggest point we drew already
-	_drawnUntilStrokePointTmp = std::max(_drawnUntilStrokePointTmp, (unsigned long)end);
+	unsigned long begin = stroke.begin();
 
-	SkiaStrokePathEffectPainter strokePainter(getCanvas(), getDocument().getStrokePoints());
+	if (_incremental && _drawnUntilStrokePoint > 0 && _drawnUntilStrokePoint - 1 > stroke.begin())
+		begin = _drawnUntilStrokePoint - 1;
 
 	LOG_ALL(skiadocumentpainterlog)
 			<< "drawing stroke (" << stroke.begin() << " - " << stroke.end()
 			<< ") , starting from point " << begin << " until " << end << std::endl;
 
-	strokePainter.draw(stroke, getRoi(), begin, end);
+	_strokePainter.draw(getCanvas(), getDocument().getStrokePoints(), stroke, getRoi(), begin, end);
+
+	// remember until which point we drew already in our temporary memory
+	_drawnUntilStrokePointTmp = std::max(_drawnUntilStrokePointTmp, end);
 }
 
 

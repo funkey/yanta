@@ -6,6 +6,7 @@
 
 #include <document/Document.h>
 #include "SkiaDocumentVisitor.h"
+#include "SkiaStrokeBallPainter.h"
 
 class SkiaDocumentPainter : public SkiaDocumentVisitor {
 
@@ -31,13 +32,22 @@ public:
 			const util::rect<DocumentPrecision>& roi = util::rect<DocumentPrecision>(0, 0, 0, 0));
 
 	/**
+	 * Enable or disable incremental drawing. If enabled and 
+	 * rememberDrawnElements() has been called, a subsequent call to draw() will 
+	 * only paint what was not painted, yet. After that, rememberDrawnElements() 
+	 * has to be called again to remember these incremental changes.
+	 */
+	void setIncremental(bool incremental) { _incremental = incremental; }
+
+	/**
 	 * Remember what was drawn already. Call this method prior an incremental 
 	 * draw, to draw only new elements.
 	 */
 	void rememberDrawnElements() {
 
 		_drawnUntilStrokePoint = _drawnUntilStrokePointTmp;
-		_incremental = true;
+		_canvasCleared         = _canvasClearedTmp;
+		_paperDrawn            = _paperDrawnTmp;
 	}
 
 	/**
@@ -54,7 +64,8 @@ public:
 	void resetIncrementalMemory() {
 
 		_drawnUntilStrokePoint = 0;
-		_incremental = false;
+		_canvasCleared =  false;
+		_paperDrawn = false;
 	}
 
 	/**
@@ -95,15 +106,20 @@ private:
 	// shall the paper be drawn as well?
 	bool _drawPaper;
 
-	// the number of the stroke point until which all have been drawn already
-	unsigned long _drawnUntilStrokePoint;
+	// the number of the stroke point until which all lines connecting previous 
+	// stroke points have been drawn
+	unsigned long _drawnUntilStrokePoint, _drawnUntilStrokePointTmp;
 
-	// temporal memory of the number of the stroke point until which all have 
-	// been drawn already
-	unsigned long _drawnUntilStrokePointTmp;
+	// did we clear the canvas in a previous call already?
+	bool _canvasCleared, _canvasClearedTmp;
 
-	// did we remember what we drew?
+	// did we draw the paper in a previous call already?
+	bool _paperDrawn, _paperDrawnTmp;
+
+	// shall we draw incrementally?
 	bool _incremental;
+
+	SkiaStrokeBallPainter _strokePainter;
 };
 
 #endif // YANTA_SKIA_CANVAS_PAINTER_H__
