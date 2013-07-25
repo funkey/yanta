@@ -1,4 +1,6 @@
 #include <cmath>
+
+#include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/make_shared.hpp>
 
 #include <gui/OpenGl.h>
@@ -17,6 +19,7 @@ BackendPainter::BackendPainter() :
 	_documentChanged(true),
 	_documentPainter(gui::skia_pixel_t(255, 255, 255)),
 	_documentCleanUpPainter(gui::skia_pixel_t(255, 255, 255)),
+	_overlayAlpha(1.0),
 	_prefetchLeft(1024),
 	_prefetchRight(1024),
 	_prefetchTop(1024),
@@ -91,7 +94,7 @@ BackendPainter::documentToTexture(const util::point<DocumentPrecision>& point) {
 	return inv;
 }
 
-void
+bool
 BackendPainter::draw(
 		const util::rect<double>&  roi,
 		const util::point<double>& resolution) {
@@ -99,7 +102,7 @@ BackendPainter::draw(
 	if (!_documentPainter.hasDocument()) {
 
 		LOG_DEBUG(backendpainterlog) << "no document to paint (yet)" << std::endl;
-		return;
+		return false;
 	}
 
 	LOG_ALL(backendpainterlog) << "redrawing in " << roi << " with resolution " << resolution << std::endl;
@@ -132,6 +135,8 @@ BackendPainter::draw(
 		_documentChanged = false;
 	}
 
+	bool wantsRedraw = false;
+
 	if (_mode == IncrementalDrawing) {
 
 		// scale changed while we are in drawing mode -- texture needs to be 
@@ -152,7 +157,7 @@ BackendPainter::draw(
 
 			// update the working area ourselves
 			updateDocument(pixelRoi);
-			updateOverlay(pixelRoi);
+			wantsRedraw = updateOverlay(pixelRoi);
 
 		// shift changed in incremental drawing mode -- move prefetch texture 
 		// and get back to incremental drawing
@@ -176,7 +181,7 @@ BackendPainter::draw(
 			}
 
 			updateDocument(pixelRoi);
-			updateOverlay(pixelRoi);
+			wantsRedraw = updateOverlay(pixelRoi);
 		}
 	}
 
@@ -214,6 +219,8 @@ BackendPainter::draw(
 	// one of the other modes)
 	if (_mode != Zooming)
 		_previousScale    = _scale;
+
+	return wantsRedraw;
 }
 
 bool
@@ -272,11 +279,24 @@ BackendPainter::updateDocument(const util::rect<int>& roi) {
 	_documentPainter.rememberDrawnElements();
 }
 
-void
+bool
 BackendPainter::updateOverlay(const util::rect<int>& roi) {
 
 	// TODO: clean only dirty parts
 	_overlayTexture->fill(roi, _overlayPainter);
+
+	if (_overlayPainter.getDocument().size<Selection>() > 0) {
+
+		LOG_ALL(backendpainterlog) << "there are selection in the overlay -- requesting a redraw" << std::endl;
+
+		// let the selection pulsate
+		long millis = boost::posix_time::microsec_clock::local_time().time_of_day().total_milliseconds();
+		_overlayAlpha = 0.5 + 0.4*2*std::abs(0.5 - std::fmod(millis*0.001, 1.0));
+
+		return true;
+	}
+
+	return false;
 }
 
 void
@@ -404,12 +424,16 @@ BackendPainter::drawTextures(const util::rect<int>& roi) {
 	if (_mode == Zooming) {
 
 		glScaled(_scaleChange.x, _scaleChange.y, 1.0);
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		_documentTexture->render(roi/_scaleChange);
+		glColor4f(1.0f, 1.0f, 0.5f, _overlayAlpha);
 		_overlayTexture->render(roi/_scaleChange);
 
 	} else {
 
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		_documentTexture->render(roi);
+		glColor4f(1.0f, 1.0f, 0.8f, _overlayAlpha);
 		_overlayTexture->render(roi);
 	}
 

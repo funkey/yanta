@@ -8,7 +8,7 @@ logger::LogChannel osdpainterlog("osdpainterlog", "[OsdPainter] ");
 OsdPainter::OsdPainter(const PenMode& penMode) :
 	_penMode(penMode) {}
 
-void
+bool
 OsdPainter::draw(
 		const util::rect<double>&  roi,
 		const util::point<double>& resolution) {
@@ -124,5 +124,7 @@ OsdPainter::draw(
 	glVertex2f(x + 3, y + 10);
 	glVertex2f(x + 3, y - 10);
 	glEnd();
+
+	return false;
 }
 

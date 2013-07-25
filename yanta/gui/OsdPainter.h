@@ -17,7 +17,7 @@ public:
 		_penMode = penMode;
 	}
 
-	void draw(
+	bool draw(
 			const util::rect<double>&  roi,
 			const util::point<double>& resolution);
 

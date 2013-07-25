@@ -14,6 +14,8 @@ class SkiaOverlayPainter : public SkiaDocumentPainter {
 
 public:
 
+	SkiaOverlayPainter();
+
 	/**
 	 * Set the tools to draw in the overlay.
 	 */
@@ -59,6 +61,8 @@ public:
 private:
 
 	boost::shared_ptr<Tools> _tools;
+
+	SkPaint _selectionPaint;
 };
 
 #endif // YANTA_SKIA_OVERLAY_PAINTER_H__

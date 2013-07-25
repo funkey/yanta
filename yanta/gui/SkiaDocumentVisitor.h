@@ -23,6 +23,11 @@ public:
 	void setDocument(boost::shared_ptr<Document> document) { _document = document; }
 
 	/**
+	 * Get the document to visit.
+	 */
+	Document& getDocument() { return *_document; }
+
+	/**
 	 * Check whether a document was set for this visitor already.
 	 */
 	bool hasDocument() { return _document; }
@@ -66,11 +71,6 @@ protected:
 	 * Get the skia canvas to draw to.
 	 */
 	SkCanvas& getCanvas() { return *_canvas; }
-
-	/**
-	 * Get the document to visit.
-	 */
-	Document& getDocument() { return *_document; }
 
 private:
 

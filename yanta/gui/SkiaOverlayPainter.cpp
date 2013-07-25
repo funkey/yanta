@@ -1,10 +1,20 @@
-#include <SkDashPathEffect.h>
+#include <SkMaskFilter.h>
+#include <SkBlurMaskFilter.h>
 
 #include <util/Logger.h>
 #include "SkiaDocumentPainter.h"
 #include "SkiaOverlayPainter.h"
 
 logger::LogChannel skiaoverlaypainterlog("skiaoverlaypainterlog", "[SkiaOverlayPainter] ");
+
+SkiaOverlayPainter::SkiaOverlayPainter() {
+
+	_selectionPaint.setColor(SkColorSetARGB(25, 0, 0, 0));
+	_selectionPaint.setAntiAlias(true);
+	_selectionPaint.setStyle(SkPaint::kFill_Style);
+	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(0.1, SkBlurMaskFilter::kNormal_BlurStyle);
+	_selectionPaint.setMaskFilter(maskFilter)->unref();
+}
 
 void
 SkiaOverlayPainter::draw(
@@ -57,17 +67,5 @@ SkiaOverlayPainter::visit(Selection& selection) {
 	path.lineTo(bb.minX, bb.maxY);
 	path.lineTo(bb.minX, bb.minY);
 
-	SkPaint paint;
-	paint.setColor(SkColorSetARGB(80, 0, 0, 0));
-	paint.setAntiAlias(true);
-	paint.setStyle(SkPaint::kFill_Style);
-	getCanvas().drawPath(path, paint);
-
-	SkScalar intervals[] = {3, 2};
-	SkDashPathEffect dash(intervals, 2, 0);
-	paint.setStrokeWidth(0.5);
-	paint.setColor(SkColorSetARGB(255, 0, 0, 0));
-	paint.setPathEffect(&dash);
-	paint.setStyle(SkPaint::kStroke_Style);
-	getCanvas().drawPath(path, paint);
+	getCanvas().drawPath(path, _selectionPaint);
 }

@@ -166,7 +166,6 @@ PrefetchTexture::render(const util::rect<int>& roi) {
 		//glEnable(GL_TEXTURE_2D);
 		// END DEBUG
 
-		glColor3f(1.0f, 1.0f, 1.0f);
 		glBegin(GL_QUADS);
 		glTexCoord2d(texCoords.minX, texCoords.minY); glVertex2d(parts[i].minX, parts[i].minY);
 		glTexCoord2d(texCoords.maxX, texCoords.minY); glVertex2d(parts[i].maxX, parts[i].minY);

@@ -40,7 +40,7 @@ public:
 		_cursorPosition = position;
 	}
 
-	void draw(
+	bool draw(
 			const util::rect<double>&  roi,
 			const util::point<double>& resolution);
 
@@ -117,7 +117,7 @@ private:
 	/**
 	 * Update the overlay in the specified ROI.
 	 */
-	void updateOverlay(const util::rect<int>& roi);
+	bool updateOverlay(const util::rect<int>& roi);
 
 	/**
 	 * Draw the texture content that corresponds to roi into roi.
@@ -139,6 +139,9 @@ private:
 	// the textures to draw to
 	boost::shared_ptr<PrefetchTexture> _documentTexture;
 	boost::shared_ptr<PrefetchTexture> _overlayTexture;
+
+	// the transparency of the overlay texture
+	float _overlayAlpha;
 
 	// the number of pixels to add to the visible region for prefetching
 	unsigned int _prefetchLeft;
