@@ -144,7 +144,9 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 			anchorSelection();
 
-			_document->add(Selection::CreateFromPath(_lasso->getPath(), *_document));
+			Selection selection = Selection::CreateFromPath(_lasso->getPath(), *_document);
+			if (selection.size() > 0)
+				_document->add(selection);
 
 			_tools->remove(_lasso);
 
