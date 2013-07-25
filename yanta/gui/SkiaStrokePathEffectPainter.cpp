@@ -71,7 +71,18 @@ SkiaStrokePathEffectPainter::makePathEffect(
 	//path.transform(mirror, &backward);
 	//path.reverseAddPath(backward);
 
-	return new SkPath1DPathEffect(path, length, 0, SkPath1DPathEffect::kMorph_Style);
+	SkPathEffect* pressureEffect = new SkPath1DPathEffect(path, length, 0, SkPath1DPathEffect::kMorph_Style);
+#if 1
+	return pressureEffect;
+#else
+	SkPathEffect* smoothEffect = new SkCornerPathEffect(SkIntToScalar(200));
+	SkPathEffect* pathEffect   = new SkComposePathEffect(pressureEffect, smoothEffect);
+
+	smoothEffect->unref();
+	pressureEffect->unref();
+
+	return pathEffect;
+#endif
 }
 
 void
