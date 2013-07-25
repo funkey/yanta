@@ -1,3 +1,6 @@
+#include <SkMaskFilter.h>
+#include <SkBlurMaskFilter.h>
+
 #include <util/Logger.h>
 #include "SkiaDocumentPainter.h"
 
@@ -80,32 +83,66 @@ SkiaDocumentPainter::visit(Page& page) {
 	if (!getRoi().isZero() && !getRoi().intersects(util::rect<PagePrecision>(0, 0, page.getSize().x, page.getSize().y)))
 		return;
 
-	SkPaint paint;
-	paint.setStrokeCap(SkPaint::kRound_Cap);
-	paint.setColor(SkColorSetRGB(0, 0, 0));
-	paint.setAntiAlias(true);
+	SkPath outline;
 	const util::point<PagePrecision>& pageSize = page.getSize();
-	getCanvas().drawLine(0, 0, pageSize.x, 0, paint);
-	getCanvas().drawLine(pageSize.x, 0, pageSize.x, pageSize.y, paint);
-	getCanvas().drawLine(pageSize.x, pageSize.y, 0, pageSize.y, paint);
-	getCanvas().drawLine(0, pageSize.y, 0, 0, paint);
-	paint.setColor(SkColorSetRGB(0, 203, 0));
-	paint.setStrokeWidth(0.01);
+	outline.lineTo(pageSize.x, 0);
+	outline.lineTo(pageSize.x, pageSize.y);
+	outline.lineTo(0, pageSize.y);
+	outline.lineTo(0, 0);
+	outline.close();
+
+	const char pageRed   = 255;
+	const char pageGreen = 255;
+	const char pageBlue  = 245;
+
+	const char gridRed   = 55;
+	const char gridGreen = 55;
+	const char gridBlue  = 45;
+
+	const double gridSizeX = 5.0;
+	const double gridSizeY = 5.0;
+	const double gridWidth = 0.03;
+
+	SkPaint paint;
+
+	// shadow-like thingie
+
+	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(5, SkBlurMaskFilter::kOuter_BlurStyle, SkBlurMaskFilter::kNone_BlurFlag);
+	paint.setMaskFilter(maskFilter)->unref();
+	paint.setColor(SkColorSetRGB(0.5*pageRed, 0.5*pageGreen, 0.5*pageBlue));
+	getCanvas().drawPath(outline, paint);
+	paint.setMaskFilter(NULL);
+
+	// the paper
+
+	paint.setStyle(SkPaint::kFill_Style);
+	paint.setColor(SkColorSetRGB(pageRed, pageGreen, pageBlue));
+	getCanvas().drawPath(outline, paint);
+
+	// the grid
+
+	paint.setStyle(SkPaint::kStroke_Style);
+	paint.setColor(SkColorSetRGB(gridRed, gridGreen, gridBlue));
+	paint.setStrokeWidth(gridWidth);
+	paint.setAntiAlias(true);
 
 	double startX = std::max(getRoi().minX, 0.0);
 	double startY = std::max(getRoi().minY, 0.0);
 	double endX   = getRoi().isZero() ? pageSize.x : std::min(getRoi().maxX, pageSize.x);
 	double endY   = getRoi().isZero() ? pageSize.y : std::min(getRoi().maxY, pageSize.y);
 
-	for (int x = (int)ceil(startX); x <= (int)floor(endX); x++)
+	for (int x = (int)ceil(startX/gridSizeX)*gridSizeX; x <= (int)floor(endX/gridSizeX)*gridSizeX; x += gridSizeX)
 		getCanvas().drawLine(x, startY, x, endY, paint);
-	for (int y = (int)ceil(startY); y <= (int)floor(endY); y++) {
-		if (y%10 == 0)
-			paint.setStrokeWidth(0.05);
+	for (int y = (int)ceil(startY/gridSizeY)*gridSizeY; y <= (int)floor(endY/gridSizeY)*gridSizeY; y += gridSizeY)
 		getCanvas().drawLine(startX, y, endX, y, paint);
-		if (y%10 == 0)
-			paint.setStrokeWidth(0.01);
-	}
+
+	// the outline
+
+	paint.setColor(SkColorSetRGB(0.5*pageRed, 0.5*pageGreen, 0.5*pageBlue));
+	paint.setStrokeWidth(gridWidth);
+	paint.setStrokeCap(SkPaint::kRound_Cap);
+	paint.setStrokeJoin(SkPaint::kRound_Join);
+	getCanvas().drawPath(outline, paint);
 
 	_paperDrawnTmp = true;
 }
