@@ -326,7 +326,7 @@ TilingTexture::cleanUp(Rasterizer& rasterizer, unsigned int maxNumRequests) {
 		if (!getNextCleanUpRequest(request))
 			return i;
 
-		updateTile(request.tile, rasterizer, request.tileRegion);
+		updateTile(request.tile, rasterizer, request.tileRegion, *_cleanUpBuffer);
 	}
 
 	return i;
