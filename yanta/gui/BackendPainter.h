@@ -42,14 +42,14 @@ public:
 		_cursorPosition = position;
 	}
 
+	bool draw(
+			const util::rect<double>&  roi,
+			const util::point<double>& resolution);
+
 	/**
 	 * Give the painter a hint about added content.
 	 */
 	void contentAdded(const util::rect<DocumentPrecision>& region);
-
-	bool draw(
-			const util::rect<double>&  roi,
-			const util::point<double>& resolution);
 
 	/**
 	 * Request a drag of the painter in pixel units.
@@ -62,9 +62,10 @@ public:
 	void zoom(double zoomChange, const util::point<DocumentPrecision>& anchor);
 
 	/**
-	 * Prepare pen-drawing. Call this after a change to drag() or zoom().
+	 * Initiate a full redraw with the current zoom level. Call this after a 
+	 * sequence of zoom() requests.
 	 */
-	void prepareDrawing();
+	void finishZoom();
 
 	/**
 	 * Transform a point from screen pixel units to document units.
@@ -110,7 +111,7 @@ private:
 	enum BackendPainterMode {
 
 		IncrementalDrawing,
-		Moving,
+		Dragging,
 		Zooming
 	};
 

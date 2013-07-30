@@ -292,9 +292,12 @@ BackendView::removeFinger(unsigned int id, unsigned long timestamp) {
 
 		LOG_ALL(backendviewlog) << "this is one of the fingers I am listening to" << std::endl;
 
+		if (_mode == Zooming)
+			_painter->finishZoom();
+
 		_fingerDown.erase(i);
-		_painter->prepareDrawing();
 		_contentChanged();
+
 		initGesture(timestamp);
 		setMode();
 

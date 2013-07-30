@@ -39,24 +39,6 @@ BackendPainter::BackendPainter() :
 	_documentPainter.setIncremental(true);
 }
 
-void
-BackendPainter::contentAdded(const util::rect<DocumentPrecision>& region) {
-
-	util::rect<int> pixelRegion = documentToTexture(region);
-
-	if (_contentAddedRegion.isZero())
-
-		_contentAddedRegion = pixelRegion;
-
-	else {
-
-		_contentAddedRegion.minX = std::min(_contentAddedRegion.minX, pixelRegion.minX);
-		_contentAddedRegion.minY = std::min(_contentAddedRegion.minY, pixelRegion.minY);
-		_contentAddedRegion.maxX = std::max(_contentAddedRegion.maxX, pixelRegion.maxX);
-		_contentAddedRegion.maxY = std::max(_contentAddedRegion.maxY, pixelRegion.maxY);
-	}
-}
-
 bool
 BackendPainter::draw(
 		const util::rect<double>&  roi,
@@ -87,14 +69,11 @@ BackendPainter::draw(
 
 	gui::OpenGl::Guard guard;
 
-	if (prepareTextures(pixelRoi))
+	if (prepareTextures(pixelRoi) || _documentChanged) {
+
+		LOG_DEBUG(backendpainterlog) << "rebuild texture or document changed entirely -- initiate full redraw" << std::endl;
+
 		initiateFullRedraw(pixelRoi);
-
-	if (_documentChanged) {
-
-		LOG_DEBUG(backendpainterlog) << "the document changed entirely -- resetting incremental memories" << std::endl;
-
-		_documentPainter.resetIncrementalMemory();
 		_documentChanged = false;
 	}
 
@@ -108,7 +87,7 @@ BackendPainter::draw(
 
 			LOG_DEBUG(backendpainterlog) << "scale changed while we are in drawing mode" << std::endl;
 
-			initiateFullRedraw(pixelRoi);
+			//initiateFullRedraw(pixelRoi);
 
 			// update the working area ourselves
 			updateDocument(pixelRoi);
@@ -133,7 +112,7 @@ BackendPainter::draw(
 		}
 	}
 
-	if (_mode == Moving) {
+	if (_mode == Dragging) {
 
 		// shift changed in move mode -- just move prefetch texture
 		if (pixelShift != _previousShift) {
@@ -172,6 +151,26 @@ BackendPainter::draw(
 }
 
 void
+BackendPainter::contentAdded(const util::rect<DocumentPrecision>& region) {
+
+	util::rect<int> pixelRegion = documentToTexture(region);
+
+	if (_contentAddedRegion.isZero())
+
+		_contentAddedRegion = pixelRegion;
+
+	else {
+
+		_contentAddedRegion.minX = std::min(_contentAddedRegion.minX, pixelRegion.minX);
+		_contentAddedRegion.minY = std::min(_contentAddedRegion.minY, pixelRegion.minY);
+		_contentAddedRegion.maxX = std::max(_contentAddedRegion.maxX, pixelRegion.maxX);
+		_contentAddedRegion.maxY = std::max(_contentAddedRegion.maxY, pixelRegion.maxY);
+	}
+
+	_mode = IncrementalDrawing;
+}
+
+void
 BackendPainter::drag(const util::point<DocumentPrecision>& direction) {
 
 	// the direction is given in (sub)pixel units, but we need integers
@@ -181,9 +180,7 @@ BackendPainter::drag(const util::point<DocumentPrecision>& direction) {
 
 	_shift += d;
 
-	_mode = Moving;
-
-	setDeviceTransformation();
+	_mode = Dragging;
 }
 
 void
@@ -205,14 +202,14 @@ BackendPainter::zoom(double zoomChange, const util::point<DocumentPrecision>& an
 	// by stretching the texture (and repaint when we leave the zoom mode)
 
 	_mode = Zooming;
-
-	setDeviceTransformation();
 }
 
 void
-BackendPainter::prepareDrawing() {
+BackendPainter::finishZoom() {
 
 	setDeviceTransformation();
+	initiateFullRedraw(_previousPixelRoi);
+
 	_mode = IncrementalDrawing;
 }
 
@@ -323,11 +320,6 @@ BackendPainter::initiateFullRedraw(const util::rect<int>& roi) {
 
 bool
 BackendPainter::prepareTextures(const util::rect<int>& pixelRoi) {
-
-	unsigned int textureWidth  = pixelRoi.width()  + _prefetchLeft + _prefetchRight;
-	unsigned int textureHeight = pixelRoi.height() + _prefetchTop  + _prefetchBottom;
-
-	LOG_ALL(backendpainterlog) << "with pre-fetch areas, texture has to be of size " << textureWidth << "x" << textureHeight << std::endl;
 
 	//if (_overlayTexture && (_overlayTexture->width() < (unsigned int)pixelRoi.width() || _overlayTexture->height() < (unsigned int)pixelRoi.height())) {
 
