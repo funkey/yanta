@@ -314,8 +314,11 @@ BackendPainter::initiateFullRedraw(const util::rect<int>& roi) {
 	LOG_DEBUG(backendpainterlog) << "initiate full redraw for roi " << roi << std::endl;
 
 	_documentTexture->reset(roi.center());
+	_documentTexture->markDirtyExcept(roi);
 	_documentPainter.resetIncrementalMemory();
 	//_overlayTexture->reset(roi);
+
+	_contentAddedRegion = util::rect<int>(0, 0, 0, 0);
 }
 
 bool

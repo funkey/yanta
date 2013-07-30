@@ -96,9 +96,6 @@ TilingTexture::reset(const util::point<int>& center) {
 
 	// dismiss all pending clean-up requests
 	_cleanUpRequests.clear();
-
-	// mark everything as dirty
-	markDirty(_tilesRegion);
 }
 
 void
@@ -184,6 +181,20 @@ TilingTexture::markDirty(const util::rect<int>& region) {
 			}
 		}
 	}
+}
+
+void
+TilingTexture::markDirtyExcept(const util::rect<int>& region) {
+
+	util::rect<int> left(_tilesRegion.minX, _tilesRegion.minY, region.minX, _tilesRegion.maxY);
+	util::rect<int> right(region.maxX, _tilesRegion.minY, _tilesRegion.maxX, _tilesRegion.maxY);
+	util::rect<int> top(region.minX, _tilesRegion.minY, region.maxX, region.minY);
+	util::rect<int> bottom(region.minX, region.maxY, region.maxX, _tilesRegion.maxY);
+
+	markDirty(left);
+	markDirty(right);
+	markDirty(top);
+	markDirty(bottom);
 }
 
 void

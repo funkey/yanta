@@ -70,6 +70,11 @@ public:
 	void markDirty(const util::rect<int>& region);
 
 	/**
+	 * Mark everything dirty except for the given region.
+	 */
+	void markDirtyExcept(const util::rect<int>& region);
+
+	/**
 	 * Check whether there are dirty regions in the texture.
 	 */
 	bool hasDirtyRegions() { return !_cleanUpRequests.empty(); }
