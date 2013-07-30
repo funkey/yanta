@@ -15,10 +15,10 @@ public:
 
 	Osd();
 
-	static const double Small  = 0.05;
-	static const double Normal = 0.5;
+	static const double Small  = 0.1;
+	static const double Normal = 0.3;
 	static const double Big    = 1;
-	static const double Large  = 2;
+	static const double Large  = 3;
 
 private:
 
