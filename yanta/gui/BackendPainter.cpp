@@ -7,6 +7,7 @@
 #include <util/Logger.h>
 #include <util/ProgramOptions.h>
 #include "BackendPainter.h"
+#include "TilingTexture.h"
 
 logger::LogChannel backendpainterlog("backendpainterlog", "[BackendPainter] ");
 
@@ -34,64 +35,26 @@ BackendPainter::BackendPainter() :
 	_mode(IncrementalDrawing),
 	_cursorPosition(0, 0) {
 
-	_documentPainter.setDeviceTransformation(_scale, util::point<double>(0, 0));
-	_documentCleanUpPainter.setDeviceTransformation(_scale, util::point<double>(0, 0));
-	_overlayPainter.setDeviceTransformation(_scale, util::point<double>(0, 0));
+	setDeviceTransformation();
+	_documentPainter.setIncremental(true);
 }
 
 void
-BackendPainter::drag(const util::point<DocumentPrecision>& direction) {
+BackendPainter::contentAdded(const util::rect<DocumentPrecision>& region) {
 
-	// the direction is given in (sub)pixel units, but we need integers
-	util::point<int> d;
-	d.x = (int)round(direction.x);
-	d.y = (int)round(direction.y);
+	util::rect<int> pixelRegion = documentToTexture(region);
 
-	_shift += d;
+	if (_contentAddedRegion.isZero())
 
-	_mode = Moving;
-}
+		_contentAddedRegion = pixelRegion;
 
-void
-BackendPainter::zoom(double zoomChange, const util::point<DocumentPrecision>& anchor) {
+	else {
 
-	LOG_ALL(backendpainterlog) << "changing zoom by " << zoomChange << " keeping " << anchor << " where it is" << std::endl;
-
-	// convert the anchor from screen coordinates to texture coordinates
-	_zoomAnchor = anchor - _shift;
-
-	if (_mode != Zooming)
-		_scaleChange = util::point<double>(1.0, 1.0);
-
-	_scaleChange *= zoomChange;
-	_scale       *= zoomChange;
-	_shift        = _shift + (1 - zoomChange)*_zoomAnchor;
-
-	// don't change the document painter transformations -- we simulate the zoom 
-	// by stretching the texture (and repaint when we leave the zoom mode)
-
-	_mode = Zooming;
-}
-
-util::point<DocumentPrecision>
-BackendPainter::screenToDocument(const util::point<double>& point) {
-
-	util::point<DocumentPrecision> inv = point;
-
-	inv -= _shift;
-	inv /= _scale;
-
-	return inv;
-}
-
-util::point<int>
-BackendPainter::documentToTexture(const util::point<DocumentPrecision>& point) {
-
-	util::point<double> inv = point;
-
-	inv *= _scale;
-
-	return inv;
+		_contentAddedRegion.minX = std::min(_contentAddedRegion.minX, pixelRegion.minX);
+		_contentAddedRegion.minY = std::min(_contentAddedRegion.minY, pixelRegion.minY);
+		_contentAddedRegion.maxX = std::max(_contentAddedRegion.maxX, pixelRegion.maxX);
+		_contentAddedRegion.maxY = std::max(_contentAddedRegion.maxY, pixelRegion.maxY);
+	}
 }
 
 bool
@@ -146,18 +109,10 @@ BackendPainter::draw(
 			LOG_DEBUG(backendpainterlog) << "scale changed while we are in drawing mode" << std::endl;
 
 			initiateFullRedraw(pixelRoi);
-			prepareDrawing(pixelRoi);
-
-			// everything beyond the working area needs to be updated by the 
-			// background painter
-			_documentTexture->markDirty(_left);
-			_documentTexture->markDirty(_right);
-			_documentTexture->markDirty(_top);
-			_documentTexture->markDirty(_bottom);
 
 			// update the working area ourselves
 			updateDocument(pixelRoi);
-			wantsRedraw = updateOverlay(pixelRoi);
+			//wantsRedraw = updateOverlay(pixelRoi);
 
 		// shift changed in incremental drawing mode -- move prefetch texture 
 		// and get back to incremental drawing
@@ -166,22 +121,15 @@ BackendPainter::draw(
 			LOG_DEBUG(backendpainterlog) << "shift changed while we are in drawing mode" << std::endl;
 
 			_documentTexture->shift(pixelShift - _previousShift);
-			_overlayTexture->shift(pixelShift - _previousShift);
-			prepareDrawing(pixelRoi);
+			//_overlayTexture->shift(pixelShift - _previousShift);
 
 		// transformation did not change
 		} else {
 
 			LOG_ALL(backendpainterlog) << "transformation did not change -- I just quickly update the document" << std::endl;
 
-			if (pixelRoi != _previousPixelRoi) {
-
-				LOG_ALL(backendpainterlog) << "The ROI changed" << std::endl;
-				prepareDrawing(pixelRoi);
-			}
-
 			updateDocument(pixelRoi);
-			wantsRedraw = updateOverlay(pixelRoi);
+			//wantsRedraw = updateOverlay(pixelRoi);
 		}
 	}
 
@@ -194,8 +142,8 @@ BackendPainter::draw(
 
 			// show a different part of the document texture
 			_documentTexture->shift(pixelShift - _previousShift);
-			_overlayTexture->shift(pixelShift - _previousShift);
-			_overlayTexture->cleanUp(_overlayPainter);
+			//_overlayTexture->shift(pixelShift - _previousShift);
+			//_overlayTexture->cleanUp(_overlayPainter);
 		}
 	}
 
@@ -218,44 +166,85 @@ BackendPainter::draw(
 	// zooming mode (this allows us to detect a scale change when we're back in 
 	// one of the other modes)
 	if (_mode != Zooming)
-		_previousScale    = _scale;
+		_previousScale = _scale;
 
 	return wantsRedraw;
 }
 
-bool
-BackendPainter::prepareTextures(const util::rect<int>& pixelRoi) {
+void
+BackendPainter::drag(const util::point<DocumentPrecision>& direction) {
 
-	unsigned int textureWidth  = pixelRoi.width()  + _prefetchLeft + _prefetchRight;
-	unsigned int textureHeight = pixelRoi.height() + _prefetchTop  + _prefetchBottom;
+	// the direction is given in (sub)pixel units, but we need integers
+	util::point<int> d;
+	d.x = (int)round(direction.x);
+	d.y = (int)round(direction.y);
 
-	LOG_ALL(backendpainterlog) << "with pre-fetch areas, texture has to be of size " << textureWidth << "x" << textureHeight << std::endl;
+	_shift += d;
 
-	if (_overlayTexture && (_overlayTexture->width() < (unsigned int)pixelRoi.width() || _overlayTexture->height() < (unsigned int)pixelRoi.height())) {
+	_mode = Moving;
 
-		_overlayTexture.reset();
-	}
+	setDeviceTransformation();
+}
 
-	if (!_overlayTexture) {
+void
+BackendPainter::zoom(double zoomChange, const util::point<DocumentPrecision>& anchor) {
 
-		_overlayTexture = boost::make_shared<PrefetchTexture>(pixelRoi, 0, 0, 0, 0);
-	}
+	LOG_ALL(backendpainterlog) << "changing zoom by " << zoomChange << " keeping " << anchor << " where it is" << std::endl;
 
-	if (_documentTexture && (_documentTexture->width() < textureWidth || _documentTexture->height() < textureHeight)) {
+	// convert the anchor from screen coordinates to texture coordinates
+	_zoomAnchor = anchor - _shift;
 
-		LOG_DEBUG(backendpainterlog) << "texture is of different size, create a new one" << std::endl;
+	if (_mode != Zooming)
+		_scaleChange = util::point<double>(1.0, 1.0);
 
-		_documentTexture.reset();
-	}
+	_scaleChange *= zoomChange;
+	_scale       *= zoomChange;
+	_shift        = _shift + (1 - zoomChange)*_zoomAnchor;
 
-	if (!_documentTexture) {
+	// don't change the document painter transformations -- we simulate the zoom 
+	// by stretching the texture (and repaint when we leave the zoom mode)
 
-		_documentTexture = boost::make_shared<PrefetchTexture>(pixelRoi, _prefetchLeft, _prefetchRight, _prefetchTop, _prefetchBottom);
+	_mode = Zooming;
 
-		return true;
-	}
+	setDeviceTransformation();
+}
 
-	return false;
+void
+BackendPainter::prepareDrawing() {
+
+	setDeviceTransformation();
+	_mode = IncrementalDrawing;
+}
+
+util::point<DocumentPrecision>
+BackendPainter::screenToDocument(const util::point<double>& point) {
+
+	util::point<DocumentPrecision> inv = point;
+
+	inv -= _shift;
+	inv /= _scale;
+
+	return inv;
+}
+
+util::point<int>
+BackendPainter::documentToTexture(const util::point<DocumentPrecision>& point) {
+
+	util::point<double> inv = point;
+
+	inv *= _scale;
+
+	return inv;
+}
+
+util::rect<int>
+BackendPainter::documentToTexture(const util::rect<DocumentPrecision>& rect) {
+
+	util::rect<double> inv = rect;
+
+	inv *= _scale;
+
+	return inv;
 }
 
 void
@@ -263,50 +252,6 @@ BackendPainter::refresh() {
 
 	LOG_DEBUG(backendpainterlog) << "refresh requested" << std::endl;
 	_documentPainter.resetIncrementalMemory();
-}
-
-void
-BackendPainter::updateDocument(const util::rect<int>& roi) {
-
-	// is it necessary to draw something?
-	if (!_documentPainter.needRedraw()) {
-
-		LOG_ALL(backendpainterlog) << "nothing changed, skipping redraw" << std::endl;
-		return;
-	}
-
-	_documentTexture->fill(roi, _documentPainter);
-	_documentPainter.rememberDrawnElements();
-}
-
-bool
-BackendPainter::updateOverlay(const util::rect<int>& roi) {
-
-	// TODO: clean only dirty parts
-	_overlayTexture->fill(roi, _overlayPainter);
-
-	if (_overlayPainter.getDocument().size<Selection>() > 0) {
-
-		LOG_ALL(backendpainterlog) << "there are selection in the overlay -- requesting a redraw" << std::endl;
-
-		// let the selection pulsate
-		long millis = boost::posix_time::microsec_clock::local_time().time_of_day().total_milliseconds();
-		_overlayAlpha = 0.5 + 0.4*2*std::abs(0.5 - std::fmod(millis*0.001, 1.0));
-
-		return true;
-	}
-
-	return false;
-}
-
-void
-BackendPainter::initiateFullRedraw(const util::rect<int>& roi) {
-
-	LOG_DEBUG(backendpainterlog) << "initiate full redraw for roi " << roi << std::endl;
-
-	_documentTexture->reset(roi);
-	_documentPainter.resetIncrementalMemory();
-	_overlayTexture->reset(roi);
 }
 
 void
@@ -328,7 +273,7 @@ BackendPainter::markDirty(const util::rect<DocumentPrecision>& area) {
 
 		// in this case, redraw immediately the part that got dirty
 		_documentPainter.setIncremental(false);
-		_documentTexture->fill(_previousPixelRoi.intersection(pixelArea), _documentPainter);
+		_documentTexture->update(_previousPixelRoi.intersection(pixelArea), _documentPainter);
 		_documentPainter.setIncremental(true);
 
 		// send everything beyond the working area to the worker threads
@@ -347,72 +292,114 @@ BackendPainter::markDirty(const util::rect<DocumentPrecision>& area) {
 bool
 BackendPainter::cleanDirtyAreas(unsigned int maxNumRequests) {
 
-	boost::shared_ptr<PrefetchTexture> texture = _documentTexture;
+	boost::shared_ptr<TilingTexture> texture = _documentTexture;
 
-	if (!texture || !texture->hasDirtyAreas())
+	if (!texture)
 		return false;
 
-	texture->cleanUp(_documentCleanUpPainter, maxNumRequests);
+	if (texture->cleanUp(_documentCleanUpPainter, maxNumRequests))
+		return true;
 
-	return true;
+	return false;
 }
 
 void
-BackendPainter::moveSelection(const SelectionMoved& signal) {
+BackendPainter::setDeviceTransformation() {
 
-	_overlayTexture->markDirty(signal.area);
+	_documentPainter.setDeviceTransformation(_scale, util::point<int>(0, 0));
+	_documentCleanUpPainter.setDeviceTransformation(_scale, util::point<int>(0, 0));
+	_overlayPainter.setDeviceTransformation(_scale, util::point<int>(0, 0));
 }
 
 void
-BackendPainter::prepareDrawing(const util::rect<int>& roi) {
+BackendPainter::initiateFullRedraw(const util::rect<int>& roi) {
 
-	LOG_DEBUG(backendpainterlog) << "resetting the incremental memory" << std::endl;
+	LOG_DEBUG(backendpainterlog) << "initiate full redraw for roi " << roi << std::endl;
 
-	util::rect<int> workingArea;
+	_documentTexture->reset(roi.center());
+	_documentPainter.resetIncrementalMemory();
+	//_overlayTexture->reset(roi);
+}
 
-	if (roi.isZero()) {
+bool
+BackendPainter::prepareTextures(const util::rect<int>& pixelRoi) {
 
-		if (_mode == IncrementalDrawing)
-			return;
+	unsigned int textureWidth  = pixelRoi.width()  + _prefetchLeft + _prefetchRight;
+	unsigned int textureHeight = pixelRoi.height() + _prefetchTop  + _prefetchBottom;
 
-		workingArea = _previousPixelRoi;
+	LOG_ALL(backendpainterlog) << "with pre-fetch areas, texture has to be of size " << textureWidth << "x" << textureHeight << std::endl;
+
+	//if (_overlayTexture && (_overlayTexture->width() < (unsigned int)pixelRoi.width() || _overlayTexture->height() < (unsigned int)pixelRoi.height())) {
+
+		//_overlayTexture.reset();
+	//}
+
+	//if (!_overlayTexture) {
+
+		//_overlayTexture = boost::make_shared<TilingTexture>(pixelRoi, 0, 0, 0, 0);
+	//}
+
+	if (!_documentTexture) {
+
+		_documentTexture = boost::make_shared<TilingTexture>(pixelRoi.center());
+
+		return true;
+	}
+
+	return false;
+}
+
+void
+BackendPainter::updateDocument(const util::rect<int>& roi) {
+
+	// is it necessary to draw something?
+	if (!_documentPainter.needRedraw()) {
+
+		LOG_ALL(backendpainterlog) << "nothing changed, skipping redraw" << std::endl;
+		return;
+	}
+
+	if (!_contentAddedRegion.isZero()) {
+
+		LOG_ALL(backendpainterlog) << "adding content in " << _contentAddedRegion << std::endl;
+
+		_documentTexture->update(_contentAddedRegion, _documentPainter);
+		_contentAddedRegion = util::rect<DocumentPrecision>(0, 0, 0, 0);
 
 	} else {
 
-		workingArea = roi;
+		LOG_ALL(backendpainterlog) << "updating in " << roi << std::endl;
+
+		_documentTexture->update(roi, _documentPainter);
 	}
 
-	_documentTexture->setWorkingArea(workingArea);
-	_overlayTexture->setWorkingArea(workingArea);
+	_documentPainter.rememberDrawnElements();
+}
 
-	_left = util::rect<int>(
-			workingArea.minX - _prefetchLeft,
-			workingArea.minY - _prefetchTop,
-			workingArea.minX,
-			workingArea.maxY + _prefetchBottom);
-	_right = util::rect<int>(
-			workingArea.maxX,
-			workingArea.minY - _prefetchTop,
-			workingArea.maxX + _prefetchRight,
-			workingArea.maxY + _prefetchBottom);
-	_top = util::rect<int>(
-			workingArea.minX,
-			workingArea.minY - _prefetchTop,
-			workingArea.maxX,
-			workingArea.minY);
-	_bottom = util::rect<int>(
-			workingArea.minX,
-			workingArea.maxY,
-			workingArea.maxX,
-			workingArea.maxY + _prefetchBottom);
+bool
+BackendPainter::updateOverlay(const util::rect<int>& /*roi*/) {
 
-	_documentPainter.setIncremental(true);
-	_documentPainter.resetIncrementalMemory();
-	_documentPainter.setDeviceTransformation(_scale, util::point<DocumentPrecision>(0.0, 0.0));
-	_documentCleanUpPainter.setDeviceTransformation(_scale, util::point<DocumentPrecision>(0.0, 0.0));
-	_overlayPainter.setDeviceTransformation(_scale, util::point<DocumentPrecision>(0.0, 0.0));
+	// TODO: clean only dirty parts
+	//_overlayTexture->fill(roi, _overlayPainter);
 
-	_mode = IncrementalDrawing;
+	//if (_overlayPainter.getDocument().size<Selection>() > 0) {
+
+		//LOG_ALL(backendpainterlog) << "there are selection in the overlay -- requesting a redraw" << std::endl;
+
+		//// let the selection pulsate
+		//long millis = boost::posix_time::microsec_clock::local_time().time_of_day().total_milliseconds();
+		//_overlayAlpha = 0.5 + 0.4*2*std::abs(0.5 - std::fmod(millis*0.001, 1.0));
+
+		//return true;
+	//}
+
+	return false;
+}
+
+void
+BackendPainter::moveSelection(const SelectionMoved& /*signal*/) {
+
+	//_overlayTexture->markDirty(signal.area);
 }
 
 void
@@ -427,14 +414,14 @@ BackendPainter::drawTextures(const util::rect<int>& roi) {
 		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		_documentTexture->render(roi/_scaleChange);
 		glColor4f(1.0f, 1.0f, 0.5f, _overlayAlpha);
-		_overlayTexture->render(roi/_scaleChange);
+		//_overlayTexture->render(roi/_scaleChange);
 
 	} else {
 
 		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		_documentTexture->render(roi);
 		glColor4f(1.0f, 1.0f, 0.8f, _overlayAlpha);
-		_overlayTexture->render(roi);
+		//_overlayTexture->render(roi);
 	}
 
 	glPopMatrix();

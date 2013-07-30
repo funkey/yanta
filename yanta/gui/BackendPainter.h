@@ -10,9 +10,11 @@
 #include <tools/Tools.h>
 #include "SkiaDocumentPainter.h"
 #include "SkiaOverlayPainter.h"
-#include "PrefetchTexture.h"
 
 extern logger::LogChannel backendpainterlog;
+
+// forward declaration
+class TilingTexture;
 
 class BackendPainter : public gui::Painter {
 
@@ -40,6 +42,11 @@ public:
 		_cursorPosition = position;
 	}
 
+	/**
+	 * Give the painter a hint about added content.
+	 */
+	void contentAdded(const util::rect<DocumentPrecision>& region);
+
 	bool draw(
 			const util::rect<double>&  roi,
 			const util::point<double>& resolution);
@@ -55,9 +62,9 @@ public:
 	void zoom(double zoomChange, const util::point<DocumentPrecision>& anchor);
 
 	/**
-	 * Prepare for drawing. Call this after drag() or zoom().
+	 * Prepare pen-drawing. Call this after a change to drag() or zoom().
 	 */
-	void prepareDrawing(const util::rect<int>& roi = util::rect<int>(0, 0, 0, 0));
+	void prepareDrawing();
 
 	/**
 	 * Transform a point from screen pixel units to document units.
@@ -68,6 +75,11 @@ public:
 	 * Transform a point from document units to texture pixel units.
 	 */
 	util::point<int> documentToTexture(const util::point<DocumentPrecision>& p);
+
+	/**
+	 * Transform a rect from document units to texture pixel units.
+	 */
+	util::rect<int> documentToTexture(const util::rect<DocumentPrecision>& r);
 
 	/**
 	 * Manually request a full redraw.
@@ -102,6 +114,11 @@ private:
 		Zooming
 	};
 
+	/**
+	 * Set the current device transformation in all painters.
+	 */
+	void setDeviceTransformation();
+
 	void initiateFullRedraw(const util::rect<int>& roi);
 
 	/**
@@ -127,6 +144,9 @@ private:
 	// indicates that the document was changed entirely
 	bool _documentChanged;
 
+	// hint where content was added
+	util::rect<int> _contentAddedRegion;
+
 	// the skia painter for the document
 	SkiaDocumentPainter _documentPainter;
 
@@ -137,8 +157,8 @@ private:
 	SkiaOverlayPainter _overlayPainter;
 
 	// the textures to draw to
-	boost::shared_ptr<PrefetchTexture> _documentTexture;
-	boost::shared_ptr<PrefetchTexture> _overlayTexture;
+	boost::shared_ptr<TilingTexture> _documentTexture;
+	boost::shared_ptr<TilingTexture> _overlayTexture;
 
 	// the transparency of the overlay texture
 	float _overlayAlpha;

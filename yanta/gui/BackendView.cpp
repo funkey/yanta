@@ -360,10 +360,11 @@ BackendView::onToolsChangedArea(const ChangedArea& signal) {
 }
 
 void
-BackendView::onStrokePointAdded(const StrokePointAdded& /*signal*/) {
+BackendView::onStrokePointAdded(const StrokePointAdded& signal) {
 
 	LOG_ALL(backendviewlog) << "a stroke point was added -- initiate a redraw" << std::endl;
 
+	_painter->contentAdded(signal.area);
 	_contentChanged();
 }
 

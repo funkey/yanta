@@ -7,7 +7,10 @@
 
 #include <util/point.hpp>
 #include <util/rect.hpp>
+#include <util/Logger.h>
 #include <gui/Texture.h>
+
+extern logger::LogChannel tilingtexturelog;
 
 /**
  * A texture used for prefetching drawings of a rasterizer. The texture's 
@@ -73,7 +76,7 @@ public:
 	 * Clean all dirty regions.
 	 */
 	template <typename Rasterizer>
-	void cleanUp(Rasterizer& rasterizer, unsigned int maxNumRequests = 0);
+	unsigned int cleanUp(Rasterizer& rasterizer, unsigned int maxNumRequests = 0);
 
 	/**
 	 * Check whether a given region is dirty.
@@ -166,6 +169,8 @@ TilingTexture::update(
 		const util::rect<int>& region,
 		Rasterizer&            rasterizer) {
 
+	LOG_DEBUG(tilingtexturelog) << "updating region " << region << std::endl;
+
 	// get the up-to-four parts of the region in tiles
 	util::rect<int>  subregions[4];
 	split(region, subregions);
@@ -178,6 +183,8 @@ TilingTexture::update(
 			continue;
 
 		util::rect<int> tiles = getTiles(subregions[i]);
+
+		LOG_ALL(tilingtexturelog) << "  updating tiles in " << tiles << std::endl;
 
 		// ...for each tile in this part...
 		for (int x = tiles.minX; x < tiles.maxX; x++) {
@@ -199,11 +206,15 @@ TilingTexture::updateTile(
 		Rasterizer&             rasterizer,
 		const util::rect<int>&  roi) {
 
+	LOG_DEBUG(tilingtexturelog) << "updating tile " << tileInArray << std::endl;
+
+	boost::mutex::scoped_lock lock(_tiles[tileInArray.x][tileInArray.y]->getMutex());
+
 	gui::skia_pixel_t* data = _tiles[tileInArray.x][tileInArray.y]->map<gui::skia_pixel_t>();
 
 	// wrap the buffer in a skia bitmap
 	SkBitmap bitmap;
-	bitmap.setConfig(SkBitmap::kARGB_8888_Config, TilesX, TilesY);
+	bitmap.setConfig(SkBitmap::kARGB_8888_Config, TileSize, TileSize);
 	bitmap.setPixels(data);
 
 	SkCanvas canvas(bitmap);
@@ -224,7 +235,7 @@ TilingTexture::updateTile(
 }
 
 template <typename Rasterizer>
-void
+unsigned int
 TilingTexture::cleanUp(Rasterizer& rasterizer, unsigned int maxNumRequests) {
 
 	gui::OpenGl::Guard guard;
@@ -236,15 +247,18 @@ TilingTexture::cleanUp(Rasterizer& rasterizer, unsigned int maxNumRequests) {
 
 	CleanUpRequest request;
 
-	for (unsigned int i = 0; i < numRequests; i++) {
+	unsigned int i = 0;
+	for (; i < numRequests; i++) {
 
 		// the number of requests might have decreased while we were working on 
 		// them, in this case abort and come back later
 		if (!getNextCleanUpRequest(request))
-			return;
+			return i;
 
-		updateTile(request.tile, request.tileRegion, rasterizer, request.tileRegion);
+		updateTile(request.tile, rasterizer, request.tileRegion);
 	}
+
+	return i;
 }
 
 #endif // YANTA_TILLING_TEXTURE_H__

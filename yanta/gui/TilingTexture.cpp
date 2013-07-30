@@ -3,19 +3,19 @@
 
 #include <gui/Skia.h>
 #include <gui/OpenGl.h>
-#include <util/Logger.h>
-
 #include "TilingTexture.h"
 
-logger::LogChannel prefetchtexturelog("prefetchtexturelog", "[TilingTexture] ");
+logger::LogChannel tilingtexturelog("tilingtexturelog", "[TilingTexture] ");
 
 TilingTexture::TilingTexture(const util::point<int>& center) {
 
-	reset(center);
+	LOG_ALL(tilingtexturelog) << "creating new tiling texture around " << center << std::endl;
 
 	for (unsigned int x = 0; x < TilesX; x++)
 		for (unsigned int y = 0; y < TilesY; y++)
 			_tiles[x][y] = new gui::Texture(TileSize, TileSize, GL_RGBA);
+
+	reset(center);
 }
 
 TilingTexture::~TilingTexture() {
@@ -30,7 +30,7 @@ TilingTexture::~TilingTexture() {
 void
 TilingTexture::shift(const util::point<int>& shift) {
 
-	LOG_ALL(prefetchtexturelog) << "shifting texture content by " << shift << std::endl;
+	LOG_ALL(tilingtexturelog) << "shifting texture content by " << shift << std::endl;
 
 	_shift += shift;
 
@@ -43,6 +43,7 @@ TilingTexture::shift(const util::point<int>& shift) {
 
 	while (_shift.x >= (int)TileSize) {
 		_topLeftTile.x++;
+		if (_topLeftTile.x >= (int)TilesX) _topLeftTile.x -= TilesX;
 		_tilesRegion -= util::point<int>((int)TileSize, 0);
 		_shift.x -= TileSize;
 		int x = (TilesX - _topLeftTile.x) % TilesX;
@@ -50,17 +51,17 @@ TilingTexture::shift(const util::point<int>& shift) {
 			markDirty(util::point<int>(x, y));
 	}
 	while (_shift.x <= -(int)TileSize) {
-
 		_topLeftTile.x--;
+		if (_topLeftTile.x <  0) _topLeftTile.x += TilesX;
 		_tilesRegion += util::point<int>((int)TileSize, 0);
 		_shift.x += TileSize;
-
 		int x = (TilesX - 1) - _topLeftTile.x;
 		for (int y = 0; y < (int)TilesY; y++)
 			markDirty(util::point<int>(x, y));
 	}
 	while (_shift.y >= (int)TileSize) {
 		_topLeftTile.y++;
+		if (_topLeftTile.y >= (int)TilesY) _topLeftTile.y -= TilesY;
 		_tilesRegion -= util::point<int>(0, (int)TileSize);
 		_shift.y -= TileSize;
 		int y = (TilesY - _topLeftTile.y) % TilesY;
@@ -68,22 +69,17 @@ TilingTexture::shift(const util::point<int>& shift) {
 			markDirty(util::point<int>(x, y));
 	}
 	while (_shift.y <= -(int)TileSize) {
-
 		_topLeftTile.y--;
+		if (_topLeftTile.y <  0) _topLeftTile.y += TilesY;
 		_tilesRegion += util::point<int>(0, (int)TileSize);
 		_shift.y += TileSize;
-
 		int y = (TilesY - 1) - _topLeftTile.y;
 		for (int x = 0; x < (int)TilesX; x++)
 			markDirty(util::point<int>(x, y));
 	}
 
-	while (_topLeftTile.x >= (int)TilesX) _topLeftTile.x -= TilesX;
-	while (_topLeftTile.x <  (int)TilesX) _topLeftTile.x += TilesX;
-	while (_topLeftTile.y >= (int)TilesY) _topLeftTile.y -= TilesY;
-	while (_topLeftTile.y <  (int)TilesY) _topLeftTile.y += TilesY;
-
-	LOG_ALL(prefetchtexturelog) << "texture region is now " << _tilesRegion << std::endl;
+	LOG_ALL(tilingtexturelog) << "  texture region is now " << _tilesRegion << std::endl;
+	LOG_ALL(tilingtexturelog) << "  top left tile is " << _topLeftTile << std::endl;
 }
 
 void
@@ -130,7 +126,7 @@ TilingTexture::render(const util::rect<int>& roi) {
 		if (subregions[i].area() <= 0)
 			continue;
 
-		LOG_ALL(prefetchtexturelog) << "drawing texture part " << i << std::endl;
+		LOG_ALL(tilingtexturelog) << "drawing texture part " << i << std::endl;
 
 		util::rect<int> tiles = getTiles(subregions[i]);
 
@@ -141,7 +137,11 @@ TilingTexture::render(const util::rect<int>& roi) {
 				util::point<int> tileInArray(x, y);
 				util::rect<int>  tileRegion = getTileRegion(tileInArray);
 
+				boost::mutex::scoped_lock lock(_tiles[x][y]->getMutex());
 				_tiles[x][y]->bind();
+
+				//LOG_ALL(tilingtexturelog) << "drawing tile " << tileInArray << " at " << tileRegion << std::endl;
+				glColor3f(fmod(3.432432*x,1.0), fmod(3.43243413*y,1.0), fmod(0.10990232*x*y,1.0));
 
 				// draw the whole tile
 				glBegin(GL_QUADS);
@@ -160,7 +160,7 @@ TilingTexture::render(const util::rect<int>& roi) {
 void
 TilingTexture::markDirty(const util::rect<int>& region) {
 
-	LOG_ALL(prefetchtexturelog) << "region " << region << " is dirty, now" << std::endl;
+	LOG_ALL(tilingtexturelog) << "marking region " << region << " as dirty" << std::endl;
 
 	util::rect<int>  subregions[4];
 
@@ -190,6 +190,8 @@ TilingTexture::markDirty(const util::rect<int>& region) {
 void
 TilingTexture::markDirty(const util::point<int>& tile) {
 
+	LOG_ALL(tilingtexturelog) << "marking dirty tile " << tile << std::endl;
+
 	CleanUpRequest request(tile, getTileRegion(tile));
 	_cleanUpRequests.push_back(request);
 }
@@ -199,8 +201,12 @@ TilingTexture::split(
 		const util::rect<int>& region,
 		util::rect<int>*       subregions) {
 
+	LOG_ALL(tilingtexturelog) << "splitting region " << region << std::endl;
+
 	// split point in pixels
 	util::point<int> splitPoint = _tilesRegion.upperLeft() + _topLeftTile*util::point<int>(TileSize, TileSize);
+
+	LOG_ALL(tilingtexturelog) << "split point is at " << splitPoint << std::endl;
 
 	// upper left
 	subregions[0].minX = std::max(splitPoint.x, region.minX);
@@ -225,26 +231,46 @@ TilingTexture::split(
 	subregions[3].minY = region.minY;
 	subregions[3].maxX = std::min(splitPoint.x, region.maxX);
 	subregions[3].maxY = std::min(splitPoint.y, region.maxY);
+
+	for (int i = 0; i < 4; i++) {
+
+		if (subregions[i].width() <= 0 || subregions[i].height() <= 0) {
+
+			subregions[i] = util::rect<int>(0, 0, 0, 0);
+			continue;
+		}
+	}
 }
 
 util::rect<int>
 TilingTexture::getTiles(const util::rect<int>& region) {
 
-	if (region.area() == 0)
+	LOG_ALL(tilingtexturelog) << "getting tiles for region " << region << std::endl;
+
+	if (!region.intersects(_tilesRegion)) {
+
+		LOG_ALL(tilingtexturelog) << "  region does not intersect any tile -- returning empty rect" << std::endl;
 		return util::rect<int>(0, 0, 0, 0);
+	}
 
 	util::rect<int> tiles = region - _tilesRegion.upperLeft();
+
+	LOG_ALL(tilingtexturelog) << "  relative to tiles region: " << tiles << std::endl;
 
 	// get the tiles in content space
 	tiles.minX = tiles.minX/TileSize;
 	tiles.minY = tiles.minY/TileSize;
-	tiles.maxX = (tiles.maxX - 1)/TileSize;
-	tiles.maxY = (tiles.maxY - 1)/TileSize;
+	tiles.maxX = (tiles.maxX - 1)/TileSize + 1;
+	tiles.maxY = (tiles.maxY - 1)/TileSize + 1;
+
+	LOG_ALL(tilingtexturelog) << "  in tiles: " << tiles << std::endl;
 
 	// convert to tile array indices
 	tiles -= _topLeftTile;
 	if (tiles.minX < 0) tiles += util::point<int>((int)TilesX, 0);
 	if (tiles.minY < 0) tiles += util::point<int>(0, (int)TilesY);
+
+	LOG_ALL(tilingtexturelog) << "  as array indices " << tiles << std::endl;
 
 	return tiles;
 }
@@ -279,7 +305,7 @@ TilingTexture::isDirty(const util::rect<int>& roi) {
 	for (std::deque<CleanUpRequest>::const_iterator i = _cleanUpRequests.begin(); i != _cleanUpRequests.end(); i++)
 		if (i->tileRegion.intersects(roi)) {
 
-			LOG_ALL(prefetchtexturelog) << "roi " << roi << " is dirty because of request in " << i->tileRegion<< std::endl;
+			LOG_ALL(tilingtexturelog) << "roi " << roi << " is dirty because of request in " << i->tileRegion<< std::endl;
 			return true;
 		}
 
