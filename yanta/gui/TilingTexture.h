@@ -21,11 +21,11 @@ extern logger::LogChannel tilingtexturelog;
 class TilingTexture {
 
 	// the size of a tile
-	static const unsigned int TileSize = 256;
+	static const unsigned int TileSize = 32;
 
 	// the number of tiles in the x and y direction
-	static const unsigned int TilesX = 32;
-	static const unsigned int TilesY = 32;
+	static const unsigned int TilesX = 128;
+	static const unsigned int TilesY = 128;
 
 public:
 
