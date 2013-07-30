@@ -107,7 +107,7 @@ SkiaDocumentPainter::visit(Page& page) {
 
 	// shadow-like thingie
 
-	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(5, SkBlurMaskFilter::kOuter_BlurStyle, SkBlurMaskFilter::kNone_BlurFlag);
+	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(page.getBorderSize()/3.0, SkBlurMaskFilter::kOuter_BlurStyle, SkBlurMaskFilter::kNone_BlurFlag);
 	paint.setMaskFilter(maskFilter)->unref();
 	paint.setColor(SkColorSetRGB(0.5*pageRed, 0.5*pageGreen, 0.5*pageBlue));
 	getCanvas().drawPath(outline, paint);
