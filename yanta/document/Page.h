@@ -41,6 +41,11 @@ public:
 	inline const util::point<PagePrecision>& getSize() const { return _size; }
 
 	/**
+	 * Get the size of the border around the page.
+	 */
+	inline double getBorderSize() const { return _borderSize; }
+
+	/**
 	 * Create a new stroke starting behind the existing points.
 	 */
 	void createNewStroke(
@@ -206,9 +211,11 @@ private:
 		return p - getShift();
 	}
 
-
 	// the size of this page on the document
 	util::point<PagePrecision>   _size;
+
+	// the size of the border around the page (for instance for shadow effects)
+	double _borderSize;
 
 	// the bounding box of the page (not its content) in document units
 	util::rect<DocumentPrecision> _pageBoundingBox;

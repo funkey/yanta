@@ -9,10 +9,11 @@ Page::Page(
 		const util::point<DocumentPrecision>& position,
 		const util::point<PagePrecision>&     size) :
 	_size(size),
+	_borderSize(15),
 	_pageBoundingBox(position.x, position.y, position.x + size.x, position.y + size.y),
 	_strokePoints(document->getStrokePoints()) {
 
-	fitBoundingBox(util::rect<PagePrecision>(0, 0, size.x, size.y));
+	fitBoundingBox(util::rect<PagePrecision>(-getBorderSize(), -getBorderSize(), size.x + getBorderSize(), size.y + getBorderSize()));
 	shift(position);
 }
 
@@ -56,7 +57,7 @@ void
 Page::recomputeBoundingBox() {
 
 	resetBoundingBox();
-	fitBoundingBox(util::rect<PagePrecision>(0, 0, _size.x, _size.y));
+	fitBoundingBox(util::rect<PagePrecision>(-getBorderSize(), -getBorderSize(), _size.x + getBorderSize(), _size.y + getBorderSize()));
 	for_each(UpdateBoundingBox(*this));
 }
 
