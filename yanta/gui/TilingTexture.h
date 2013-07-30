@@ -50,7 +50,9 @@ public:
 
 	/**
 	 * Update a region of the texture with whatever the provided rasterizer 
-	 * draws into this region.
+	 * draws into this region. The previous content of the texture will be 
+	 * available to the rasterizer, i.e., alpha operations can be performed on 
+	 * top of the previous content.
 	 */
 	template <typename Rasterizer>
 	void update(
@@ -73,7 +75,8 @@ public:
 	bool hasDirtyRegions() { return !_cleanUpRequests.empty(); }
 
 	/**
-	 * Clean all dirty regions.
+	 * Clean dirty regions. At most maxNumRequests are processed. Returns the 
+	 * number of processed requests.
 	 */
 	template <typename Rasterizer>
 	unsigned int cleanUp(Rasterizer& rasterizer, unsigned int maxNumRequests = 0);
@@ -128,6 +131,29 @@ private:
 			const util::point<int>& tileInArray,
 			Rasterizer&             rasterizer,
 			const util::rect<int>&  roi);
+
+	/**
+	 * Update a tile, using rasterizer, but draw only in the given roi. Use the 
+	 * given buffer instead of the tile's texture buffer.
+	 */
+	template <typename Rasterizer>
+	void updateTile(
+			const util::point<int>& tileInArray,
+			Rasterizer&             rasterizer,
+			const util::rect<int>&  roi,
+			gui::Buffer&            buffer);
+
+	/**
+	 * Rasterize into bufferData, representing bufferRegion, limited to roi, 
+	 * using rasterizer.
+	 */
+	template <typename Rasterizer>
+	void rasterize(
+			Rasterizer&            rasterizer,
+			gui::skia_pixel_t*     bufferData,
+			const util::rect<int>& bufferRegion,
+			const util::rect<int>& roi);
+
 	/**
 	 * Split a region into four parts, according to the beginning of the content 
 	 * in the tiles array. Additionally, give the tiles that intersect the parts 
@@ -161,6 +187,9 @@ private:
 
 	// dirty tiles of the texture
 	std::deque<CleanUpRequest> _cleanUpRequests;
+
+	// a clean-up buffer per thread
+	boost::thread_specific_ptr<gui::Buffer> _cleanUpBuffer;
 };
 
 template <typename Rasterizer>
@@ -208,30 +237,64 @@ TilingTexture::updateTile(
 
 	LOG_DEBUG(tilingtexturelog) << "updating tile " << tileInArray << std::endl;
 
-	boost::mutex::scoped_lock lock(_tiles[tileInArray.x][tileInArray.y]->getMutex());
-
+	// map the texture directly
 	gui::skia_pixel_t* data = _tiles[tileInArray.x][tileInArray.y]->map<gui::skia_pixel_t>();
+
+	// draw to it
+	rasterize(rasterizer, data, getTileRegion(tileInArray), roi);
+
+	// unmap the texture
+	_tiles[tileInArray.x][tileInArray.y]->unmap<gui::skia_pixel_t>();
+}
+
+template <typename Rasterizer>
+void
+TilingTexture::updateTile(
+		const util::point<int>& tileInArray,
+		Rasterizer&             rasterizer,
+		const util::rect<int>&  roi,
+		gui::Buffer&            buffer) {
+
+	LOG_DEBUG(tilingtexturelog) << "updating tile " << tileInArray << std::endl;
+
+	// map the buffer
+	gui::skia_pixel_t* data = buffer.map<gui::skia_pixel_t>();
+
+	// draw to it
+	rasterize(rasterizer, data, getTileRegion(tileInArray), roi);
+
+	// unmap the buffer
+	buffer.unmap();
+
+	// reload tile texture
+	_tiles[tileInArray.x][tileInArray.y]->loadData(buffer);
+}
+
+template <typename Rasterizer>
+void
+TilingTexture::rasterize(
+		Rasterizer&            rasterizer,
+		gui::skia_pixel_t*     bufferData,
+		const util::rect<int>& bufferRegion,
+		const util::rect<int>& roi) {
 
 	// wrap the buffer in a skia bitmap
 	SkBitmap bitmap;
-	bitmap.setConfig(SkBitmap::kARGB_8888_Config, TileSize, TileSize);
-	bitmap.setPixels(data);
+	bitmap.setConfig(SkBitmap::kARGB_8888_Config, bufferRegion.width(), bufferRegion.height());
+	bitmap.setPixels(bufferData);
 
 	SkCanvas canvas(bitmap);
 
 	// Now, we have a surface of widthxheight, with (0,0) being the upper left 
 	// corner and (width-1,height-1) the lower right. Translate operations, such 
-	// that the upper left is tileRegion.upperLeft() and lower right is 
-	// tileRegion.lowerRight().
+	// that the upper left is bufferRegion.upperLeft() and lower right is 
+	// bufferRegion.lowerRight().
 
 	// translate bufferArea.upperLeft() to (0,0)
-	util::point<int> translate = -getTileRegion(tileInArray).upperLeft();
+	util::point<int> translate = -bufferRegion.upperLeft();
 	canvas.translate(translate.x, translate.y);
 
 	rasterizer.draw(canvas, roi);
-
-	// unmap the buffer
-	_tiles[tileInArray.x][tileInArray.y]->unmap<gui::skia_pixel_t>();
 }
 
 template <typename Rasterizer>
@@ -239,6 +302,14 @@ unsigned int
 TilingTexture::cleanUp(Rasterizer& rasterizer, unsigned int maxNumRequests) {
 
 	gui::OpenGl::Guard guard;
+
+	if (_cleanUpBuffer.get() == 0) {
+
+		GLenum format = gui::detail::pixel_format_traits<gui::skia_pixel_t>::gl_format;
+		GLenum type   = gui::detail::pixel_format_traits<gui::skia_pixel_t>::gl_type;
+
+		_cleanUpBuffer.reset(new gui::Buffer(TileSize, TileSize, format, type));
+	}
 
 	unsigned int numRequests = _cleanUpRequests.size();
 	

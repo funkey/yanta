@@ -137,11 +137,10 @@ TilingTexture::render(const util::rect<int>& roi) {
 				util::point<int> tileInArray(x, y);
 				util::rect<int>  tileRegion = getTileRegion(tileInArray);
 
-				boost::mutex::scoped_lock lock(_tiles[x][y]->getMutex());
 				_tiles[x][y]->bind();
 
-				//LOG_ALL(tilingtexturelog) << "drawing tile " << tileInArray << " at " << tileRegion << std::endl;
-				glColor3f(fmod(3.432432*x,1.0), fmod(3.43243413*y,1.0), fmod(0.10990232*x*y,1.0));
+				LOG_ALL(tilingtexturelog) << "drawing tile " << tileInArray << " at " << tileRegion << std::endl;
+				//glColor3f(fmod(3.432432*x,1.0), fmod(3.43243413*y,1.0), fmod(0.10990232*x*y,1.0));
 
 				// draw the whole tile
 				glBegin(GL_QUADS);
