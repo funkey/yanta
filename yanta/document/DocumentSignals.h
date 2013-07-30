@@ -4,14 +4,30 @@
 #include <Signals.h>
 
 /**
- * Base class for all document signals.
+ * Signal to indicate that the document changed incrementally.
  */
-class DocumentSignal : public signals::Signal {};
+class ContentAdded : public ChangedArea {
+
+public:
+
+	ContentAdded() : ChangedArea() {}
+
+	ContentAdded(const util::rect<DocumentPrecision>& area_) :
+		ChangedArea(area_) {}
+};
 
 /**
  * Signal to send when just a stroke point was added to the current stroke.
  */
-class StrokePointAdded : public DocumentSignal {};
+class StrokePointAdded : public ContentAdded {
+
+public:
+
+	StrokePointAdded() : ContentAdded() {}
+
+	StrokePointAdded(const util::rect<DocumentPrecision>& area_) :
+		ContentAdded(area_) {}
+};
 
 /**
  * Signal to send when a selection was moved.

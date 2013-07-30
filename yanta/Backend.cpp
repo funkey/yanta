@@ -73,6 +73,8 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 	LOG_DEBUG(backendlog) << "pen down (button " << signal.button << ")" << std::endl;
 
+	_previousPosition = signal.position;
+
 	if (signal.button == gui::buttons::Left) {
 
 		_penDown = true;
@@ -82,7 +84,6 @@ Backend::onPenDown(const gui::PenDown& signal) {
 			if (_document->get<Selection>(i).getBoundingBox().contains(signal.position)) {
 
 				_mode = DragSelection;
-				_previousPosition = signal.position;
 				_currentElement = i;
 
 				return;
@@ -113,14 +114,20 @@ Backend::onPenDown(const gui::PenDown& signal) {
 	if (signal.button == gui::buttons::Middle) {
 
 		_mode = Erase;
-		_previousPosition = signal.position;
 
 		if (_penDown) {
 
 			_document->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
 			_document->finishCurrentStroke();
 
-			_strokePointAdded();
+			double penWidth = _penMode->getStyle().width();
+			util::rect<DocumentPrecision> area(
+					signal.position.x - penWidth,
+					signal.position.y - penWidth,
+					signal.position.x + penWidth,
+					signal.position.y + penWidth);
+			StrokePointAdded signal(area);
+			_strokePointAdded(signal);
 		}
 	}
 }
@@ -137,10 +144,8 @@ Backend::onPenUp(const gui::PenUp& signal) {
 		if (_mode == DragSelection) {
 
 			_mode = Draw;
-			return;
-		}
 
-		if (_penMode->getMode() == PenMode::Lasso) {
+		} else if (_penMode->getMode() == PenMode::Lasso) {
 
 			anchorSelection();
 
@@ -158,21 +163,25 @@ Backend::onPenUp(const gui::PenUp& signal) {
 
 			_lasso.reset();
 
-			return;
-		}
-
-		if (_mode == Draw) {
+		} else if (_mode == Draw) {
 
 			LOG_DEBUG(backendlog) << "accepting" << std::endl;
 
 			_document->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
 			_document->finishCurrentStroke();
 
-			_strokePointAdded();
+			double penWidth = _penMode->getStyle().width();
+			util::rect<DocumentPrecision> area(_previousPosition.x, _previousPosition.y, _previousPosition.x, _previousPosition.y);
+			area.fit(signal.position);
+			area.minX -= penWidth;
+			area.minY -= penWidth;
+			area.maxX += penWidth;
+			area.maxY += penWidth;
+			StrokePointAdded signal(area);
+			_strokePointAdded(signal);
 		}
-	}
 
-	if (signal.button == gui::buttons::Middle) {
+	} else if (signal.button == gui::buttons::Middle) {
 
 		_mode = Draw;
 
@@ -182,6 +191,8 @@ Backend::onPenUp(const gui::PenUp& signal) {
 			_document->setCurrentStrokeStyle(_penMode->getStyle());
 		}
 	}
+
+	_previousPosition = signal.position;
 }
 
 void
@@ -197,7 +208,6 @@ Backend::onPenMove(const gui::PenMove& signal) {
 		Selection& selection = _document->get<Selection>(_currentElement);
 
 		util::point<DocumentPrecision> shift = signal.position - _previousPosition;
-		_previousPosition = signal.position;
 
 		util::rect<DocumentPrecision> changed = selection.getBoundingBox();
 		selection.shift(shift);
@@ -206,22 +216,14 @@ Backend::onPenMove(const gui::PenMove& signal) {
 		SelectionMoved signal(changed, _currentElement, shift);
 		_selectionMoved(signal);
 
-		return;
-	}
-
-	if (_penMode->getMode() == PenMode::Lasso) {
+	} else if (_penMode->getMode() == PenMode::Lasso) {
 
 		_lasso->addPoint(signal.position);
 		_lassoPointAdded();
 
-		return;
-	}
-
-	if (_mode == Erase) {
+	} else if (_mode == Erase) {
 
 		util::rect<DocumentPrecision> dirtyArea = _document->erase(_previousPosition, signal.position);
-
-		_previousPosition = signal.position;
 
 		if (!dirtyArea.isZero()) {
 
@@ -232,8 +234,19 @@ Backend::onPenMove(const gui::PenMove& signal) {
 	} else {
 
 		_document->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
-		_strokePointAdded();
+
+		double penWidth = _penMode->getStyle().width();
+		util::rect<DocumentPrecision> area(_previousPosition.x, _previousPosition.y, _previousPosition.x, _previousPosition.y);
+		area.fit(signal.position);
+		area.minX -= penWidth;
+		area.minY -= penWidth;
+		area.maxX += penWidth;
+		area.maxY += penWidth;
+		StrokePointAdded signal(area);
+		_strokePointAdded(signal);
 	}
+
+	_previousPosition = signal.position;
 }
 
 void
