@@ -21,6 +21,8 @@ SkiaDocumentPainter::SkiaDocumentPainter(
 void
 SkiaDocumentPainter::draw(SkCanvas& canvas, const util::rect<DocumentPrecision>& roi) {
 
+	LOG_DEBUG(skiadocumentpainterlog) << "drawing document in " << roi << std::endl;
+
 	setCanvas(canvas);
 	setRoi(roi);
 
@@ -80,7 +82,12 @@ SkiaDocumentPainter::visit(Page& page) {
 
 	// even though the roi might intersect the page's content, it might not 
 	// intersect the paper -- check that here (in page coordinates)
-	if (!getRoi().isZero() && !getRoi().intersects(util::rect<PagePrecision>(0, 0, page.getSize().x, page.getSize().y)))
+	if (!getRoi().isZero() && !getRoi().intersects(
+			util::rect<PagePrecision>(
+					-page.getBorderSize(),
+					-page.getBorderSize(),
+					page.getSize().x + page.getBorderSize(),
+					page.getSize().y + page.getBorderSize())))
 		return;
 
 	SkPath outline;
