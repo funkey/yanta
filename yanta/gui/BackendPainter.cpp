@@ -6,6 +6,7 @@
 #include <gui/OpenGl.h>
 #include <util/Logger.h>
 #include <util/ProgramOptions.h>
+#include "PrefetchTexture.h"
 #include "BackendPainter.h"
 
 logger::LogChannel backendpainterlog("backendpainterlog", "[BackendPainter] ");

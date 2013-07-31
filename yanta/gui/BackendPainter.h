@@ -10,9 +10,11 @@
 #include <tools/Tools.h>
 #include "SkiaDocumentPainter.h"
 #include "SkiaOverlayPainter.h"
-#include "PrefetchTexture.h"
 
 extern logger::LogChannel backendpainterlog;
+
+// forward declaration
+class PrefetchTexture;
 
 class BackendPainter : public gui::Painter {
 
