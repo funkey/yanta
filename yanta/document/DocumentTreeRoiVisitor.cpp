@@ -1,3 +1,3 @@
 #include "DocumentTreeRoiVisitor.h"
 
-logger::LogChannel DocumentTreeRoiVisitor::documenttreevisitorlog("documenttreeroivisitorlog", "[DocumentTreeRoiVisitor] ");
+logger::LogChannel DocumentTreeRoiVisitor::documenttreeroivisitorlog("documenttreeroivisitorlog", "[DocumentTreeRoiVisitor] ");

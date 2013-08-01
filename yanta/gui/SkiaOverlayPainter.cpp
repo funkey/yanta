@@ -22,9 +22,8 @@ SkiaOverlayPainter::draw(
 		const util::rect<DocumentPrecision>& roi) {
 
 	setCanvas(canvas);
-	setRoi(roi);
 
-	prepare();
+	prepare(roi);
 
 	// clear the surface, respecting the clipping
 	canvas.clear(SkColorSetARGB(0, 255, 255, 255));

@@ -1,5 +1,6 @@
 #include <gui/Modifiers.h>
 #include <util/Logger.h>
+#include <tools/Erasor.h>
 #include "Backend.h"
 
 logger::LogChannel backendlog("backendlog", "[Backend] ");
@@ -223,7 +224,8 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	} else if (_mode == Erase) {
 
-		util::rect<DocumentPrecision> dirtyArea = _document->erase(_previousPosition, signal.position);
+		Erasor erasor(*_document);
+		util::rect<DocumentPrecision> dirtyArea = erasor.erase(_previousPosition, signal.position);
 
 		if (!dirtyArea.isZero()) {
 
