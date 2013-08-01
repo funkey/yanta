@@ -6,7 +6,8 @@ logger::LogChannel erasorlog("erasorlog", "[Erasor] ");
 Erasor::Erasor(Document& document, ErasorMode mode) :
 	_document(document),
 	_strokePoints(document.getStrokePoints()),
-	_mode(mode) {}
+	_mode(mode),
+	_radius(1.0) {}
 
 util::rect<DocumentPrecision>
 Erasor::erase(
