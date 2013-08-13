@@ -43,9 +43,17 @@ public:
 		LOG_ALL(documenttreeroivisitorlog) << "should be the same as " << getTransformation().getInverse().applyTo(_roi) << std::endl;
 		LOG_ALL(documenttreeroivisitorlog) << "and " << getRoi() << std::endl;
 
-		// visit all elements that intersect the roi
-		RoiTraverser<VisitorType> traverser(visitor, getRoi());
-		container.for_each(traverser);
+		if (_roi.isZero()) {
+
+			Traverser<VisitorType> traverser(visitor);
+			container.for_each(traverser);
+
+		} else {
+
+			// visit all elements that intersect the roi
+			RoiTraverser<VisitorType> traverser(visitor, getRoi());
+			container.for_each(traverser);
+		}
 	}
 
 	// fallback implementation
