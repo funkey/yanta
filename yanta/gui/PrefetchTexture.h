@@ -121,7 +121,7 @@ private:
 	 */
 	template <typename Painter>
 	void fillBuffer(
-			gui::Buffer&           buffer,
+			gui::skia_pixel_t*     buffer,
 			const util::rect<int>& bufferArea,
 			Painter&               painter,
 			const util::rect<int>& roi);
@@ -133,9 +133,9 @@ private:
 	 */
 	void split(const util::rect<int>& subarea, util::rect<int>* parts, util::point<int>* offsets);
 
-	void createBuffer(unsigned int width, unsigned int height, gui::Buffer** buffer);
+	void createBuffer(unsigned int width, unsigned int height, gui::skia_pixel_t** buffer);
 
-	void deleteBuffer(gui::Buffer** buffer);
+	void deleteBuffer(gui::skia_pixel_t** buffer);
 
 	// the whole area (including prefetch) covered by the texture in pixel units
 	util::rect<int> _textureArea;
@@ -151,15 +151,6 @@ private:
 
 	// a mutex to protect access to _texture
 	boost::mutex _textureMutex;
-
-	// the width of the x-, and the height of the y-buffer (used to reload dirty 
-	// areas along the edges of the texture)
-	unsigned int _bufferWidth;
-	unsigned int _bufferHeight;
-
-	// OpenGl buffers to reload dirty parts of the texture
-	gui::Buffer* _reloadBufferX;
-	gui::Buffer* _reloadBufferY;
 
 	// the point where all four corners of the texture meet in content space
 	util::point<int> _splitPoint;
@@ -179,7 +170,7 @@ private:
 	util::point<int> _workingAreaOffsets[4];
 
 	// the up-to-four buffers for the working area
-	gui::Buffer* _workingBuffers[4];
+	gui::skia_pixel_t* _workingBuffers[4];
 
 	// the clean-up area a thread is currently working on
 	util::rect<int> _currentCleanUpArea;
@@ -211,19 +202,31 @@ PrefetchTexture::fill(
 
 			// fill the _workingBuffers[i], representing area 
 			// _workingAreaParts[i] only in the subarea parts[i]
-			fillBuffer(*_workingBuffers[i], _workingAreaParts[i], painter, parts[i]);
+			fillBuffer(_workingBuffers[i], _workingAreaParts[i], painter, parts[i]);
 
-			_texture->loadData(*_workingBuffers[i], _workingAreaOffsets[i].x, _workingAreaOffsets[i].y);
+			_texture->loadData(
+					_workingBuffers[i],
+					util::rect<unsigned int>(
+							_workingAreaOffsets[i].x,
+							_workingAreaOffsets[i].y,
+							_workingAreaOffsets[i].x + _workingAreaParts[i].width(),
+							_workingAreaOffsets[i].y + _workingAreaParts[i].height()));
 
 		} else {
 
-			gui::Buffer* buffer = 0;
+			gui::skia_pixel_t* buffer = 0;
 
 			createBuffer(width, height, &buffer);
 
-			fillBuffer(*buffer, parts[i], painter, parts[i]);
+			fillBuffer(buffer, parts[i], painter, parts[i]);
 
-			_texture->loadData(*buffer, offsets[i].x, offsets[i].y);
+			_texture->loadData(
+					buffer,
+					util::rect<unsigned int>(
+							offsets[i].x,
+							offsets[i].y,
+							offsets[i].x + width,
+							offsets[i].y + height));
 
 			deleteBuffer(&buffer);
 		}
@@ -233,7 +236,7 @@ PrefetchTexture::fill(
 template <typename Painter>
 void
 PrefetchTexture::fillBuffer(
-		gui::Buffer&           buffer,
+		gui::skia_pixel_t*     buffer,
 		const util::rect<int>& bufferArea,
 		Painter&               painter,
 		const util::rect<int>& roi) {
@@ -241,12 +244,10 @@ PrefetchTexture::fillBuffer(
 	unsigned int width  = bufferArea.width();
 	unsigned int height = bufferArea.height();
 
-	gui::skia_pixel_t* data = buffer.map<gui::skia_pixel_t>();
-
 	// wrap the buffer in a skia bitmap
 	SkBitmap bitmap;
 	bitmap.setConfig(SkBitmap::kARGB_8888_Config, width, height);
-	bitmap.setPixels(data);
+	bitmap.setPixels(buffer);
 
 	SkCanvas canvas(bitmap);
 
@@ -260,9 +261,6 @@ PrefetchTexture::fillBuffer(
 	canvas.translate(translate.x, translate.y);
 
 	painter.draw(canvas, roi);
-
-	// unmap the buffer
-	buffer.unmap();
 }
 
 template <typename Painter>
@@ -276,7 +274,7 @@ PrefetchTexture::cleanUp(Painter& painter, unsigned int maxNumRequests) {
 	if (maxNumRequests != 0)
 		numRequests = std::min(numRequests, maxNumRequests);
 
-	gui::Buffer* buffer = 0;
+	gui::skia_pixel_t* buffer = 0;
 	CleanUpRequest request;
 
 	for (unsigned int i = 0; i < numRequests; i++) {
@@ -288,10 +286,16 @@ PrefetchTexture::cleanUp(Painter& painter, unsigned int maxNumRequests) {
 
 		createBuffer(request.area.width(), request.area.height(), &buffer);
 
-		fillBuffer(*buffer, request.area, painter, request.area);
+		fillBuffer(buffer, request.area, painter, request.area);
 
 		// update texture with buffer content
-		_texture->loadData(*buffer, request.textureOffset.x, request.textureOffset.y);
+		_texture->loadData(
+				buffer,
+				util::rect<unsigned int>(
+						request.textureOffset.x,
+						request.textureOffset.y,
+						request.textureOffset.x + request.area.width(),
+						request.textureOffset.y + request.area.height()));
 
 		deleteBuffer(&buffer);
 

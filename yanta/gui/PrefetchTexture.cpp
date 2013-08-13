@@ -20,10 +20,6 @@ PrefetchTexture::PrefetchTexture(
 	_prefetchTop(prefetchTop),
 	_prefetchBottom(prefetchBottom),
 	_texture(0),
-	_bufferWidth(std::min(prefetchLeft, prefetchRight)),
-	_bufferHeight(std::min(prefetchTop, prefetchBottom)),
-	_reloadBufferX(0),
-	_reloadBufferY(0),
 	_workingArea(0, 0, 0, 0),
 	_currentCleanUpArea(0, 0, 0, 0) {
 
@@ -40,8 +36,6 @@ PrefetchTexture::~PrefetchTexture() {
 
 	for (int i = 0; i < 4; i++)
 		deleteBuffer(&_workingBuffers[i]);
-	deleteBuffer(&_reloadBufferX);
-	deleteBuffer(&_reloadBufferY);
 
 	if (_texture)
 		delete _texture;
@@ -58,21 +52,12 @@ PrefetchTexture::prepare() {
 		LOG_ALL(prefetchtexturelog) << "texture is of different size, create a new one" << std::endl;
 
 		delete _texture;
-		delete _reloadBufferX;
-		delete _reloadBufferY;
 		_texture = 0;
-		_reloadBufferX = 0;
-		_reloadBufferY = 0;
 	}
 
 	if (_texture == 0) {
 
-		GLenum format = gui::detail::pixel_format_traits<gui::skia_pixel_t>::gl_format;
-		GLenum type   = gui::detail::pixel_format_traits<gui::skia_pixel_t>::gl_type;
-
 		_texture = new gui::Texture(width, height, GL_RGBA);
-		_reloadBufferX = new gui::Buffer(_bufferWidth, height, format, type);
-		_reloadBufferY = new gui::Buffer(width, _bufferHeight, format, type);
 
 		return true;
 	}
@@ -329,21 +314,18 @@ PrefetchTexture::split(const util::rect<int>& subarea, util::rect<int>* parts, u
 }
 
 void
-PrefetchTexture::createBuffer(unsigned int width, unsigned int height, gui::Buffer** buffer) {
+PrefetchTexture::createBuffer(unsigned int width, unsigned int height, gui::skia_pixel_t** buffer) {
 
 	deleteBuffer(buffer);
 
-	GLenum format = gui::detail::pixel_format_traits<gui::skia_pixel_t>::gl_format;
-	GLenum type   = gui::detail::pixel_format_traits<gui::skia_pixel_t>::gl_type;
-
-	*buffer = new gui::Buffer(width, height, format, type);
+	*buffer = new gui::skia_pixel_t[width*height];
 }
 
 void
-PrefetchTexture::deleteBuffer(gui::Buffer** buffer) {
+PrefetchTexture::deleteBuffer(gui::skia_pixel_t** buffer) {
 
 	if (*buffer)
-		delete *buffer;
+		delete[] *buffer;
 
 	*buffer = 0;
 }
