@@ -8,7 +8,7 @@
 #include <util/ProgramOptions.h>
 #include "PrefetchTexture.h"
 #include "BackendPainter.h"
-#include "TilingTexture.h"
+#include "TorusTexture.h"
 
 logger::LogChannel backendpainterlog("backendpainterlog", "[BackendPainter] ");
 
@@ -20,12 +20,8 @@ util::ProgramOption optionDpi(
 BackendPainter::BackendPainter() :
 	_documentChanged(true),
 	_documentPainter(gui::skia_pixel_t(255, 255, 255)),
-	_documentCleanUpPainter(gui::skia_pixel_t(255, 255, 255)),
+	_documentCleanUpPainter(boost::make_shared<SkiaDocumentPainter>(gui::skia_pixel_t(255, 255, 255))),
 	_overlayAlpha(1.0),
-	_prefetchLeft(1024),
-	_prefetchRight(1024),
-	_prefetchTop(1024),
-	_prefetchBottom(1024),
 	_shift(0, 0),
 	_scale(optionDpi.as<double>()*0.0393701, optionDpi.as<double>()*0.0393701), // pixel per millimeter
 	_scaleChange(1, 1),
@@ -68,6 +64,8 @@ BackendPainter::draw(
 
 	LOG_ALL(backendpainterlog) << "pixel roi is " << pixelRoi << std::endl;
 
+	// TODO: is this really needed? I think we can assume a valid OpenGl 
+	// context, here.
 	gui::OpenGl::Guard guard;
 
 	if (prepareTextures(pixelRoi) || _documentChanged) {
@@ -88,11 +86,7 @@ BackendPainter::draw(
 
 			LOG_DEBUG(backendpainterlog) << "scale changed while we are in drawing mode" << std::endl;
 
-			//initiateFullRedraw(pixelRoi);
-
-			// update the working area ourselves
-			updateDocument(pixelRoi);
-			//wantsRedraw = updateOverlay(pixelRoi);
+			initiateFullRedraw(pixelRoi);
 
 		// shift changed in incremental drawing mode -- move prefetch texture 
 		// and get back to incremental drawing
@@ -106,10 +100,7 @@ BackendPainter::draw(
 		// transformation did not change
 		} else {
 
-			LOG_ALL(backendpainterlog) << "transformation did not change -- I just quickly update the document" << std::endl;
-
-			updateDocument(pixelRoi);
-			//wantsRedraw = updateOverlay(pixelRoi);
+			LOG_ALL(backendpainterlog) << "transformation did not change" << std::endl;
 		}
 	}
 
@@ -123,7 +114,6 @@ BackendPainter::draw(
 			// show a different part of the document texture
 			_documentTexture->shift(pixelShift - _previousShift);
 			//_overlayTexture->shift(pixelShift - _previousShift);
-			//_overlayTexture->cleanUp(_overlayPainter);
 		}
 	}
 
@@ -154,19 +144,11 @@ BackendPainter::draw(
 void
 BackendPainter::contentAdded(const util::rect<DocumentPrecision>& region) {
 
+	// get the pixels that are affected
 	util::rect<int> pixelRegion = documentToTexture(region);
 
-	if (_contentAddedRegion.isZero())
-
-		_contentAddedRegion = pixelRegion;
-
-	else {
-
-		_contentAddedRegion.minX = std::min(_contentAddedRegion.minX, pixelRegion.minX);
-		_contentAddedRegion.minY = std::min(_contentAddedRegion.minY, pixelRegion.minY);
-		_contentAddedRegion.maxX = std::max(_contentAddedRegion.maxX, pixelRegion.maxX);
-		_contentAddedRegion.maxY = std::max(_contentAddedRegion.maxY, pixelRegion.maxY);
-	}
+	// mark the corresponding part of the texture as needs-update
+	_documentTexture->markDirty(pixelRegion, TorusTexture::NeedsUpdate);
 
 	_mode = IncrementalDrawing;
 }
@@ -249,7 +231,8 @@ void
 BackendPainter::refresh() {
 
 	LOG_DEBUG(backendpainterlog) << "refresh requested" << std::endl;
-	_documentPainter.resetIncrementalMemory();
+
+	initiateFullRedraw(_previousPixelRoi);
 }
 
 void
@@ -262,50 +245,14 @@ BackendPainter::markDirty(const util::rect<DocumentPrecision>& area) {
 	// add a border of one pixels to compensate for rounding artefacts
 	util::rect<int> pixelArea(ul.x - 1, ul.y - 1, lr.x + 1, lr.y +1);
 
-	// are we currently looking at this area?
-	if (_mode == IncrementalDrawing && pixelArea.intersects(_previousPixelRoi)) {
-
-		LOG_DEBUG(backendpainterlog) << "redrawing dirty working area " << (_previousPixelRoi.intersection(pixelArea)) << std::endl;
-
-		gui::OpenGl::Guard guard;
-
-		// in this case, redraw immediately the part that got dirty
-		_documentPainter.setIncremental(false);
-		_documentTexture->update(_previousPixelRoi.intersection(pixelArea), _documentPainter);
-		_documentPainter.setIncremental(true);
-
-		// send everything beyond the working area to the worker threads
-		_documentTexture->markDirty(_left.intersection(pixelArea));
-		_documentTexture->markDirty(_right.intersection(pixelArea));
-		_documentTexture->markDirty(_top.intersection(pixelArea));
-		_documentTexture->markDirty(_bottom.intersection(pixelArea));
-
-	} else {
-
-		// otherwise, let the background threads do the work
-		_documentTexture->markDirty(pixelArea);
-	}
-}
-
-bool
-BackendPainter::cleanDirtyAreas(unsigned int maxNumRequests) {
-
-	boost::shared_ptr<TilingTexture> texture = _documentTexture;
-
-	if (!texture)
-		return false;
-
-	if (texture->cleanUp(_documentCleanUpPainter, maxNumRequests))
-		return true;
-
-	return false;
+	_documentTexture->markDirty(pixelArea, TorusTexture::NeedsRedraw);
 }
 
 void
 BackendPainter::setDeviceTransformation() {
 
 	_documentPainter.setDeviceTransformation(_scale, util::point<int>(0, 0));
-	_documentCleanUpPainter.setDeviceTransformation(_scale, util::point<int>(0, 0));
+	_documentCleanUpPainter->setDeviceTransformation(_scale, util::point<int>(0, 0));
 	_overlayPainter.setDeviceTransformation(_scale, util::point<int>(0, 0));
 }
 
@@ -315,11 +262,8 @@ BackendPainter::initiateFullRedraw(const util::rect<int>& roi) {
 	LOG_DEBUG(backendpainterlog) << "initiate full redraw for roi " << roi << std::endl;
 
 	_documentTexture->reset(roi.center());
-	_documentTexture->markDirtyExcept(roi);
 	_documentPainter.resetIncrementalMemory();
 	//_overlayTexture->reset(roi);
-
-	_contentAddedRegion = util::rect<int>(0, 0, 0, 0);
 }
 
 bool
@@ -332,12 +276,13 @@ BackendPainter::prepareTextures(const util::rect<int>& pixelRoi) {
 
 	//if (!_overlayTexture) {
 
-		//_overlayTexture = boost::make_shared<TilingTexture>(pixelRoi, 0, 0, 0, 0);
+		//_overlayTexture = boost::make_shared<TorusTexture>(pixelRoi);
 	//}
 
 	if (!_documentTexture) {
 
-		_documentTexture = boost::make_shared<TilingTexture>(pixelRoi.center());
+		_documentTexture = boost::make_shared<TorusTexture>(pixelRoi);
+		_documentTexture->setBackgroundPainter(_documentCleanUpPainter);
 
 		return true;
 	}
@@ -346,56 +291,9 @@ BackendPainter::prepareTextures(const util::rect<int>& pixelRoi) {
 }
 
 void
-BackendPainter::updateDocument(const util::rect<int>& roi) {
-
-	// is it necessary to draw something?
-	if (!_documentPainter.needRedraw()) {
-
-		LOG_ALL(backendpainterlog) << "nothing changed, skipping redraw" << std::endl;
-		return;
-	}
-
-	if (!_contentAddedRegion.isZero()) {
-
-		LOG_ALL(backendpainterlog) << "adding content in " << _contentAddedRegion << std::endl;
-
-		_documentTexture->update(_contentAddedRegion, _documentPainter);
-		_contentAddedRegion = util::rect<DocumentPrecision>(0, 0, 0, 0);
-
-	} else {
-
-		LOG_ALL(backendpainterlog) << "updating in " << roi << std::endl;
-
-		_documentTexture->update(roi, _documentPainter);
-	}
-
-	_documentPainter.rememberDrawnElements();
-}
-
-bool
-BackendPainter::updateOverlay(const util::rect<int>& /*roi*/) {
-
-	// TODO: clean only dirty parts
-	//_overlayTexture->fill(roi, _overlayPainter);
-
-	//if (_overlayPainter.getDocument().size<Selection>() > 0) {
-
-		//LOG_ALL(backendpainterlog) << "there are selection in the overlay -- requesting a redraw" << std::endl;
-
-		//// let the selection pulsate
-		//long millis = boost::posix_time::microsec_clock::local_time().time_of_day().total_milliseconds();
-		//_overlayAlpha = 0.5 + 0.4*2*std::abs(0.5 - std::fmod(millis*0.001, 1.0));
-
-		//return true;
-	//}
-
-	return false;
-}
-
-void
 BackendPainter::moveSelection(const SelectionMoved& /*signal*/) {
 
-	//_overlayTexture->markDirty(signal.area);
+	//_overlayTexture->markDirty(signal.area, TorusTexture::NeedsRedraw);
 }
 
 void
@@ -408,17 +306,19 @@ BackendPainter::drawTextures(const util::rect<int>& roi) {
 
 		glScaled(_scaleChange.x, _scaleChange.y, 1.0);
 		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-		_documentTexture->render(roi/_scaleChange);
+		_documentTexture->render(roi/_scaleChange, _documentPainter);
 		glColor4f(1.0f, 1.0f, 0.5f, _overlayAlpha);
 		//_overlayTexture->render(roi/_scaleChange);
 
 	} else {
 
 		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-		_documentTexture->render(roi);
+		_documentTexture->render(roi, _documentPainter);
 		glColor4f(1.0f, 1.0f, 0.8f, _overlayAlpha);
 		//_overlayTexture->render(roi);
 	}
 
 	glPopMatrix();
+
+	_documentPainter.rememberDrawnElements();
 }

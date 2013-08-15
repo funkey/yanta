@@ -14,7 +14,7 @@
 extern logger::LogChannel backendpainterlog;
 
 // forward declaration
-class TilingTexture;
+class TorusTexture;
 
 class BackendPainter : public gui::Painter {
 
@@ -26,7 +26,7 @@ public:
 
 		_documentPainter.setDocument(document);
 		_overlayPainter.setDocument(document);
-		_documentCleanUpPainter.setDocument(document);
+		_documentCleanUpPainter->setDocument(document);
 		_documentChanged = true;
 	}
 
@@ -93,12 +93,6 @@ public:
 	void markDirty(const util::rect<DocumentPrecision>& area);
 
 	/**
-	 * Clean all dirty areas of the painter. Returns true, if there were some, 
-	 * false otherwise.
-	 */
-	bool cleanDirtyAreas(unsigned int maxNumRequests);
-
-	/**
 	 * Initiate a redraw of a moved selection.
 	 */
 	void moveSelection(const SelectionMoved& signal);
@@ -110,8 +104,13 @@ private:
 	 */
 	enum BackendPainterMode {
 
+		// TODO: do we need that?
 		IncrementalDrawing,
+
+		// user is dragging the texture
 		Dragging,
+
+		// user is zooming
 		Zooming
 	};
 
@@ -123,52 +122,33 @@ private:
 	void initiateFullRedraw(const util::rect<int>& roi);
 
 	/**
-	 * Prepare the texture and buffers of the respective sizes.
+	 * Prepare the textures for the given region.
 	 */
 	bool prepareTextures(const util::rect<int>& pixelRoi);
 
 	/**
-	 * Update the document in the specified ROI.
-	 */
-	void updateDocument(const util::rect<int>& roi);
-
-	/**
-	 * Update the overlay in the specified ROI.
-	 */
-	bool updateOverlay(const util::rect<int>& roi);
-
-	/**
-	 * Draw the texture content that corresponds to roi into roi.
+	 * Draw the textures' content that corresponds to roi into roi.
 	 */
 	void drawTextures(const util::rect<int>& roi);
 
 	// indicates that the document was changed entirely
 	bool _documentChanged;
 
-	// hint where content was added
-	util::rect<int> _contentAddedRegion;
-
 	// the skia painter for the document
 	SkiaDocumentPainter _documentPainter;
 
 	// a skia painter for the background updates
-	SkiaDocumentPainter _documentCleanUpPainter;
+	boost::shared_ptr<SkiaDocumentPainter> _documentCleanUpPainter;
 
 	// a skia painter for the overlay
 	SkiaOverlayPainter _overlayPainter;
 
 	// the textures to draw to
-	boost::shared_ptr<TilingTexture> _documentTexture;
-	boost::shared_ptr<TilingTexture> _overlayTexture;
+	boost::shared_ptr<TorusTexture> _documentTexture;
+	boost::shared_ptr<TorusTexture> _overlayTexture;
 
 	// the transparency of the overlay texture
 	float _overlayAlpha;
-
-	// the number of pixels to add to the visible region for prefetching
-	unsigned int _prefetchLeft;
-	unsigned int _prefetchRight;
-	unsigned int _prefetchTop;
-	unsigned int _prefetchBottom;
 
 	// Mapping from document untis to screen pixel units:
 	//
@@ -189,12 +169,7 @@ private:
 
 	util::rect<int> _previousPixelRoi;
 
-	// the prefetch parts
-	util::rect<int> _left;
-	util::rect<int> _right;
-	util::rect<int> _bottom;
-	util::rect<int> _top;
-
+	// the current mode of the backend painter
 	BackendPainterMode _mode;
 
 	// the position of the cursor to draw in screen pixels

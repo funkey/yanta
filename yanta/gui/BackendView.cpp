@@ -19,8 +19,6 @@ BackendView::BackendView() :
 	_lastPen(0, 0),
 	_gestureStartCenter(0, 0),
 	_gestureStartDistance(0),
-	_backgroundPainterStopped(false),
-	_backgroundThread(boost::bind(&BackendView::cleanDirtyAreas, this)),
 	_mode(Nothing),
 	_penOffset(optionPenOffsetX.as<int>(), optionPenOffsetY.as<int>()) {
 
@@ -47,16 +45,6 @@ BackendView::BackendView() :
 	_painter.registerForwardCallback(&BackendView::onFingerDown, this);
 	_painter.registerForwardCallback(&BackendView::onFingerMove, this);
 	_painter.registerForwardCallback(&BackendView::onFingerUp, this);
-}
-
-BackendView::~BackendView() {
-
-	LOG_DEBUG(backendviewlog) << "tearing down background rendering thread" << std::endl;
-
-	_backgroundPainterStopped = true;
-	_backgroundThread.join();
-
-	LOG_DEBUG(backendviewlog) << "background rendering thread stopped" << std::endl;
 }
 
 void
@@ -435,39 +423,3 @@ BackendView::locked(unsigned long /*now*/, const util::point<DocumentPrecision>&
 	return false;
 }
 
-void
-BackendView::cleanDirtyAreas() {
-
-	boost::timer::cpu_timer timer;
-
-	const boost::timer::nanosecond_type NanosBusyWait = 100000LL;     // 1/10000th of a second
-	const boost::timer::nanosecond_type NanosIdleWait = 1000000000LL; // 1/1th of a second
-
-	bool isClean = false;
-
-	while (!_backgroundPainterStopped) {
-
-		// was there something to clean?
-		if (_painter && _painter->cleanDirtyAreas(2)) {
-
-			isClean = false;
-
-		// there was nothing to clean
-		} else {
-
-			if (!isClean)
-				_contentChanged();
-			isClean = true;
-		}
-
-		boost::timer::cpu_times const elapsed(timer.elapsed());
-
-		boost::timer::nanosecond_type waitAtLeast = (isClean ? NanosIdleWait : NanosBusyWait);
-
-		if (elapsed.wall <= waitAtLeast)
-			usleep((waitAtLeast - elapsed.wall)/1000);
-
-		timer.stop();
-		timer.start();
-	}
-}

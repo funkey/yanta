@@ -20,8 +20,6 @@ public:
 
 	BackendView();
 
-	~BackendView();
-
 private:
 
 	/**
@@ -93,8 +91,6 @@ private:
 
 	util::point<DocumentPrecision> getFingerCenter();
 
-	void cleanDirtyAreas();
-
 	/**
 	 * Returns true if there was recent pen activity and finger movements should 
 	 * be ignored.
@@ -138,12 +134,6 @@ private:
 	util::point<DocumentPrecision> _gestureStartCenter;
 	DocumentPrecision              _gestureStartDistance;
 	unsigned long                  _gestureStartTime;
-
-	// used to stop the background rendering thread
-	bool _backgroundPainterStopped;
-
-	// the background rendering thread keeping dirty regions clean
-	boost::thread _backgroundThread;
 
 	int _mode;
 
