@@ -57,6 +57,11 @@ public:
 	 */
 	void render(const util::rect<int>& region, SkiaDocumentPainter& painter);
 
+	/**
+	 * Set a painter for the background clean-up thread.
+	 */
+	void setBackgroundPainter(boost::shared_ptr<SkiaDocumentPainter> painter);
+
 private:
 
 	/**

@@ -3,15 +3,13 @@
 logger::LogChannel torustexturelog("torustexturelog", "[TorusTexture] ");
 
 TorusTexture::TorusTexture(const util::rect<int>& region) :
+	_width (region.width() /TileSize + (region.width()  % TileSize == 0 ? 0 : 1)),
+	_height(region.height()/TileSize + (region.height() % TileSize == 0 ? 0 : 1)),
+	_outOfDates(boost::extents[_width][_height]),
+	_mapping(_width, _height),
 	_texture(0) {
 
-	_width  = region.width()/TileSize;
-	_height = region.height()/TileSize;
-
-	if (region.width() % TileSize != 0)
-		_width++;
-	if (region.height() % TileSize != 0)
-		_height++;
+	LOG_DEBUG(torustexturelog) << "creating new torus texture with " << _width << "x" << _height << " tiles to cover " << region << std::endl;
 
 	// the tiles cache has to contain at least the tiles that we need
 	assert(_width  <= TilesCache::Width);
@@ -71,6 +69,7 @@ TorusTexture::shift(const util::point<int>& shift) {
 	while (_shift.x >= (int)TileSize) {
 
 		_mapping.shift(util::point<int>(1, 0));
+		_cache.shift(util::point<int>(1, 0));
 		_shift.x -= TileSize;
 
 		// the new tiles are in the left column
@@ -82,17 +81,19 @@ TorusTexture::shift(const util::point<int>& shift) {
 	while (_shift.x <= -(int)TileSize) {
 
 		_mapping.shift(util::point<int>(-1, 0));
+		_cache.shift(util::point<int>(-1, 0));
 		_shift.x += TileSize;
 
 		// the new tiles are in the right column
 		util::rect<int> tilesRegion = _mapping.get_region();
-		int x = tilesRegion.maxX;
+		int x = tilesRegion.maxX - 1;
 		for (int y = tilesRegion.minY; y < tilesRegion.maxY; y++)
 			markDirty(util::point<int>(x, y), NeedsRedraw);
 	}
 	while (_shift.y >= (int)TileSize) {
 
 		_mapping.shift(util::point<int>(0, 1));
+		_cache.shift(util::point<int>(0, 1));
 		_shift.y -= TileSize;
 
 		// the new tiles are in the top column
@@ -104,11 +105,12 @@ TorusTexture::shift(const util::point<int>& shift) {
 	while (_shift.y <= -(int)TileSize) {
 
 		_mapping.shift(util::point<int>(0, -1));
+		_cache.shift(util::point<int>(0, -1));
 		_shift.y += TileSize;
 
 		// the new tiles are in the bottom column
 		util::rect<int> tilesRegion = _mapping.get_region();
-		int y = tilesRegion.maxY;
+		int y = tilesRegion.maxY - 1;
 		for (int x = tilesRegion.minX; x < tilesRegion.maxX; x++)
 			markDirty(util::point<int>(x, y), NeedsRedraw);
 	}
@@ -135,16 +137,28 @@ TorusTexture::markDirty(const util::rect<int>& region, DirtyFlag dirtyFlag) {
 void
 TorusTexture::render(const util::rect<int>& region, SkiaDocumentPainter& painter) {
 
+	LOG_ALL(torustexturelog) << "called render for " << region << std::endl;
+
 	// get the tiles in the region
 	util::rect<int> tiles;
-	tiles.minX = region.minX/TileSize;
-	tiles.minY = region.minY/TileSize;
-	tiles.maxX = (region.maxX - 1)/TileSize + 1;
-	tiles.maxY = (region.maxY - 1)/TileSize + 1;
+	tiles.minX = region.minX/static_cast<int>(TileSize);
+	tiles.minY = region.minY/static_cast<int>(TileSize);
+	tiles.maxX = (region.maxX - 1)/static_cast<int>(TileSize) + 1;
+	tiles.maxY = (region.maxY - 1)/static_cast<int>(TileSize) + 1;
+
+	LOG_ALL(torustexturelog) << "tiles would be " << tiles << std::endl;
 
 	// intersect it with the tiles that are used in the texture to make sure we 
 	// are not drawing tiles that don't exist
 	tiles = _mapping.get_region().intersection(tiles);
+
+	LOG_ALL(torustexturelog) << "intersected with my tiles " << _mapping.get_region() << ", this gives " << tiles << std::endl;
+
+	if (tiles.area() <= 0) {
+
+		LOG_ALL(torustexturelog) << "I don't have tiles for this region" << std::endl;
+		return;
+	}
 
 	// reload out-of-date tiles
 	// TODO: make this more efficient (by using a queue of reload requests)
@@ -156,6 +170,9 @@ TorusTexture::render(const util::rect<int>& region, SkiaDocumentPainter& painter
 			if (_outOfDates[physicalTile.x][physicalTile.y]) {
 
 				util::point<int> tile(x, y);
+
+				LOG_ALL(torustexturelog) << "reloading tile " << tile << std::endl;
+
 				reloadTile(tile, physicalTile, painter);
 			}
 		}
@@ -176,21 +193,23 @@ TorusTexture::render(const util::rect<int>& region, SkiaDocumentPainter& painter
 	// for each part...
 	for (int i = 0; i < 4; i++) {
 
+		LOG_ALL(torustexturelog) << "attempting to draw part " << i << " with tiles " << subtiles[i] << std::endl;
+
 		if (subtiles[i].area() <= 0)
 			continue;
 
 		LOG_ALL(torustexturelog) << "drawing texture part " << i << std::endl;
 
-		// the region covered by this part
+		// the region covered by this part in pixels
 		util::rect<int> subregion = subtiles[i]*static_cast<int>(TileSize);
 
 		util::point<int> physicalUpperLeft  = _mapping.map(subtiles[i].upperLeft());
-		util::point<int> physicalLowerRight = _mapping.map(subtiles[i].lowerRight());
+		util::point<int> physicalLowerRight = physicalUpperLeft + util::point<int>(subtiles[i].width(), subtiles[i].height());
 
-		// the texCoords as pixels in the texture
+		// the texCoords as tiles in the texture
 		util::rect<double> texCoords(physicalUpperLeft.x, physicalUpperLeft.y, physicalLowerRight.x, physicalLowerRight.y);
 		// normalized to [0,1)x[0,1)
-		texCoords /= util::point<double>(_width*TileSize, _height*TileSize);
+		texCoords /= util::point<double>(_width, _height);
 
 		// draw the texture part
 		glBegin(GL_QUADS);
@@ -207,11 +226,20 @@ TorusTexture::render(const util::rect<int>& region, SkiaDocumentPainter& painter
 }
 
 void
+TorusTexture::setBackgroundPainter(boost::shared_ptr<SkiaDocumentPainter> painter) {
+
+	_cache.setBackgroundPainter(painter);
+}
+
+void
 TorusTexture::markDirty(const util::point<int>& tile, DirtyFlag dirtyFlag) {
 
 	// mark the tile out-of-date in the texture
-	util::point<int> physicalTile = _mapping.map(tile);
-	_outOfDates[physicalTile.x][physicalTile.y] = true;
+	if (_mapping.get_region().contains(tile)) {
+
+		util::point<int> physicalTile = _mapping.map(tile);
+		_outOfDates[physicalTile.x][physicalTile.y] = true;
+	}
 
 	// mark the tile dirty in the cache
 	if (dirtyFlag == NeedsRedraw)
