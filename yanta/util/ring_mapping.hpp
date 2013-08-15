@@ -123,7 +123,7 @@ public:
 
 		_start = begin;
 		_physicalStart = 0;
-		_split = 0;
+		_split = begin;
 	}
 
 	/**
