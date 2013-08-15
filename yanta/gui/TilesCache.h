@@ -1,6 +1,7 @@
 #ifndef YANTA_GUI_TILES_CACHE_H__
 #define YANTA_GUI_TILES_CACHE_H__
 
+#include <boost/multi_array.hpp>
 #include <boost/thread.hpp>
 
 #include <util/torus_mapping.hpp>
@@ -18,8 +19,8 @@ public:
 	static const unsigned int TileSize = 128;
 
 	// the number of tiles in the x and y direction
-	static const unsigned int Width  = 16;
-	static const unsigned int Height = 16;
+	static const unsigned int Width  = 8;
+	static const unsigned int Height = 8;
 
 	/**
 	 * The possible state of tiles in the cache.
@@ -125,10 +126,12 @@ private:
 	bool getNextCleanUpRequest(CleanUpRequest& request);
 
 	// 2D array of tiles
-	gui::skia_pixel_t _tiles[Width][Height][TileSize*TileSize];
+	typedef boost::multi_array<gui::skia_pixel_t, 3> tiles_type;
+	tiles_type  _tiles;
 
 	// 2D array of states for the tiles
-	TileState _tileStates[Width][Height];
+	typedef boost::multi_array<TileState, 2> tile_states_type;
+	tile_states_type _tileStates;
 
 	// mapping from logical tile coordinates to physical coordinates in 2D array
 	torus_mapping<int, Width, Height> _mapping;

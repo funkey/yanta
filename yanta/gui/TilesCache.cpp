@@ -5,10 +5,13 @@
 logger::LogChannel tilescachelog("tilescachelog", "[TilesCache] ");
 
 TilesCache::TilesCache(const util::point<int>& center) :
+	_tiles(boost::extents[Width][Height][TileSize*TileSize]),
+	_tileStates(boost::extents[Width][Height]),
 	_backgroundPainterStopped(false),
 	_backgroundThread(boost::bind(&TilesCache::cleanUp, this)) {
 
 	LOG_ALL(tilescachelog) << "creating new tiles cache around " << center << std::endl;
+
 
 	reset(center);
 }
@@ -153,7 +156,7 @@ TilesCache::getTile(const util::point<int>& tile, SkiaDocumentPainter& painter) 
 		painter.setIncremental(true);
 	}
 
-	return _tiles[physicalTile.x][physicalTile.y];
+	return &_tiles[physicalTile.x][physicalTile.y][0];
 }
 
 void
@@ -165,7 +168,26 @@ TilesCache::setBackgroundPainter(boost::shared_ptr<SkiaDocumentPainter> painter)
 void
 TilesCache::updateTile(const util::point<int>& physicalTile, const util::rect<int>& tileRegion, SkiaDocumentPainter& painter) {
 
-	gui::skia_pixel_t* buffer = _tiles[physicalTile.x][physicalTile.y];
+	LOG_ALL(tilescachelog) << "updating physical tile " << physicalTile << " with content of " << tileRegion << std::endl;
+
+	// It can happen that a clean-up request became stale because getTile() 
+	// cleaned the tile already. In this case, there is nothing to do here.
+	if (_tileStates[physicalTile.x][physicalTile.y] == Clean) {
+
+		LOG_ALL(tilescachelog) << "this tile is clean already -- skip update" << std::endl;
+		return;
+	}
+
+	// Possible data race:
+	// 
+	// Tile get's cleaned while we are here. In this case, the tile will be 
+	// updated twice. That's okay.
+
+	// mark it as clean
+	_tileStates[physicalTile.x][physicalTile.y] = Clean;
+
+	// get the data of the tile
+	gui::skia_pixel_t* buffer = &_tiles[physicalTile.x][physicalTile.y][0];
 
 	// wrap the buffer in a skia bitmap
 	SkBitmap bitmap;
@@ -189,6 +211,8 @@ TilesCache::updateTile(const util::point<int>& physicalTile, const util::rect<in
 void
 TilesCache::cleanUp() {
 
+	LOG_ALL(tilescachelog) << "background clean-up thread started" << std::endl;
+
 	boost::timer::cpu_timer timer;
 
 	const boost::timer::nanosecond_type NanosBusyWait = 100000LL;     // 1/10000th of a second
@@ -197,6 +221,8 @@ TilesCache::cleanUp() {
 	bool isClean = false;
 
 	while (!_backgroundPainterStopped) {
+
+		LOG_ALL(tilescachelog) << "checking for dirty tiles" << std::endl;
 
 		// was there something to clean?
 		isClean = (_backgroundPainter && cleanDirtyTiles(2) == 0);
@@ -212,6 +238,8 @@ TilesCache::cleanUp() {
 		timer.stop();
 		timer.start();
 	}
+
+	LOG_ALL(tilescachelog) << "background clean-up thread stopped" << std::endl;
 }
 
 unsigned int
