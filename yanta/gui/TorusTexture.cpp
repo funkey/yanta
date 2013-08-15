@@ -68,7 +68,7 @@ TorusTexture::shift(const util::point<int>& shift) {
 
 	while (_shift.x >= (int)TileSize) {
 
-		_mapping.shift(util::point<int>(1, 0));
+		_mapping.shift(util::point<int>(-1, 0));
 		_cache.shift(util::point<int>(1, 0));
 		_shift.x -= TileSize;
 
@@ -80,7 +80,7 @@ TorusTexture::shift(const util::point<int>& shift) {
 	}
 	while (_shift.x <= -(int)TileSize) {
 
-		_mapping.shift(util::point<int>(-1, 0));
+		_mapping.shift(util::point<int>(1, 0));
 		_cache.shift(util::point<int>(-1, 0));
 		_shift.x += TileSize;
 
@@ -92,7 +92,7 @@ TorusTexture::shift(const util::point<int>& shift) {
 	}
 	while (_shift.y >= (int)TileSize) {
 
-		_mapping.shift(util::point<int>(0, 1));
+		_mapping.shift(util::point<int>(0, -1));
 		_cache.shift(util::point<int>(0, 1));
 		_shift.y -= TileSize;
 
@@ -104,7 +104,7 @@ TorusTexture::shift(const util::point<int>& shift) {
 	}
 	while (_shift.y <= -(int)TileSize) {
 
-		_mapping.shift(util::point<int>(0, -1));
+		_mapping.shift(util::point<int>(0, 1));
 		_cache.shift(util::point<int>(0, -1));
 		_shift.y += TileSize;
 

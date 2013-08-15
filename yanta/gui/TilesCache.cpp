@@ -57,7 +57,7 @@ TilesCache::shift(const util::point<int>& shift) {
 
 	while (remaining.x > 0) {
 
-		_mapping.shift(util::point<int>(1, 0));
+		_mapping.shift(util::point<int>(-1, 0));
 		remaining.x--;
 
 		// the new tiles are in the left column
@@ -68,7 +68,7 @@ TilesCache::shift(const util::point<int>& shift) {
 	}
 	while (remaining.x < 0) {
 
-		_mapping.shift(util::point<int>(-1, 0));
+		_mapping.shift(util::point<int>(1, 0));
 		remaining.x++;
 
 		// the new tiles are in the right column
@@ -79,7 +79,7 @@ TilesCache::shift(const util::point<int>& shift) {
 	}
 	while (remaining.y > 0) {
 
-		_mapping.shift(util::point<int>(0, 1));
+		_mapping.shift(util::point<int>(0, -1));
 		remaining.y--;
 
 		// the new tiles are in the top column
@@ -90,7 +90,7 @@ TilesCache::shift(const util::point<int>& shift) {
 	}
 	while (remaining.y < 0) {
 
-		_mapping.shift(util::point<int>(0, -1));
+		_mapping.shift(util::point<int>(0, 1));
 		remaining.y++;
 
 		// the new tiles are in the bottom column
@@ -106,11 +106,11 @@ TilesCache::shift(const util::point<int>& shift) {
 void
 TilesCache::markDirty(const util::point<int>& tile, TileState state) {
 
-	LOG_ALL(tilescachelog) << "marking tile " << tile << " as " << (state == NeedsUpdate ? "needs update" : "needs redraw") << std::endl;
+	LOG_ALL(tilescachelog) << "marking tile " << tile << " as " << (state == NeedsUpdate ? "needs update" : "needs redraw");
 
 	if (!_mapping.get_region().contains(tile)) {
 
-		LOG_ALL(tilescachelog) << "this tile is not in the cache" << std::endl;
+		LOG_ALL(tilescachelog) << " -- this tile is not in the cache" << std::endl;
 		return;
 	}
 
@@ -127,9 +127,15 @@ TilesCache::markDirty(const util::point<int>& tile, TileState state) {
 		util::rect<int> tileRegion(tile.x, tile.y, tile.x + 1, tile.y + 1);
 		tileRegion *= static_cast<int>(TileSize);
 
+		LOG_ALL(tilescachelog) << ", queuing it with region " << tileRegion << std::endl;
+
 		// queue a clean-up request
 		CleanUpRequest request(physicalTile, tileRegion);
 		_cleanUpRequests.push_back(request);
+
+	} else {
+
+		LOG_ALL(tilescachelog) << ", just set a flag" << std::endl;
 	}
 }
 
@@ -142,6 +148,8 @@ TilesCache::getTile(const util::point<int>& tile, SkiaDocumentPainter& painter) 
 
 	if (_tileStates[physicalTile.x][physicalTile.y] == NeedsUpdate) {
 
+		LOG_ALL(tilescachelog) << "this tile needs an update" << std::endl;
+
 		// get the region covered by the tile in pixels
 		util::rect<int> tileRegion(tile.x, tile.y, tile.x + 1, tile.y + 1);
 		tileRegion *= static_cast<int>(TileSize);
@@ -150,6 +158,8 @@ TilesCache::getTile(const util::point<int>& tile, SkiaDocumentPainter& painter) 
 	}
 
 	if (_tileStates[physicalTile.x][physicalTile.y] == NeedsRedraw) {
+
+		LOG_ALL(tilescachelog) << "this tile needs a redraw" << std::endl;
 
 		// get the region covered by the tile in pixels
 		util::rect<int> tileRegion(tile.x, tile.y, tile.x + 1, tile.y + 1);
