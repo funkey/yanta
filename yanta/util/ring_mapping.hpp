@@ -38,6 +38,17 @@ private:
 	Precision _length;
 };
 
+/**
+ * Compute the modulo the way we want it.
+ */
+template <typename Precision>
+Precision mod(Precision a, Precision b) {
+
+	Precision c = a % b;
+
+	return (c < 0 ? c + b : c);
+}
+
 } // namespace detail
 } // namespace util
 
@@ -92,7 +103,7 @@ public:
 		assert(x >= _start);
 		assert(x <  _start + length());
 
-		return (_physicalStart + x - _start) % length();
+		return util::detail::mod(_physicalStart + x - _start, length());
 	}
 
 	/**
@@ -101,7 +112,7 @@ public:
 	void shift(Precision s) {
 
 		_start += s;
-		_physicalStart = _start % length();
+		_physicalStart = util::detail::mod(_start, length());
 		_split = _start + (length() - _physicalStart);
 	}
 
