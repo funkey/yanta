@@ -194,11 +194,7 @@ TilesCache::updateTile(const util::point<int>& physicalTile, const util::rect<in
 
 	// Possible data race:
 	// 
-	// Tile get's cleaned while we are here. In this case, the tile will be 
-	// updated twice. That's okay.
-
-	// mark it as clean
-	_tileStates[physicalTile.x][physicalTile.y] = Clean;
+	// Tile get's cleaned by someone else while we are here.
 
 	// get the data of the tile
 	gui::skia_pixel_t* buffer = &_tiles[physicalTile.x][physicalTile.y][0];
@@ -220,6 +216,9 @@ TilesCache::updateTile(const util::point<int>& physicalTile, const util::rect<in
 	canvas.translate(translate.x, translate.y);
 
 	painter.draw(canvas, tileRegion);
+
+	// mark it as clean
+	_tileStates[physicalTile.x][physicalTile.y] = Clean;
 }
 
 void
