@@ -214,7 +214,8 @@ TilingTexture::split(
 	LOG_ALL(tilingtexturelog) << "splitting region " << region << std::endl;
 
 	// split point in pixels
-	util::point<int> splitPoint = _tilesRegion.upperLeft() + _topLeftTile*util::point<int>(TileSize, TileSize);
+	unsigned int ts = TileSize;
+	util::point<int> splitPoint = _tilesRegion.upperLeft() + _topLeftTile*util::point<int>(ts, ts);
 
 	LOG_ALL(tilingtexturelog) << "split point is at " << splitPoint << std::endl;
 
@@ -293,7 +294,8 @@ TilingTexture::getTileRegion(const util::point<int>& tile) {
 	if (tileInContent.x >= (int)TilesX) tileInContent.x -= TilesX;
 	if (tileInContent.y >= (int)TilesY) tileInContent.y -= TilesY;
 
-	return util::rect<int>(0, 0, TileSize, TileSize) + _tilesRegion.upperLeft() + tileInContent*util::point<int>(TileSize, TileSize);
+	unsigned int ts = TileSize;
+	return util::rect<int>(0, 0, ts, ts) + _tilesRegion.upperLeft() + tileInContent*util::point<int>(ts, ts);
 }
 
 bool
