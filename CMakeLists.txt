@@ -155,10 +155,9 @@ add_subdirectory(modules/gui)
 # compiler settings #
 #####################
 
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -Wall -Wextra -fomit-frame-pointer")
-set(CMAKE_CXX_FLAGS_PROFILING "-O3 -DNDEBUG -g -fno-omit-frame-pointer -Wall -Wextra" CACHE STRING "Profiling CXX flags" FORCE)
-set(CMAKE_CXX_FLAGS_DEBUG   "-g -DNDEBUG -Wall -Wextra")
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_RELEASE})
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -DBOOST_DISABLE_ASSERTS -DSK_RELEASE -Wall -Wextra -fomit-frame-pointer")
+set(CMAKE_CXX_FLAGS_PROFILING "-O3 -DNDEBUG -DBOOST_DISABLE_ASSERTS -DSK_RELEASE -g -fno-omit-frame-pointer -Wall -Wextra" CACHE STRING "Profiling CXX flags" FORCE)
+set(CMAKE_CXX_FLAGS_DEBUG   "-g -DSK_RELEASE -Wall -Wextra")
 mark_as_advanced(CMAKE_CXX_FLAGS_PROFILING)
 
 ###############
