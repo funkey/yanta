@@ -10,8 +10,7 @@ TilesCache::TilesCache(const util::point<int>& center) :
 	_backgroundPainterStopped(false),
 	_backgroundThread(boost::bind(&TilesCache::cleanUp, this)) {
 
-	LOG_ALL(tilescachelog) << "creating new tiles cache around " << center << std::endl;
-
+	LOG_ALL(tilescachelog) << "creating new tiles cache around tile " << center << std::endl;
 
 	reset(center);
 }
@@ -31,10 +30,7 @@ TilesCache::reset(const util::point<int>& center) {
 
 	// reset the tile mapping, such that all tiles around center map to 
 	// [0,w)x[0,h)
-	_mapping.reset(center/static_cast<int>(TileSize) - util::point<int>(Width/2, Height/2));
-
-	// reset accumulated shift
-	_shift = util::point<int>(0, 0);
+	_mapping.reset(center - util::point<int>(Width/2, Height/2));
 
 	// dismiss all pending clean-up requests
 	_cleanUpRequests.clear();
@@ -49,9 +45,7 @@ TilesCache::reset(const util::point<int>& center) {
 void
 TilesCache::shift(const util::point<int>& shift) {
 
-	LOG_ALL(tilescachelog) << "shifting cache content by " << shift << std::endl;
-
-	_shift += shift;
+	LOG_ALL(tilescachelog) << "shifting cache content by " << shift << " tiles" << std::endl;
 
 	// We are shifting content out of the region covered by this cache.
 	//
@@ -59,10 +53,12 @@ TilesCache::shift(const util::point<int>& shift) {
 	// got shifted out of the region, we take this column and insert it at the 
 	// left. We mark the newly inserted tiles as dirty.
 
-	while (_shift.x >= (int)TileSize) {
+	util::point<int> remaining = shift;
+
+	while (remaining.x > 0) {
 
 		_mapping.shift(util::point<int>(1, 0));
-		_shift.x -= TileSize;
+		remaining.x--;
 
 		// the new tiles are in the left column
 		util::rect<int> tilesRegion = _mapping.get_region();
@@ -70,10 +66,10 @@ TilesCache::shift(const util::point<int>& shift) {
 		for (int y = tilesRegion.minY; y < tilesRegion.maxY; y++)
 			markDirty(util::point<int>(x, y), NeedsRedraw);
 	}
-	while (_shift.x <= -(int)TileSize) {
+	while (remaining.x < 0) {
 
 		_mapping.shift(util::point<int>(-1, 0));
-		_shift.x += TileSize;
+		remaining.x++;
 
 		// the new tiles are in the right column
 		util::rect<int> tilesRegion = _mapping.get_region();
@@ -81,10 +77,10 @@ TilesCache::shift(const util::point<int>& shift) {
 		for (int y = tilesRegion.minY; y < tilesRegion.maxY; y++)
 			markDirty(util::point<int>(x, y), NeedsRedraw);
 	}
-	while (_shift.y >= (int)TileSize) {
+	while (remaining.y > 0) {
 
 		_mapping.shift(util::point<int>(0, 1));
-		_shift.y -= TileSize;
+		remaining.y--;
 
 		// the new tiles are in the top column
 		util::rect<int> tilesRegion = _mapping.get_region();
@@ -92,10 +88,10 @@ TilesCache::shift(const util::point<int>& shift) {
 		for (int x = tilesRegion.minX; x < tilesRegion.maxX; x++)
 			markDirty(util::point<int>(x, y), NeedsRedraw);
 	}
-	while (_shift.y <= -(int)TileSize) {
+	while (remaining.y < 0) {
 
 		_mapping.shift(util::point<int>(0, -1));
-		_shift.y += TileSize;
+		remaining.y++;
 
 		// the new tiles are in the bottom column
 		util::rect<int> tilesRegion = _mapping.get_region();
@@ -104,7 +100,7 @@ TilesCache::shift(const util::point<int>& shift) {
 			markDirty(util::point<int>(x, y), NeedsRedraw);
 	}
 
-	LOG_ALL(tilescachelog) << "  cache region is now " << _mapping.get_region() << std::endl;
+	LOG_ALL(tilescachelog) << "cache region is now " << _mapping.get_region() << std::endl;
 }
 
 void
@@ -114,7 +110,9 @@ TilesCache::markDirty(const util::point<int>& tile, TileState state) {
 
 	util::point<int> physicalTile = _mapping.map(tile);
 
-	_tileStates[physicalTile.x][physicalTile.y] = state;
+	// set the flag, but make sure we are not overwriting previous dirty flags 
+	// of higher precedence
+	_tileStates[physicalTile.x][physicalTile.y] = std::max(_tileStates[physicalTile.x][physicalTile.y], state);
 
 	// pass only complete redraw requests to the background thread
 	if (state == NeedsRedraw) {

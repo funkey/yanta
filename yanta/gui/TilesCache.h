@@ -38,21 +38,30 @@ public:
 	};
 
 	/**
-	 * Create a new cache for the area around the given center
+	 * Create a new cache with tile 'center' being in the middle.
+	 *
+	 * @param center
+	 *              The logical coordinates of the center tile.
 	 */
-	TilesCache(const util::point<int>& center);
+	TilesCache(const util::point<int>& center = util::point<int>(0, 0));
 
 	~TilesCache();
 
 	/**
-	 * Reset the cache to represent the area around center. This will mark all 
-	 * tiles dirty.
+	 * Reset the cache such that tile 'center' is in the middle. This will mark 
+	 * all tiles dirty.
+	 *
+	 * @param center
+	 *              The logical coordinates of the center tile.
 	 */
 	void reset(const util::point<int>& center);
 
 	/**
 	 * Shift the content of the cache. This method is lightweight,
 	 * it only remembers the new position and marks some tiles as dirty.
+	 *
+	 * @param shift
+	 *              The amount by which to shift the cache in tiles.
 	 */
 	void shift(const util::point<int>& shift);
 
@@ -135,9 +144,6 @@ private:
 
 	// mapping from logical tile coordinates to physical coordinates in 2D array
 	torus_mapping<int, Width, Height> _mapping;
-
-	// accumulated shift in pixels
-	util::point<int> _shift;
 
 	// queue of clean-up requests for the background thread
 	std::deque<CleanUpRequest> _cleanUpRequests;
