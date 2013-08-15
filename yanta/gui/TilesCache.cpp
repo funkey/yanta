@@ -73,7 +73,7 @@ TilesCache::shift(const util::point<int>& shift) {
 
 		// the new tiles are in the right column
 		util::rect<int> tilesRegion = _mapping.get_region();
-		int x = tilesRegion.maxX;
+		int x = tilesRegion.maxX - 1;
 		for (int y = tilesRegion.minY; y < tilesRegion.maxY; y++)
 			markDirty(util::point<int>(x, y), NeedsRedraw);
 	}
@@ -95,7 +95,7 @@ TilesCache::shift(const util::point<int>& shift) {
 
 		// the new tiles are in the bottom column
 		util::rect<int> tilesRegion = _mapping.get_region();
-		int y = tilesRegion.maxY;
+		int y = tilesRegion.maxY - 1;
 		for (int x = tilesRegion.minX; x < tilesRegion.maxX; x++)
 			markDirty(util::point<int>(x, y), NeedsRedraw);
 	}
@@ -107,6 +107,12 @@ void
 TilesCache::markDirty(const util::point<int>& tile, TileState state) {
 
 	LOG_ALL(tilescachelog) << "marking tile " << tile << " as " << (state == NeedsUpdate ? "needs update" : "needs redraw") << std::endl;
+
+	if (!_mapping.get_region().contains(tile)) {
+
+		LOG_ALL(tilescachelog) << "this tile is not in the cache" << std::endl;
+		return;
+	}
 
 	util::point<int> physicalTile = _mapping.map(tile);
 
