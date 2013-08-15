@@ -3,6 +3,7 @@
 
 #include <util/point.hpp>
 #include <util/rect.hpp>
+#include <util/Transformation.h>
 
 template <typename Precision>
 class Transformable {
@@ -10,59 +11,65 @@ class Transformable {
 public:
 
 	Transformable() :
-		_shift(0, 0),
-		_scale(1, 1),
 		_boundingBox(0, 0, 0, 0) {}
 
 	/**
 	 * Get the shift of this object.
 	 */
-	inline const util::point<DocumentPrecision>& getShift() const {
+	inline const util::point<Precision>& getShift() const {
 
-		return _shift;
+		return _transformation.getShift();
 	}
 
 	/**
 	 * Get the scale of this object.
 	 */
-	inline const util::point<DocumentPrecision>& getScale() const {
+	inline const util::point<Precision>& getScale() const {
 
-		return _scale;
+		return _transformation.getScale();
 	}
 
 	/**
-	 * Get the shift of this object.
+	 * Get the transformation of this object.
 	 */
-	inline void setShift(const util::point<DocumentPrecision>& shift) {
+	inline const Transformation<Precision>& getTransformation() const {
 
-		_boundingBox += shift - _shift;
-		_shift = shift;
+		return _transformation;
 	}
 
 	/**
-	 * Get the scale of this object.
+	 * Set the shift of this object.
 	 */
-	inline void setScale(const util::point<DocumentPrecision>& scale) {
+	inline void setShift(const util::point<Precision>& shift) {
 
-		_boundingBox *= scale/_scale;
-		_scale = scale;
+		_boundingBox += shift - _transformation.getShift();
+		_transformation.setShift(shift);
+	}
+
+	/**
+	 * Set the scale of this object.
+	 */
+	inline void setScale(const util::point<Precision>& scale) {
+
+		_boundingBox *= scale/_transformation.getScale();
+		_transformation.setScale(scale);
 	}
 
 	/**
 	 * Shift this object.
 	 */
-	inline void shift(const util::point<DocumentPrecision>& shift) {
+	inline void shift(const util::point<Precision>& shift) {
 
-		_shift += shift;
+		_transformation.shift(shift);
 		_boundingBox += shift;
 	}
 
 	/**
 	 * Scale this object.
 	 */
-	inline void scale(const util::point<DocumentPrecision>& scale) {
+	inline void scale(const util::point<Precision>& scale) {
 
-		_scale *= scale;
+		_transformation.scale(scale);
 		_boundingBox *= scale;
 	}
 
@@ -80,9 +87,9 @@ public:
 	void fitBoundingBox(const util::rect<Precision>& r) {
 
 		if (_boundingBox.isZero())
-			_boundingBox = r*_scale + _shift;
+			_boundingBox = r*_transformation.getScale() + _transformation.getShift();
 		else
-			_boundingBox.fit(r*_scale + _shift);
+			_boundingBox.fit(r*_transformation.getScale() + _transformation.getShift());
 	}
 
 	/**
@@ -92,9 +99,9 @@ public:
 	void fitBoundingBox(const util::point<Precision>& p) {
 
 		if (_boundingBox.isZero())
-			_boundingBox = util::rect<Precision>(p.x, p.y, p.x, p.y)*_scale + _shift;
+			_boundingBox = util::rect<Precision>(p.x, p.y, p.x, p.y)*_transformation.getScale() + _transformation.getShift();
 		else
-			_boundingBox.fit(p*_scale + _shift);
+			_boundingBox.fit(p*_transformation.getScale() + _transformation.getShift());
 	}
 
 	/**
@@ -107,8 +114,7 @@ public:
 
 private:
 
-	util::point<Precision> _shift;
-	util::point<Precision> _scale;
+	Transformation<Precision> _transformation;
 
 	util::rect<Precision> _boundingBox;
 };

@@ -16,15 +16,18 @@ SkiaDocumentPainter::SkiaDocumentPainter(
 	_canvasCleared(false),
 	_canvasClearedTmp(false),
 	_paperDrawn(false),
-	_paperDrawnTmp(false) {}
+	_paperDrawnTmp(false),
+	_incremental(false) {}
 
 void
 SkiaDocumentPainter::draw(SkCanvas& canvas, const util::rect<DocumentPrecision>& roi) {
 
-	setCanvas(canvas);
-	setRoi(roi);
+	LOG_DEBUG(skiadocumentpainterlog) << "drawing document in " << roi << std::endl;
 
-	prepare();
+	setCanvas(canvas);
+
+	// prepare the visitor to draw only within roi
+	prepare(roi);
 
 	{
 		// make sure reading access to the stroke points are safe
@@ -73,15 +76,23 @@ SkiaDocumentPainter::visit(Document&) {
 void
 SkiaDocumentPainter::visit(Page& page) {
 
-	LOG_ALL(skiadocumentpainterlog) << "visiting page" << std::endl;
+	LOG_ALL(skiadocumentpainterlog) << "visiting page with roi " << getRoi() << std::endl;
 
 	if ((_incremental && _paperDrawn) || !_drawPaper)
 		return;
 
 	// even though the roi might intersect the page's content, it might not 
 	// intersect the paper -- check that here (in page coordinates)
-	if (!getRoi().isZero() && !getRoi().intersects(util::rect<PagePrecision>(0, 0, page.getSize().x, page.getSize().y)))
+	if (!getRoi().isZero() && !getRoi().intersects(
+			util::rect<PagePrecision>(
+					-page.getBorderSize(),
+					-page.getBorderSize(),
+					page.getSize().x + page.getBorderSize(),
+					page.getSize().y + page.getBorderSize()))) {
+
+		LOG_ALL(skiadocumentpainterlog) << "page does not intersect roi (but content probably does)" << std::endl;
 		return;
+	}
 
 	SkPath outline;
 	const util::point<PagePrecision>& pageSize = page.getSize();
@@ -107,7 +118,10 @@ SkiaDocumentPainter::visit(Page& page) {
 
 	// shadow-like thingie
 
-	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(page.getBorderSize()/3.0, SkBlurMaskFilter::kOuter_BlurStyle, SkBlurMaskFilter::kNone_BlurFlag);
+	// we blur the boundary with a "standard deviation" of 1/10 of the border 
+	// size of the paper -- this makes sure that at the end of the border there 
+	// is almost no trace of the blur anymore
+	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(page.getBorderSize()/10.0, SkBlurMaskFilter::kOuter_BlurStyle, SkBlurMaskFilter::kNone_BlurFlag);
 	paint.setMaskFilter(maskFilter)->unref();
 	paint.setColor(SkColorSetRGB(0.5*pageRed, 0.5*pageGreen, 0.5*pageBlue));
 	getCanvas().drawPath(outline, paint);

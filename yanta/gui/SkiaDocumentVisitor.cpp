@@ -7,15 +7,23 @@ SkiaDocumentVisitor::SkiaDocumentVisitor() :
 	_pixelOffset(0, 0) {}
 
 void
-SkiaDocumentVisitor::prepare() {
+SkiaDocumentVisitor::prepare(const util::rect<DocumentPrecision>& roi) {
 
-	if (!getRoi().isZero()) {
+	if (!roi.isZero()) {
 
 		// clip outside our responsibility
-		_canvas->clipRect(SkRect::MakeLTRB(getRoi().minX, getRoi().minY, getRoi().maxX, getRoi().maxY));
+		_canvas->clipRect(SkRect::MakeLTRB(roi.minX, roi.minY, roi.maxX, roi.maxY));
+
+		// roi is given in device units, transform it into document coordinates 
+		// according to the current device transformation
 
 		// transform roi downwards
-		setRoi((getRoi() - _pixelOffset)/_pixelsPerDeviceUnit);
+		setRoi((roi - _pixelOffset)/_pixelsPerDeviceUnit);
+
+	} else {
+
+		// set the zero roi
+		setRoi(roi);
 	}
 
 	// apply the device transformation
@@ -34,19 +42,12 @@ SkiaDocumentVisitor::finish() {
 void
 SkiaDocumentVisitor::enter(DocumentElement& element) {
 
+	DocumentTreeRoiVisitor::enter(element);
+
 	const util::point<DocumentPrecision>& shift = element.getShift();
 	const util::point<DocumentPrecision>& scale = element.getScale();
 
 	_canvas->save();
-
-	if (!getRoi().isZero()) {
-
-		// transform roi downwards
-		util::rect<double> transformedRoi = getRoi();
-		transformedRoi -= shift;
-		transformedRoi /= scale;
-		setRoi(transformedRoi);
-	}
 
 	// apply the element transformation
 	_canvas->translate(shift.x, shift.y);
@@ -56,17 +57,7 @@ SkiaDocumentVisitor::enter(DocumentElement& element) {
 void
 SkiaDocumentVisitor::leave(DocumentElement& element) {
 
-	const util::point<DocumentPrecision>& shift = element.getShift();
-	const util::point<DocumentPrecision>& scale = element.getScale();
+	DocumentTreeRoiVisitor::leave(element);
 
 	_canvas->restore();
-
-	if (!getRoi().isZero()) {
-
-		// transform roi upwards
-		util::rect<DocumentPrecision> roi = getRoi();
-		roi *= scale;
-		roi += shift;
-		setRoi(roi);
-	}
 }

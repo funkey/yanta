@@ -168,8 +168,11 @@ mark_as_advanced(CMAKE_CXX_FLAGS_PROFILING)
 file (GLOB_RECURSE yantafiles yanta/*.cpp)
 
 add_executable(yanta yanta.cpp ${yantafiles})
+add_executable(benchmarks benchmarks.cpp ${yantafiles})
 target_link_libraries(yanta signals pipeline gui util ${CORELIBS})
+target_link_libraries(benchmarks signals pipeline gui util ${CORELIBS})
 
 if (OWN_SKIA)
   add_dependencies(yanta skia)
+  add_dependencies(benchmarks skia)
 endif()

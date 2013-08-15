@@ -37,25 +37,6 @@ util::ProgramOption optionExportPdf(
 		util::_long_name        = "exportPdf",
 		util::_description_text = "Export the yanta document as a pdf file.");
 
-void handleException(boost::exception& e) {
-
-	LOG_ERROR(logger::out) << "[window thread] caught exception: ";
-
-	if (boost::get_error_info<error_message>(e))
-		LOG_ERROR(logger::out) << *boost::get_error_info<error_message>(e);
-
-	LOG_ERROR(logger::out) << std::endl;
-
-	LOG_ERROR(logger::out) << "[window thread] stack trace:" << std::endl;
-
-	if (boost::get_error_info<stack_trace>(e))
-		LOG_ERROR(logger::out) << *boost::get_error_info<stack_trace>(e);
-
-	LOG_ERROR(logger::out) << std::endl;
-
-	exit(-1);
-}
-
 void processEvents(pipeline::Process<gui::Window> window) {
 
 	boost::timer::cpu_timer timer;
@@ -82,7 +63,7 @@ void processEvents(pipeline::Process<gui::Window> window) {
 
 	} catch (boost::exception& e) {
 
-		handleException(e);
+		handleException(e, logger::out(logger::error));
 	}
 }
 
@@ -170,6 +151,6 @@ int main(int optionc, char** optionv) {
 
 	} catch (Exception& e) {
 
-		handleException(e);
+		handleException(e, logger::out(logger::error));
 	}
 }

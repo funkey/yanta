@@ -36,7 +36,7 @@ public:
 	// fallback implementation
 	using TreeVisitor::traverse;
 
-private:
+protected:
 
 	/**
 	 * Functor to pass the visitor to each element of a container.

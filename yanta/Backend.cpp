@@ -1,5 +1,6 @@
 #include <gui/Modifiers.h>
 #include <util/Logger.h>
+#include <tools/Erasor.h>
 #include "Backend.h"
 
 logger::LogChannel backendlog("backendlog", "[Backend] ");
@@ -150,16 +151,19 @@ Backend::onPenUp(const gui::PenUp& signal) {
 			anchorSelection();
 
 			Selection selection = Selection::CreateFromPath(_lasso->getPath(), *_document);
-			if (selection.size() > 0)
+
+			if (selection.size() > 0) {
+
 				_document->add(selection);
+
+				ChangedArea documentSignal(selection.getBoundingBox());
+				_documentChangedArea(documentSignal);
+			}
 
 			_tools->remove(_lasso);
 
 			ChangedArea toolsSignal(_lasso->getBoundingBox());
 			_toolsChangedArea(toolsSignal);
-
-			ChangedArea documentSignal(_document->get<Selection>().back().getBoundingBox());
-			_documentChangedArea(documentSignal);
 
 			_lasso.reset();
 
@@ -213,8 +217,8 @@ Backend::onPenMove(const gui::PenMove& signal) {
 		selection.shift(shift);
 		changed.fit(selection.getBoundingBox());
 
-		SelectionMoved signal(changed, _currentElement, shift);
-		_selectionMoved(signal);
+		SelectionMoved movedSignal(changed, _currentElement, shift);
+		_selectionMoved(movedSignal);
 
 	} else if (_penMode->getMode() == PenMode::Lasso) {
 
@@ -223,12 +227,13 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	} else if (_mode == Erase) {
 
-		util::rect<DocumentPrecision> dirtyArea = _document->erase(_previousPosition, signal.position);
+		Erasor erasor(*_document);
+		util::rect<DocumentPrecision> dirtyArea = erasor.erase(_previousPosition, signal.position);
 
 		if (!dirtyArea.isZero()) {
 
-			ChangedArea signal(dirtyArea);
-			_documentChangedArea(signal);
+			ChangedArea changedSignal(dirtyArea);
+			_documentChangedArea(changedSignal);
 		}
 
 	} else {
@@ -242,8 +247,8 @@ Backend::onPenMove(const gui::PenMove& signal) {
 		area.minY -= penWidth;
 		area.maxX += penWidth;
 		area.maxY += penWidth;
-		StrokePointAdded signal(area);
-		_strokePointAdded(signal);
+		StrokePointAdded addedSignal(area);
+		_strokePointAdded(addedSignal);
 	}
 
 	_previousPosition = signal.position;
@@ -256,7 +261,7 @@ Backend::onAddPage(const AddPage& /*signal*/) {
 	int pageNum = _document->numPages();
 
 	// let the new page be of the size of the most recent page
-	const util::point<PagePrecision>& size = _document->getPage(pageNum - 1).getSize();
+	util::point<PagePrecision> size = _document->getPage(pageNum - 1).getSize();
 
 	int pageX = pageNum%2;
 	int pageY = pageNum/2;

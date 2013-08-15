@@ -55,7 +55,7 @@ public:
 	 * Default implementation does nothing.
 	 */
 	template <typename T>
-	void enter(T& t) {}
+	void enter(T&) {}
 
 	/**
 	 * Will be called after the visitor enters an element of type T.
@@ -63,7 +63,7 @@ public:
 	 * Default implementation does nothing.
 	 */
 	template <typename T>
-	void visit(T& t) {}
+	void visit(T&) {}
 
 	/**
 	 * Will be called after enter() to traverse deeper in the tree. Type 
@@ -81,7 +81,7 @@ public:
 	 * Default implementation does nothing.
 	 */
 	template <typename T>
-	void leave(T& t) {}
+	void leave(T&) {}
 };
 
 #endif // YANTA_TREE_H__

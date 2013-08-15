@@ -46,7 +46,7 @@ public:
 	/**
 	 * Prepare the processing of the whole document.
 	 */
-	void prepare();
+	void prepare(const util::rect<DocumentPrecision>& roi);
 
 	/**
 	 * Finish processing of the whole document.
