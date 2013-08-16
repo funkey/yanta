@@ -65,6 +65,16 @@ public:
 private:
 
 	/**
+	 * Get all tiles intersecting the given region.
+	 */
+	util::rect<int> getTiles(const util::rect<int>& region);
+
+	/**
+	 * Get the tile coordinate of a pixel coordinate.
+	 */
+	int getTileCoordinate(int pixel);
+
+	/**
 	 * Mark a tile in logical coordinates as dirty.
 	 */
 	void markDirty(const util::point<int>& tile, DirtyFlag dirtyFlag);

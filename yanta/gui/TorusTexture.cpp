@@ -33,6 +33,8 @@ TorusTexture::~TorusTexture() {
 void
 TorusTexture::reset(const util::point<int>& center) {
 
+	LOG_DEBUG(torustexturelog) << "reseting torus texture around " << center << std::endl;
+
 	// get the tile containing the center
 	util::point<int> centerTile = center/static_cast<int>(TileSize);
 
@@ -40,9 +42,13 @@ TorusTexture::reset(const util::point<int>& center) {
 	// [0,w)x[0,h)
 	_mapping.reset(centerTile - util::point<int>(_width/2, _height/2));
 
+	LOG_DEBUG(torustexturelog) << "new center tile is " << centerTile << std::endl;
+
 	// set the accumulated shift such that center really is in the center of the 
 	// texture
 	_shift = center - centerTile*static_cast<int>(TileSize);
+
+	LOG_DEBUG(torustexturelog) << "current shift is " << _shift << std::endl;
 
 	// center the cache around our center tile as well
 	_cache.reset(util::point<int>(centerTile.x, centerTile.y));
@@ -56,9 +62,9 @@ TorusTexture::reset(const util::point<int>& center) {
 void
 TorusTexture::shift(const util::point<int>& shift) {
 
-	LOG_ALL(torustexturelog) << "shifting texture content by " << shift << std::endl;
-
 	_shift += shift;
+
+	LOG_ALL(torustexturelog) << "shifting texture content by " << shift << ", accumulated shift is " << _shift << std::endl;
 
 	// We are shifting content out of the region covered by this texture.
 	//
@@ -122,11 +128,7 @@ void
 TorusTexture::markDirty(const util::rect<int>& region, DirtyFlag dirtyFlag) {
 
 	// get the tiles in the region
-	util::rect<int> tiles;
-	tiles.minX = region.minX/TileSize;
-	tiles.minY = region.minY/TileSize;
-	tiles.maxX = (region.maxX - 1)/TileSize + 1;
-	tiles.maxY = (region.maxY - 1)/TileSize + 1;
+	util::rect<int> tiles = getTiles(region);
 
 	// mark them dirty
 	for (int x = tiles.minX; x < tiles.maxX; x++)
@@ -140,11 +142,7 @@ TorusTexture::render(const util::rect<int>& region, SkiaDocumentPainter& painter
 	LOG_ALL(torustexturelog) << "called render for " << region << std::endl;
 
 	// get the tiles in the region
-	util::rect<int> tiles;
-	tiles.minX = region.minX/static_cast<int>(TileSize);
-	tiles.minY = region.minY/static_cast<int>(TileSize);
-	tiles.maxX = (region.maxX - 1)/static_cast<int>(TileSize) + 1;
-	tiles.maxY = (region.maxY - 1)/static_cast<int>(TileSize) + 1;
+	util::rect<int> tiles = getTiles(region);
 
 	LOG_ALL(torustexturelog) << "tiles would be " << tiles << std::endl;
 
@@ -167,11 +165,11 @@ TorusTexture::render(const util::rect<int>& region, SkiaDocumentPainter& painter
 
 			util::point<int> physicalTile = _mapping.map(util::point<int>(x, y));
 
+			LOG_ALL(torustexturelog) << "testing tile " << util::point<int>(x, y) << ", physical " << physicalTile << std::endl;
+
 			if (_outOfDates[physicalTile.x][physicalTile.y]) {
 
 				util::point<int> tile(x, y);
-
-				LOG_ALL(torustexturelog) << "reloading tile " << tile << std::endl;
 
 				reloadTile(tile, physicalTile, painter);
 			}
@@ -231,14 +229,39 @@ TorusTexture::setBackgroundPainter(boost::shared_ptr<SkiaDocumentPainter> painte
 	_cache.setBackgroundPainter(painter);
 }
 
+util::rect<int>
+TorusTexture::getTiles(const util::rect<int>& region) {
+
+	util::rect<int> tiles;
+
+	tiles.minX = getTileCoordinate(region.minX);
+	tiles.minY = getTileCoordinate(region.minY);
+	tiles.maxX = getTileCoordinate(region.maxX - 1) + 1;
+	tiles.maxY = getTileCoordinate(region.maxY - 1) + 1;
+
+	return tiles;
+}
+
+int
+TorusTexture::getTileCoordinate(int pixel) {
+
+	return pixel/static_cast<int>(TileSize) - (pixel < 0 ? 1 : 0);
+}
+
 void
 TorusTexture::markDirty(const util::point<int>& tile, DirtyFlag dirtyFlag) {
+
+	LOG_ALL(torustexturelog) << "marking dirty tile " << tile << std::endl;
 
 	// mark the tile out-of-date in the texture
 	if (_mapping.get_region().contains(tile)) {
 
+		LOG_ALL(torustexturelog) << "    marking out-of-date tile " << tile << std::endl;
+
 		util::point<int> physicalTile = _mapping.map(tile);
 		_outOfDates[physicalTile.x][physicalTile.y] = true;
+
+		LOG_ALL(torustexturelog) << "    physical tile is " << physicalTile << std::endl;
 	}
 
 	// mark the tile dirty in the cache
@@ -250,6 +273,9 @@ TorusTexture::markDirty(const util::point<int>& tile, DirtyFlag dirtyFlag) {
 
 void
 TorusTexture::reloadTile(const util::point<int>& tile, const util::point<int>& physicalTile, SkiaDocumentPainter& painter) {
+
+	LOG_ALL(torustexturelog) << "reloading tile " << tile << std::endl;
+	LOG_ALL(torustexturelog) << "    physical tile is " << physicalTile << std::endl;
 
 	// get the tile's data (and update it on-the-fly, if needed)
 	gui::skia_pixel_t* data = _cache.getTile(tile, painter);
