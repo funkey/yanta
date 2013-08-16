@@ -32,8 +32,12 @@ TilesCache::reset(const util::point<int>& center) {
 	// [0,w)x[0,h)
 	_mapping.reset(center - util::point<int>(Width/2, Height/2));
 
-	// dismiss all pending clean-up requests
-	_cleanUpRequests.clear();
+	{
+		boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
+
+		// dismiss all pending clean-up requests
+		_cleanUpRequests.clear();
+	}
 
 	// mark all tiles dirty
 	util::rect<int> tilesRegion = _mapping.get_region();
@@ -131,7 +135,11 @@ TilesCache::markDirty(const util::point<int>& tile, TileState state) {
 
 		// queue a clean-up request
 		CleanUpRequest request(physicalTile, tileRegion);
-		_cleanUpRequests.push_back(request);
+
+		{
+			boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
+			_cleanUpRequests.push_back(request);
+		}
 
 	} else {
 
@@ -258,8 +266,13 @@ TilesCache::cleanUp() {
 unsigned int
 TilesCache::cleanDirtyTiles(unsigned int  maxNumRequests) {
 
-	unsigned int numRequests = _cleanUpRequests.size();
+	unsigned int numRequests;
 	
+	{
+		boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
+		numRequests = _cleanUpRequests.size();
+	}
+
 	if (maxNumRequests != 0)
 		numRequests = std::min(numRequests, maxNumRequests);
 
@@ -281,6 +294,8 @@ TilesCache::cleanDirtyTiles(unsigned int  maxNumRequests) {
 
 bool
 TilesCache::getNextCleanUpRequest(CleanUpRequest& request) {
+
+	boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
 
 	if (_cleanUpRequests.size() == 0)
 		return false;

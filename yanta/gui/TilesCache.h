@@ -148,6 +148,9 @@ private:
 	// queue of clean-up requests for the background thread
 	std::deque<CleanUpRequest> _cleanUpRequests;
 
+	// mutex to protect concurrent access to the clean-up queue
+	boost::mutex _cleanUpRequestsMutex;
+
 	// the painter to be used by the background thread
 	boost::shared_ptr<SkiaDocumentPainter> _backgroundPainter;
 
