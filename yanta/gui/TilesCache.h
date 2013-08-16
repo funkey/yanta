@@ -19,8 +19,8 @@ public:
 	static const unsigned int TileSize = 128;
 
 	// the number of tiles in the x and y direction
-	static const unsigned int Width  = 16;
-	static const unsigned int Height = 16;
+	static const unsigned int Width  = 64;
+	static const unsigned int Height = 64;
 
 	/**
 	 * The possible state of tiles in the cache.
