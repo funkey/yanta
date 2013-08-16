@@ -137,7 +137,7 @@ TorusTexture::markDirty(const util::rect<int>& region, DirtyFlag dirtyFlag) {
 }
 
 void
-TorusTexture::render(const util::rect<int>& region, SkiaDocumentPainter& painter) {
+TorusTexture::render(const util::rect<int>& region, Rasterizer& rasterizer) {
 
 	LOG_ALL(torustexturelog) << "called render for " << region << std::endl;
 
@@ -171,7 +171,7 @@ TorusTexture::render(const util::rect<int>& region, SkiaDocumentPainter& painter
 
 				util::point<int> tile(x, y);
 
-				reloadTile(tile, physicalTile, painter);
+				reloadTile(tile, physicalTile, rasterizer);
 			}
 		}
 
@@ -224,9 +224,9 @@ TorusTexture::render(const util::rect<int>& region, SkiaDocumentPainter& painter
 }
 
 void
-TorusTexture::setBackgroundPainter(boost::shared_ptr<SkiaDocumentPainter> painter) {
+TorusTexture::setBackgroundRasterizer(boost::shared_ptr<Rasterizer> rasterizer) {
 
-	_cache.setBackgroundPainter(painter);
+	_cache.setBackgroundRasterizer(rasterizer);
 }
 
 util::rect<int>
@@ -272,13 +272,13 @@ TorusTexture::markDirty(const util::point<int>& tile, DirtyFlag dirtyFlag) {
 }
 
 void
-TorusTexture::reloadTile(const util::point<int>& tile, const util::point<int>& physicalTile, SkiaDocumentPainter& painter) {
+TorusTexture::reloadTile(const util::point<int>& tile, const util::point<int>& physicalTile, Rasterizer& rasterizer) {
 
 	LOG_ALL(torustexturelog) << "reloading tile " << tile << std::endl;
 	LOG_ALL(torustexturelog) << "    physical tile is " << physicalTile << std::endl;
 
 	// get the tile's data (and update it on-the-fly, if needed)
-	gui::skia_pixel_t* data = _cache.getTile(tile, painter);
+	gui::skia_pixel_t* data = _cache.getTile(tile, rasterizer);
 
 	// get the target area within the texture
 	util::rect<int> textureRegion(physicalTile.x, physicalTile.y, physicalTile.x + 1, physicalTile.y + 1);

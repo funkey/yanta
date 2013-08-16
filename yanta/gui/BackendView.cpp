@@ -29,7 +29,6 @@ BackendView::BackendView() :
 
 	_document.registerBackwardCallback(&BackendView::onDocumentChangedArea, this);
 	_document.registerBackwardCallback(&BackendView::onStrokePointAdded, this);
-	_document.registerBackwardCallback(&BackendView::onSelectionMoved, this);
 	_tools.registerBackwardCallback(&BackendView::onToolsChangedArea, this);
 	_tools.registerBackwardCallback(&BackendView::onLassoPointAdded, this);
 
@@ -344,14 +343,6 @@ BackendView::onDocumentChangedArea(const ChangedArea& signal) {
 }
 
 void
-BackendView::onToolsChangedArea(const ChangedArea& signal) {
-
-	LOG_ALL(backendviewlog) << "tools area " << signal.area << " changed" << std::endl;
-
-	_contentChanged();
-}
-
-void
 BackendView::onStrokePointAdded(const StrokePointAdded& signal) {
 
 	LOG_ALL(backendviewlog) << "a stroke point was added -- initiate a redraw" << std::endl;
@@ -361,17 +352,21 @@ BackendView::onStrokePointAdded(const StrokePointAdded& signal) {
 }
 
 void
-BackendView::onSelectionMoved(const SelectionMoved& signal) {
+BackendView::onToolsChangedArea(const ChangedArea& signal) {
 
-	_painter->moveSelection(signal);
+	LOG_ALL(backendviewlog) << "tools area " << signal.area << " changed" << std::endl;
+
+	_painter->markOverlayDirty(signal.area);
 
 	_contentChanged();
 }
 
 void
-BackendView::onLassoPointAdded(const LassoPointAdded& /*signal*/) {
+BackendView::onLassoPointAdded(const LassoPointAdded& signal) {
 
 	LOG_ALL(backendviewlog) << "a lasso point was added -- initiate a redraw" << std::endl;
+
+	_painter->markOverlayDirty(signal.area);
 
 	_contentChanged();
 }

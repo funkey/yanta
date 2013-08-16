@@ -93,9 +93,9 @@ public:
 	void markDirty(const util::rect<DocumentPrecision>& area);
 
 	/**
-	 * Initiate a redraw of a moved selection.
+	 * Mark an area in the overlay dirty for redraws.
 	 */
-	void moveSelection(const SelectionMoved& signal);
+	void markOverlayDirty(const util::rect<DocumentPrecision>& area);
 
 private:
 

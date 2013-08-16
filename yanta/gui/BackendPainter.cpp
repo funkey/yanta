@@ -94,7 +94,7 @@ BackendPainter::draw(
 			LOG_DEBUG(backendpainterlog) << "shift changed while we are in drawing mode" << std::endl;
 
 			_documentTexture->shift(pixelShift - _previousShift);
-			//_overlayTexture->shift(pixelShift - _previousShift);
+			_overlayTexture->shift(pixelShift - _previousShift);
 
 		// transformation did not change
 		} else {
@@ -112,7 +112,7 @@ BackendPainter::draw(
 
 			// show a different part of the document texture
 			_documentTexture->shift(pixelShift - _previousShift);
-			//_overlayTexture->shift(pixelShift - _previousShift);
+			_overlayTexture->shift(pixelShift - _previousShift);
 		}
 	}
 
@@ -248,6 +248,19 @@ BackendPainter::markDirty(const util::rect<DocumentPrecision>& area) {
 }
 
 void
+BackendPainter::markOverlayDirty(const util::rect<DocumentPrecision>& area) {
+
+	// area is in document units -- transform it to pixel units
+	util::point<int> ul = documentToTexture(area.upperLeft());
+	util::point<int> lr = documentToTexture(area.lowerRight());
+
+	// add a border of one pixels to compensate for rounding artefacts
+	util::rect<int> pixelArea(ul.x - 1, ul.y - 1, lr.x + 1, lr.y +1);
+
+	_overlayTexture->markDirty(pixelArea, TorusTexture::NeedsRedraw);
+}
+
+void
 BackendPainter::setDeviceTransformation() {
 
 	_documentPainter.setDeviceTransformation(_scale, util::point<int>(0, 0));
@@ -262,37 +275,23 @@ BackendPainter::initiateFullRedraw(const util::rect<int>& roi) {
 
 	_documentTexture->reset(roi.center());
 	_documentPainter.resetIncrementalMemory();
-	//_overlayTexture->reset(roi);
+	_overlayTexture->reset(roi.center());
 }
 
 bool
 BackendPainter::prepareTextures(const util::rect<int>& pixelRoi) {
 
-	//if (_overlayTexture && (_overlayTexture->width() < (unsigned int)pixelRoi.width() || _overlayTexture->height() < (unsigned int)pixelRoi.height())) {
-
-		//_overlayTexture.reset();
-	//}
-
-	//if (!_overlayTexture) {
-
-		//_overlayTexture = boost::make_shared<TorusTexture>(pixelRoi);
-	//}
-
 	if (!_documentTexture) {
 
 		_documentTexture = boost::make_shared<TorusTexture>(pixelRoi);
-		_documentTexture->setBackgroundPainter(_documentCleanUpPainter);
+		_documentTexture->setBackgroundRasterizer(_documentCleanUpPainter);
+
+		_overlayTexture = boost::make_shared<TorusTexture>(pixelRoi);
 
 		return true;
 	}
 
 	return false;
-}
-
-void
-BackendPainter::moveSelection(const SelectionMoved& /*signal*/) {
-
-	//_overlayTexture->markDirty(signal.area, TorusTexture::NeedsRedraw);
 }
 
 void
@@ -307,14 +306,14 @@ BackendPainter::drawTextures(const util::rect<int>& roi) {
 		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		_documentTexture->render(roi/_scaleChange, _documentPainter);
 		glColor4f(1.0f, 1.0f, 0.5f, _overlayAlpha);
-		//_overlayTexture->render(roi/_scaleChange);
+		_overlayTexture->render(roi/_scaleChange, _overlayPainter);
 
 	} else {
 
 		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 		_documentTexture->render(roi, _documentPainter);
 		glColor4f(1.0f, 1.0f, 0.8f, _overlayAlpha);
-		//_overlayTexture->render(roi);
+		_overlayTexture->render(roi, _overlayPainter);
 	}
 
 	glPopMatrix();

@@ -21,13 +21,13 @@ Backend::Backend() :
 
 	_document.registerForwardSlot(_documentChangedArea);
 	_document.registerForwardSlot(_strokePointAdded);
-	_document.registerForwardSlot(_selectionMoved);
 	_document.registerForwardCallback(&Backend::onPenDown, this);
 	_document.registerForwardCallback(&Backend::onPenMove, this);
 	_document.registerForwardCallback(&Backend::onPenUp, this);
 
 	_tools.registerForwardSlot(_toolsChangedArea);
 	_tools.registerForwardSlot(_lassoPointAdded);
+	_tools.registerForwardSlot(_selectionMoved);
 }
 
 void
@@ -98,7 +98,6 @@ Backend::onPenDown(const gui::PenDown& signal) {
 			_lasso = boost::make_shared<Lasso>();
 			_lasso->addPoint(signal.position);
 			_tools->add(_lasso);
-			_lassoPointAdded();
 
 			return;
 		}
@@ -223,7 +222,11 @@ Backend::onPenMove(const gui::PenMove& signal) {
 	} else if (_penMode->getMode() == PenMode::Lasso) {
 
 		_lasso->addPoint(signal.position);
-		_lassoPointAdded();
+		LassoPointAdded pointAdded(_previousPosition, signal.position);
+		_lassoPointAdded(pointAdded);
+
+		// we don't want _previousPosition to be set to the current position
+		return;
 
 	} else if (_mode == Erase) {
 
@@ -286,8 +289,9 @@ Backend::anchorSelection() {
 
 		selection.anchor(*_document);
 
-		ChangedArea documentSignal(selection.getBoundingBox());
-		_documentChangedArea(documentSignal);
+		ChangedArea changedArea(selection.getBoundingBox());
+		_documentChangedArea(changedArea);
+		_toolsChangedArea(changedArea);
 	}
 
 	_document->clear<Selection>();

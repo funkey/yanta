@@ -4,8 +4,10 @@
 #include <boost/multi_array.hpp>
 #include <boost/thread.hpp>
 
+#include <gui/Skia.h>
+
 #include <util/torus_mapping.hpp>
-#include "SkiaDocumentPainter.h"
+#include "Rasterizer.h"
 
 /**
  * Stores tiles (rectangle image buffers) on a torus topology to have them 
@@ -72,16 +74,16 @@ public:
 
 	/**
 	 * Get the data of a tile in the cache. If the tile was marked dirty, it 
-	 * will be updated using the provided painter. The caller has to ensure that 
-	 * the tile is part of the cache.
+	 * will be updated using the provided rasterizer. The caller has to ensure 
+	 * that the tile is part of the cache.
 	 */
-	gui::skia_pixel_t* getTile(const util::point<int>& tile, SkiaDocumentPainter& painter);
+	gui::skia_pixel_t* getTile(const util::point<int>& tile, Rasterizer& rasterizer);
 
 	/**
-	 * Set a background painter for this cache. This will launch a background 
+	 * Set a background rasterizer for this cache. This will launch a background 
 	 * thread that is periodically cleaning dirty tiles.
 	 */
-	void setBackgroundPainter(boost::shared_ptr<SkiaDocumentPainter> painter);
+	void setBackgroundRasterizer(boost::shared_ptr<Rasterizer> rasterizer);
 
 private:
 
@@ -113,10 +115,10 @@ private:
 	 *              The physical coordinates of the tile.
 	 * @param tileRegion
 	 *              The region covered by the tile in pixels.
-	 * @param painter
-	 *              The painter to use.
+	 * @param rasterizer
+	 *              The rasterizer to use.
 	 */
-	void updateTile(const util::point<int>& physicalTile, const util::rect<int>& tileRegion, SkiaDocumentPainter& painter);
+	void updateTile(const util::point<int>& physicalTile, const util::rect<int>& tileRegion, Rasterizer& rasterizer);
 
 	/**
 	 * Entry point of the background thread.
@@ -151,11 +153,11 @@ private:
 	// mutex to protect concurrent access to the clean-up queue
 	boost::mutex _cleanUpRequestsMutex;
 
-	// the painter to be used by the background thread
-	boost::shared_ptr<SkiaDocumentPainter> _backgroundPainter;
+	// the rasterizer to be used by the background thread
+	boost::shared_ptr<Rasterizer> _backgroundRasterizer;
 
 	// used to stop the background rendering thread
-	bool _backgroundPainterStopped;
+	bool _backgroundRasterizerStopped;
 
 	// the background rendering thread keeping dirty tiles clean
 	boost::thread _backgroundThread;

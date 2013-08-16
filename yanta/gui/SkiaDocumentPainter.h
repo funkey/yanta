@@ -5,10 +5,11 @@
 #include <util/rect.hpp>
 
 #include <document/Document.h>
+#include <gui/Rasterizer.h>
 #include "SkiaDocumentVisitor.h"
 #include "SkiaStrokeBallPainter.h"
 
-class SkiaDocumentPainter : public SkiaDocumentVisitor {
+class SkiaDocumentPainter : public SkiaDocumentVisitor, public Rasterizer {
 
 public:
 
@@ -27,7 +28,7 @@ public:
 	 * drawnUntilStroke is non-zero, only an incremental draw is performed, 
 	 * starting from stroke drawnUntilStroke with point drawnUntilStrokePoint.
 	 */
-	void draw(
+	virtual void draw(
 			SkCanvas& canvas,
 			const util::rect<DocumentPrecision>& roi = util::rect<DocumentPrecision>(0, 0, 0, 0));
 

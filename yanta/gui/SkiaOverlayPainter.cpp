@@ -37,11 +37,13 @@ SkiaOverlayPainter::draw(
 		// go visit the document to draw overlay elements
 		getDocument().accept(*this);
 
-		LOG_DEBUG(skiaoverlaypainterlog) << "done to visiting document" << std::endl;
+		LOG_DEBUG(skiaoverlaypainterlog) << "done visiting document" << std::endl;
 	}
 
 	// draw the tools
 	for (Tools::iterator i = _tools->begin(); i != _tools->end(); i++) {
+
+		LOG_ALL(skiaoverlaypainterlog) << "drawing a tool" << std::endl;
 
 		Tool& tool = *(*i);
 
@@ -54,6 +56,8 @@ SkiaOverlayPainter::draw(
 
 void
 SkiaOverlayPainter::visit(Selection& selection) {
+
+	LOG_ALL(skiaoverlaypainterlog) << "found a selection at " << selection.getBoundingBox() << std::endl;
 
 	// draw the outline of the selection
 

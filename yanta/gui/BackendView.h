@@ -67,8 +67,6 @@ private:
 
 	void onStrokePointAdded(const StrokePointAdded& signal);
 
-	void onSelectionMoved(const SelectionMoved& signal);
-
 
 	// callbacks from backend for tools
 

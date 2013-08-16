@@ -4,7 +4,7 @@
 #include <gui/Texture.h>
 
 #include <util/torus_mapping.hpp>
-#include "SkiaDocumentPainter.h"
+#include "Rasterizer.h"
 #include "TilesCache.h"
 
 /**
@@ -58,12 +58,12 @@ public:
 	 * Render the content of the texture for region into region. If parts of the 
 	 * texture are dirty, they will be updated using the provided painter.
 	 */
-	void render(const util::rect<int>& region, SkiaDocumentPainter& painter);
+	void render(const util::rect<int>& region, Rasterizer& rasterizer);
 
 	/**
 	 * Set a painter for the background clean-up thread.
 	 */
-	void setBackgroundPainter(boost::shared_ptr<SkiaDocumentPainter> painter);
+	void setBackgroundRasterizer(boost::shared_ptr<Rasterizer> rasterizer);
 
 private:
 
@@ -82,7 +82,7 @@ private:
 	 */
 	void markDirty(const util::point<int>& tile, DirtyFlag dirtyFlag);
 
-	void reloadTile(const util::point<int>& tile, const util::point<int>& physicalTile, SkiaDocumentPainter& painter);
+	void reloadTile(const util::point<int>& tile, const util::point<int>& physicalTile, Rasterizer& rasterizer);
 
 	// accumulated shift in pixels
 	util::point<int> _shift;

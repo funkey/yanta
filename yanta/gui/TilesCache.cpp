@@ -1,5 +1,9 @@
 #include <boost/timer/timer.hpp>
 
+#include <SkCanvas.h>
+#include <SkBitmap.h>
+
+#include <util/Logger.h>
 #include "TilesCache.h"
 
 logger::LogChannel tilescachelog("tilescachelog", "[TilesCache] ");
@@ -7,7 +11,7 @@ logger::LogChannel tilescachelog("tilescachelog", "[TilesCache] ");
 TilesCache::TilesCache(const util::point<int>& center) :
 	_tiles(boost::extents[Width][Height][TileSize*TileSize]),
 	_tileStates(boost::extents[Width][Height]),
-	_backgroundPainterStopped(false),
+	_backgroundRasterizerStopped(false),
 	_backgroundThread(boost::bind(&TilesCache::cleanUp, this)) {
 
 	LOG_ALL(tilescachelog) << "creating new tiles cache around tile " << center << std::endl;
@@ -19,7 +23,7 @@ TilesCache::~TilesCache() {
 
 	LOG_ALL(tilescachelog) << "tearing background thread down..." << std::endl;
 
-	_backgroundPainterStopped = true;
+	_backgroundRasterizerStopped = true;
 	_backgroundThread.join();
 
 	LOG_ALL(tilescachelog) << "background thread stopped" << std::endl;
@@ -148,7 +152,7 @@ TilesCache::markDirty(const util::point<int>& tile, TileState state) {
 }
 
 gui::skia_pixel_t*
-TilesCache::getTile(const util::point<int>& tile, SkiaDocumentPainter& painter) {
+TilesCache::getTile(const util::point<int>& tile, Rasterizer& rasterizer) {
 
 	LOG_ALL(tilescachelog) << "getting tile " << tile << std::endl;
 
@@ -162,7 +166,7 @@ TilesCache::getTile(const util::point<int>& tile, SkiaDocumentPainter& painter) 
 		util::rect<int> tileRegion(tile.x, tile.y, tile.x + 1, tile.y + 1);
 		tileRegion *= static_cast<int>(TileSize);
 
-		updateTile(physicalTile, tileRegion, painter);
+		updateTile(physicalTile, tileRegion, rasterizer);
 	}
 
 	if (_tileStates[physicalTile.x][physicalTile.y] == NeedsRedraw) {
@@ -173,22 +177,22 @@ TilesCache::getTile(const util::point<int>& tile, SkiaDocumentPainter& painter) 
 		util::rect<int> tileRegion(tile.x, tile.y, tile.x + 1, tile.y + 1);
 		tileRegion *= static_cast<int>(TileSize);
 
-		painter.setIncremental(false);
-		updateTile(physicalTile, tileRegion, painter);
-		painter.setIncremental(true);
+		rasterizer.setIncremental(false);
+		updateTile(physicalTile, tileRegion, rasterizer);
+		rasterizer.setIncremental(true);
 	}
 
 	return &_tiles[physicalTile.x][physicalTile.y][0];
 }
 
 void
-TilesCache::setBackgroundPainter(boost::shared_ptr<SkiaDocumentPainter> painter) {
+TilesCache::setBackgroundRasterizer(boost::shared_ptr<Rasterizer> rasterizer) {
 
-	_backgroundPainter = painter;
+	_backgroundRasterizer = rasterizer;
 }
 
 void
-TilesCache::updateTile(const util::point<int>& physicalTile, const util::rect<int>& tileRegion, SkiaDocumentPainter& painter) {
+TilesCache::updateTile(const util::point<int>& physicalTile, const util::rect<int>& tileRegion, Rasterizer& rasterizer) {
 
 	LOG_ALL(tilescachelog) << "updating physical tile " << physicalTile << " with content of " << tileRegion << std::endl;
 
@@ -223,7 +227,7 @@ TilesCache::updateTile(const util::point<int>& physicalTile, const util::rect<in
 	util::point<int> translate = -tileRegion.upperLeft();
 	canvas.translate(translate.x, translate.y);
 
-	painter.draw(canvas, tileRegion);
+	rasterizer.draw(canvas, tileRegion);
 
 	// mark it as clean
 	_tileStates[physicalTile.x][physicalTile.y] = Clean;
@@ -241,12 +245,12 @@ TilesCache::cleanUp() {
 
 	bool isClean = false;
 
-	while (!_backgroundPainterStopped) {
+	while (!_backgroundRasterizerStopped) {
 
 		LOG_ALL(tilescachelog) << "checking for dirty tiles" << std::endl;
 
 		// was there something to clean?
-		isClean = (_backgroundPainter && cleanDirtyTiles(2) == 0);
+		isClean = (_backgroundRasterizer && cleanDirtyTiles(2) == 0);
 
 		boost::timer::cpu_times const elapsed(timer.elapsed());
 
@@ -286,7 +290,7 @@ TilesCache::cleanDirtyTiles(unsigned int  maxNumRequests) {
 		if (!getNextCleanUpRequest(request))
 			return i;
 
-		updateTile(request.tile, request.tileRegion, *_backgroundPainter);
+		updateTile(request.tile, request.tileRegion, *_backgroundRasterizer);
 	}
 
 	return i;

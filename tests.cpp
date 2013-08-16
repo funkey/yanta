@@ -14,6 +14,7 @@
 
 #include <yanta/io/DocumentReader.h>
 #include <yanta/gui/TilesCache.h>
+#include <yanta/gui/SkiaDocumentPainter.h>
 #include <yanta/util/ring_mapping.hpp>
 #include <yanta/util/torus_mapping.hpp>
 
@@ -117,7 +118,7 @@ void testTilesCache(boost::shared_ptr<Document> document) {
 	boost::shared_ptr<SkiaDocumentPainter> bgpainter = boost::make_shared<SkiaDocumentPainter>();
 	bgpainter->setDocument(document);
 
-	cache.setBackgroundPainter(bgpainter);
+	cache.setBackgroundRasterizer(bgpainter);
 
 	cache.getTile(util::point<int>(0, 0), *painter);
 
