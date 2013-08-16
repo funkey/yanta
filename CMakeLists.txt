@@ -168,10 +168,13 @@ file (GLOB_RECURSE yantafiles yanta/*.cpp)
 
 add_executable(yanta yanta.cpp ${yantafiles})
 add_executable(benchmarks benchmarks.cpp ${yantafiles})
+add_executable(tests tests.cpp ${yantafiles})
 target_link_libraries(yanta signals pipeline gui util ${CORELIBS})
 target_link_libraries(benchmarks signals pipeline gui util ${CORELIBS})
+target_link_libraries(tests signals pipeline gui util ${CORELIBS})
 
 if (OWN_SKIA)
   add_dependencies(yanta skia)
   add_dependencies(benchmarks skia)
+  add_dependencies(tests skia)
 endif()
