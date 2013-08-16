@@ -3,8 +3,8 @@
 logger::LogChannel torustexturelog("torustexturelog", "[TorusTexture] ");
 
 TorusTexture::TorusTexture(const util::rect<int>& region) :
-	_width (region.width() /TileSize + (region.width()  % TileSize == 0 ? 0 : 1)),
-	_height(region.height()/TileSize + (region.height() % TileSize == 0 ? 0 : 1)),
+	_width (region.width() /TileSize + 10),
+	_height(region.height()/TileSize + 10),
 	_outOfDates(boost::extents[_width][_height]),
 	_mapping(_width, _height),
 	_texture(0) {
@@ -36,7 +36,7 @@ TorusTexture::reset(const util::point<int>& center) {
 	LOG_DEBUG(torustexturelog) << "reseting torus texture around " << center << std::endl;
 
 	// get the tile containing the center
-	util::point<int> centerTile = center/static_cast<int>(TileSize);
+	util::point<int> centerTile(getTileCoordinate(center.x), getTileCoordinate(center.y));
 
 	// reset the tile mapping, such that all tiles around center map to 
 	// [0,w)x[0,h)
@@ -44,9 +44,8 @@ TorusTexture::reset(const util::point<int>& center) {
 
 	LOG_DEBUG(torustexturelog) << "new center tile is " << centerTile << std::endl;
 
-	// set the accumulated shift such that center really is in the center of the 
-	// texture
-	_shift = center - centerTile*static_cast<int>(TileSize);
+	// reset the accumulated shift
+	_shift = util::point<int>(0, 0);
 
 	LOG_DEBUG(torustexturelog) << "current shift is " << _shift << std::endl;
 
