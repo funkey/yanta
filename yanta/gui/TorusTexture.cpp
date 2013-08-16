@@ -69,7 +69,8 @@ TorusTexture::shift(const util::point<int>& shift) {
 	//
 	// If we shifted far enough to the right, such that a whole column of tiles 
 	// got shifted out of the region, we take this column and insert it at the 
-	// left. We mark the newly inserted tiles as dirty.
+	// left. We mark the newly inserted tiles as out-of-date, such that they get 
+	// updated from the cache.
 
 	while (_shift.x >= (int)TileSize) {
 
@@ -81,7 +82,7 @@ TorusTexture::shift(const util::point<int>& shift) {
 		util::rect<int> tilesRegion = _mapping.get_region();
 		int x = tilesRegion.minX;
 		for (int y = tilesRegion.minY; y < tilesRegion.maxY; y++)
-			markDirty(util::point<int>(x, y), NeedsRedraw);
+			markDirty(util::point<int>(x, y), OutOfDate);
 	}
 	while (_shift.x <= -(int)TileSize) {
 
@@ -93,7 +94,7 @@ TorusTexture::shift(const util::point<int>& shift) {
 		util::rect<int> tilesRegion = _mapping.get_region();
 		int x = tilesRegion.maxX - 1;
 		for (int y = tilesRegion.minY; y < tilesRegion.maxY; y++)
-			markDirty(util::point<int>(x, y), NeedsRedraw);
+			markDirty(util::point<int>(x, y), OutOfDate);
 	}
 	while (_shift.y >= (int)TileSize) {
 
@@ -105,7 +106,7 @@ TorusTexture::shift(const util::point<int>& shift) {
 		util::rect<int> tilesRegion = _mapping.get_region();
 		int y = tilesRegion.minY;
 		for (int x = tilesRegion.minX; x < tilesRegion.maxX; x++)
-			markDirty(util::point<int>(x, y), NeedsRedraw);
+			markDirty(util::point<int>(x, y), OutOfDate);
 	}
 	while (_shift.y <= -(int)TileSize) {
 
@@ -117,7 +118,7 @@ TorusTexture::shift(const util::point<int>& shift) {
 		util::rect<int> tilesRegion = _mapping.get_region();
 		int y = tilesRegion.maxY - 1;
 		for (int x = tilesRegion.minX; x < tilesRegion.maxX; x++)
-			markDirty(util::point<int>(x, y), NeedsRedraw);
+			markDirty(util::point<int>(x, y), OutOfDate);
 	}
 
 	LOG_ALL(torustexturelog) << "  cache region is now " << _mapping.get_region() << std::endl;
@@ -263,7 +264,7 @@ TorusTexture::markDirty(const util::point<int>& tile, DirtyFlag dirtyFlag) {
 		LOG_ALL(torustexturelog) << "    physical tile is " << physicalTile << std::endl;
 	}
 
-	// mark the tile dirty in the cache
+	// NeedsRedraw and NeedsUpdate have to be propagated to the cache
 	if (dirtyFlag == NeedsRedraw)
 		_cache.markDirty(tile, TilesCache::NeedsRedraw);
 	else if (dirtyFlag == NeedsUpdate)

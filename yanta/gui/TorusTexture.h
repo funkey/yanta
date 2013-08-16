@@ -21,6 +21,9 @@ public:
 	 */
 	enum DirtyFlag {
 
+		// texture needs to be reload from cache
+		OutOfDate,
+
 		// needs a (possibly incremental) update
 		NeedsUpdate,
 
