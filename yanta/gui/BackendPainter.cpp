@@ -63,10 +63,6 @@ BackendPainter::draw(
 
 	LOG_ALL(backendpainterlog) << "pixel roi is " << pixelRoi << std::endl;
 
-	// TODO: is this really needed? I think we can assume a valid OpenGl 
-	// context, here.
-	gui::OpenGl::Guard guard;
-
 	if (prepareTextures(pixelRoi) || _documentChanged) {
 
 		LOG_DEBUG(backendpainterlog) << "rebuild texture or document changed entirely -- initiate full redraw" << std::endl;
@@ -74,8 +70,6 @@ BackendPainter::draw(
 		initiateFullRedraw(pixelRoi);
 		_documentChanged = false;
 	}
-
-	bool wantsRedraw = false;
 
 	if (_mode == IncrementalDrawing) {
 
@@ -137,7 +131,7 @@ BackendPainter::draw(
 	if (_mode != Zooming)
 		_previousScale = _scale;
 
-	return wantsRedraw;
+	return false;
 }
 
 void
