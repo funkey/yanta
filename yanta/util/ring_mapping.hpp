@@ -112,8 +112,8 @@ public:
 	void shift(Precision s) {
 
 		_start += s;
-		_physicalStart = util::detail::mod(_start, length());
-		_split = _start + (length() - _physicalStart);
+		_physicalStart = util::detail::mod(_physicalStart + s, length());
+		_split = _start + util::detail::mod(length() - _physicalStart, length());
 	}
 
 	/**
