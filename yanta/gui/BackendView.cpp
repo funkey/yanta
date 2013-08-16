@@ -16,6 +16,7 @@ util::ProgramOption optionPenOffsetY(
 logger::LogChannel backendviewlog("backendviewlog", "[BackendView] ");
 
 BackendView::BackendView() :
+	_penClose(false),
 	_lastPen(0, 0),
 	_gestureStartCenter(0, 0),
 	_gestureStartDistance(0),
