@@ -3,6 +3,8 @@
 
 #include <string>
 
+#include <boost/thread.hpp>
+
 #include <pipeline/all.h>
 
 #include <document/Document.h>
@@ -13,7 +15,9 @@ public:
 
 	DocumentWriter(const std::string& filename);
 
-	void write();
+	~DocumentWriter();
+
+	void write(const std::string& filename = "");
 
 private:
 
@@ -25,9 +29,16 @@ private:
 
 	void writeStroke(std::ofstream& out, const Stroke& stroke);
 
+	/**
+	 * Entry point for the auto-save thread.
+	 */
+	void autosave(unsigned int interval);
+
 	pipeline::Input<Document> _document;
 
 	std::string _filename;
+
+	boost::thread _autosaveThread;
 };
 
 #endif // YANTA_CANVAS_WRITER_H__
