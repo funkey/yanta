@@ -20,6 +20,9 @@ TorusTexture::TorusTexture(const util::rect<int>& region) :
 	gui::OpenGl::Guard guard;
 
 	_texture = new gui::Texture(_width*TileSize, _height*TileSize, GL_RGBA);
+
+	for (unsigned int i = 0; i < TileSize*TileSize; i++)
+		_notDoneImage[i] = gui::skia_pixel_t(255, 0, 0, 255);
 }
 
 TorusTexture::~TorusTexture() {
@@ -158,22 +161,47 @@ TorusTexture::render(const util::rect<int>& region, Rasterizer& rasterizer) {
 		return;
 	}
 
-	// reload out-of-date tiles
-	// TODO: make this more efficient (by using a queue of reload requests)
-	for (int x = tiles.minX; x < tiles.maxX; x++)
-		for (int y = tiles.minY; y < tiles.maxY; y++) {
+	// are all out-of-date tiles updated?
+	bool allDone = false;
 
-			util::point<int> physicalTile = _mapping.map(util::point<int>(x, y));
+	// try at most two times to get all the tiles
+	for (int i = 0; i < 2 && !allDone; i++) {
 
-			LOG_ALL(torustexturelog) << "testing tile " << util::point<int>(x, y) << ", physical " << physicalTile << std::endl;
+		// assume everything is okay
+		allDone = true;
 
-			if (_outOfDates[physicalTile.x][physicalTile.y]) {
+		// TODO: make this more efficient (by using a queue of reload requests)
+		for (int x = tiles.minX; x < tiles.maxX; x++)
+			for (int y = tiles.minY; y < tiles.maxY; y++) {
 
 				util::point<int> tile(x, y);
+				util::point<int> physicalTile = _mapping.map(tile);
 
-				reloadTile(tile, physicalTile, rasterizer);
+				bool needUpdate = false;
+
+				if (_cache.wasChanged(tile)) {
+
+					LOG_ALL(torustexturelog) << "tile " << tile << " was changed in the cache" << std::endl;
+
+					needUpdate = true;
+					_cache.seenChange(tile);
+				}
+
+				if (_outOfDates[physicalTile.x][physicalTile.y]) {
+
+					LOG_ALL(torustexturelog) << "tile " << tile << " is marked out-of-date" << std::endl;
+
+					needUpdate = true;
+				}
+
+				if (needUpdate) {
+
+					bool done = reloadTile(tile, physicalTile, rasterizer);
+
+					allDone = allDone && done;
+				}
 			}
-		}
+	}
 
 	// draw the texture
 	glEnable(GL_TEXTURE_2D);
@@ -271,7 +299,7 @@ TorusTexture::markDirty(const util::point<int>& tile, DirtyFlag dirtyFlag) {
 		_cache.markDirty(tile, TilesCache::NeedsUpdate);
 }
 
-void
+bool
 TorusTexture::reloadTile(const util::point<int>& tile, const util::point<int>& physicalTile, Rasterizer& rasterizer) {
 
 	LOG_ALL(torustexturelog) << "reloading tile " << tile << std::endl;
@@ -285,8 +313,21 @@ TorusTexture::reloadTile(const util::point<int>& tile, const util::point<int>& p
 	textureRegion *= static_cast<int>(TileSize);
 
 	// partially reload the texture
-	_texture->loadData(data, textureRegion);
+	if (data == 0) {
 
-	// mark tile as up-to-date
-	_outOfDates[physicalTile.x][physicalTile.y] = false;
+		LOG_ALL(torustexturelog) << "    tile is not ready, yet -- showing not-done image" << std::endl;
+
+		_texture->loadData(_notDoneImage, textureRegion);
+
+		return false;
+
+	} else {
+
+		_texture->loadData(data, textureRegion);
+
+		// mark tile as up-to-date
+		_outOfDates[physicalTile.x][physicalTile.y] = false;
+
+		return true;
+	}
 }

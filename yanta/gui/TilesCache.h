@@ -36,7 +36,10 @@ public:
 		NeedsUpdate,
 
 		// the tile needs to be redrawn completely
-		NeedsRedraw
+		NeedsRedraw,
+
+		// the cache for this tile is invalid
+		Invalid
 	};
 
 	/**
@@ -78,6 +81,20 @@ public:
 	 * that the tile is part of the cache.
 	 */
 	gui::skia_pixel_t* getTile(const util::point<int>& tile, Rasterizer& rasterizer);
+
+	/**
+	 * Ask whether a tile was changed by the cache. If it was changed, the 
+	 * caller has to indicate that the change was observed by calling 
+	 * seenChange().
+	 */
+	bool wasChanged(const util::point<int>& tile);
+
+	/**
+	 * Indicate that the change indicated by wasChanged() was acknowledged by 
+	 * the caller. Call this method before you reload the tile to make sure you 
+	 * don't miss another change.
+	 */
+	void seenChange(const util::point<int>& tile);
 
 	/**
 	 * Set a background rasterizer for this cache. This will launch a background 
@@ -143,6 +160,10 @@ private:
 	// 2D array of states for the tiles
 	typedef boost::multi_array<TileState, 2> tile_states_type;
 	tile_states_type _tileStates;
+
+	// 2D array of changed-flags for the tiles
+	typedef boost::multi_array<bool, 2> tile_changed_type;
+	tile_changed_type _tileChanged;
 
 	// mapping from logical tile coordinates to physical coordinates in 2D array
 	torus_mapping<int, Width, Height> _mapping;

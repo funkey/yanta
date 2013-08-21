@@ -131,7 +131,8 @@ BackendPainter::draw(
 	if (_mode != Zooming)
 		_previousScale = _scale;
 
-	return false;
+	// request another redraw
+	return true;
 }
 
 void

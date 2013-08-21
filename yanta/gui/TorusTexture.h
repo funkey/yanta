@@ -82,7 +82,11 @@ private:
 	 */
 	void markDirty(const util::point<int>& tile, DirtyFlag dirtyFlag);
 
-	void reloadTile(const util::point<int>& tile, const util::point<int>& physicalTile, Rasterizer& rasterizer);
+	/**
+	 * Try to reload a tile. Returns false, if the tile is not present in the 
+	 * cache, yet.
+	 */
+	bool reloadTile(const util::point<int>& tile, const util::point<int>& physicalTile, Rasterizer& rasterizer);
 
 	// accumulated shift in pixels
 	util::point<int> _shift;
@@ -110,6 +114,9 @@ private:
 
 	// the actual OpenGl texture
 	gui::Texture* _texture;
+
+	// the image to show for tiles that haven't been rendered, yet
+	gui::skia_pixel_t _notDoneImage[TileSize*TileSize];
 };
 
 #endif // YANTA_GUI_TORUS_TEXTURE_H__
