@@ -165,6 +165,9 @@ private:
 	typedef boost::multi_array<bool, 2> tile_changed_type;
 	tile_changed_type _tileChanged;
 
+	// 2D array of mutexes for the tiles
+	boost::mutex _tileMutexes[Width][Height];
+
 	// mapping from logical tile coordinates to physical coordinates in 2D array
 	torus_mapping<int, Width, Height> _mapping;
 

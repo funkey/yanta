@@ -184,6 +184,8 @@ TilesCache::getTile(const util::point<int>& tile, Rasterizer& rasterizer) {
 
 	util::point<int> physicalTile = _mapping.map(tile);
 
+	//boost::mutex::scoped_lock lock(_tileMutexes[physicalTile.x][physicalTile.y]);
+
 	// the tile is not ready, yet
 	if (_tileStates[physicalTile.x][physicalTile.y] == Invalid)
 		return 0;
@@ -254,6 +256,9 @@ TilesCache::updateTile(const util::point<int>& physicalTile, const util::rect<in
 	// 
 	// Tile get's cleaned by someone else while we are here.
 
+	// mark it as clean
+	_tileStates[physicalTile.x][physicalTile.y] = Clean;
+
 	// get the data of the tile
 	gui::skia_pixel_t* buffer = &_tiles[physicalTile.x][physicalTile.y][0];
 
@@ -274,9 +279,6 @@ TilesCache::updateTile(const util::point<int>& physicalTile, const util::rect<in
 	canvas.translate(translate.x, translate.y);
 
 	rasterizer.draw(canvas, tileRegion);
-
-	// mark it as clean
-	_tileStates[physicalTile.x][physicalTile.y] = Clean;
 }
 
 void
@@ -335,6 +337,12 @@ TilesCache::cleanDirtyTiles(unsigned int  maxNumRequests) {
 		// them, in this case abort and come back later
 		if (!getNextCleanUpRequest(request))
 			return i;
+
+		//boost::mutex::scoped_lock lock(_tileMutexes[request.tile.x][request.tile.y]);
+
+		// make sure tile gets updated, even if there was an update before 
+		// already, that marked it as clean
+		_tileStates[request.tile.x][request.tile.y] = Invalid;
 
 		updateTile(request.tile, request.tileRegion, *_backgroundRasterizer);
 
