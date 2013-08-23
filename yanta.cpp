@@ -15,12 +15,12 @@
 #include <util/ProgramOptions.h>
 #include <util/SignalHandler.h>
 
-#include <yanta/Backend.h>
-#include <yanta/gui/BackendView.h>
-#include <yanta/gui/Osd.h>
-#include <yanta/io/DocumentReader.h>
-#include <yanta/io/DocumentWriter.h>
-#include <yanta/io/DocumentPdfWriter.h>
+#include <Backend.h>
+#include <gui/BackendView.h>
+#include <gui/Osd.h>
+#include <io/DocumentReader.h>
+#include <io/DocumentWriter.h>
+#include <io/DocumentPdfWriter.h>
 
 util::ProgramOption optionFilename(
 		util::_long_name        = "file",

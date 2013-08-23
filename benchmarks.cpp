@@ -14,8 +14,8 @@
 #include <util/ProgramOptions.h>
 #include <util/SignalHandler.h>
 
-#include <yanta/gui/SkiaDocumentPainter.h>
-#include <yanta/io/DocumentReader.h>
+#include <gui/SkiaDocumentPainter.h>
+#include <io/DocumentReader.h>
 
 util::ProgramOption optionFilename(
 		util::_long_name        = "file",

@@ -1,7 +1,7 @@
 #ifndef YANTA_TOOL_SIGNALS_H__
 #define YANTA_TOOL_SIGNALS_H__
 
-#include <yanta/Signals.h>
+#include <Signals.h>
 
 /**
  * Signal to send when just a point was added to the lasso.

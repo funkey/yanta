@@ -144,12 +144,7 @@ set(CORELIBS
 include_directories(${PROJECT_BINARY_DIR})
 include_directories(${PROJECT_SOURCE_DIR})
 include_directories(${PROJECT_SOURCE_DIR}/modules)
-include_directories(${PROJECT_SOURCE_DIR}/yanta)
-
-add_subdirectory(modules/util)
-add_subdirectory(modules/signals)
-add_subdirectory(modules/pipeline)
-add_subdirectory(modules/gui)
+include_directories(${PROJECT_SOURCE_DIR}/modules/yanta)
 
 #####################
 # compiler settings #
@@ -158,17 +153,26 @@ add_subdirectory(modules/gui)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -DBOOST_DISABLE_ASSERTS -DSK_RELEASE -Wall -Wextra -fomit-frame-pointer")
 set(CMAKE_CXX_FLAGS_PROFILING "-O3 -DNDEBUG -DBOOST_DISABLE_ASSERTS -DSK_RELEASE -g -fno-omit-frame-pointer -Wall -Wextra" CACHE STRING "Profiling CXX flags" FORCE)
 set(CMAKE_CXX_FLAGS_DEBUG   "-g -DSK_RELEASE -Wall -Wextra")
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS_RELEASE})
 mark_as_advanced(CMAKE_CXX_FLAGS_PROFILING)
+
+##################
+# subdirectories #
+##################
+
+add_subdirectory(modules/util)
+add_subdirectory(modules/signals)
+add_subdirectory(modules/pipeline)
+add_subdirectory(modules/gui)
+add_subdirectory(modules/yanta)
 
 ###############
 # main target #
 ###############
 
-file (GLOB_RECURSE yantafiles yanta/*.cpp)
-
-add_executable(yanta yanta.cpp ${yantafiles})
-add_executable(benchmarks benchmarks.cpp ${yantafiles})
-add_executable(tests tests.cpp ${yantafiles})
+add_executable(yanta yanta.cpp $<TARGET_OBJECTS:yantalib>)
+add_executable(benchmarks benchmarks.cpp $<TARGET_OBJECTS:yantalib>)
+add_executable(tests tests.cpp $<TARGET_OBJECTS:yantalib>)
 target_link_libraries(yanta signals pipeline gui util ${CORELIBS})
 target_link_libraries(benchmarks signals pipeline gui util ${CORELIBS})
 target_link_libraries(tests signals pipeline gui util ${CORELIBS})

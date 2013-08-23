@@ -12,11 +12,11 @@
 #include <util/ProgramOptions.h>
 #include <util/SignalHandler.h>
 
-#include <yanta/io/DocumentReader.h>
-#include <yanta/gui/TilesCache.h>
-#include <yanta/gui/SkiaDocumentPainter.h>
-#include <yanta/util/ring_mapping.hpp>
-#include <yanta/util/torus_mapping.hpp>
+#include <io/DocumentReader.h>
+#include <gui/TilesCache.h>
+#include <gui/SkiaDocumentPainter.h>
+#include <util/ring_mapping.hpp>
+#include <util/torus_mapping.hpp>
 
 util::ProgramOption optionFilename(
 		util::_long_name        = "file",
