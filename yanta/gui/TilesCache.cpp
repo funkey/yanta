@@ -37,39 +37,17 @@ TilesCache::~TilesCache() {
 void
 TilesCache::reset(const util::point<int>& center) {
 
+	boost::mutex::scoped_lock lock(_mappingMutex);
+
 	// reset the tile mapping, such that all tiles around center map to 
 	// [0,w)x[0,h)
 	_mapping.reset(center - util::point<int>(Width/2, Height/2));
 
-	{
-		boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
-
-		// dismiss all pending clean-up requests
-		_cleanUpRequests.clear();
-	}
-
-	// the center
-	markDirty(center, Invalid);
-
-	// for every radius around it
-	for (int radius = 1; radius < std::max((int)Width, (int)Height)/2; radius++) {
-
-		// top
-		for (int x = -radius + 1; x < radius; x++)
-			markDirty(util::point<int>(center.x - x, center.y - radius), Invalid);
-
-		// right
-		for (int y = -radius; y <= radius; y++)
-			markDirty(util::point<int>(center.x - radius, center.y + y), Invalid);
-
-		// bottom
-		for (int x = -radius + 1; x < radius; x++)
-			markDirty(util::point<int>(center.x + x, center.y + radius), Invalid);
-
-		// left
-		for (int y = -radius; y <= radius; y++)
-			markDirty(util::point<int>(center.x + radius, center.y - y), Invalid);
-	}
+	// TODO:
+	// • this doesn't need to follow a spiral anymore
+	for (unsigned int x = 0; x < Width; x++)
+		for (unsigned int y = 0; y < Height; y++)
+			markDirtyPhysical(util::point<int>(x, y), Invalid);
 }
 
 void
@@ -87,6 +65,8 @@ TilesCache::shift(const util::point<int>& shift) {
 
 	while (remaining.x > 0) {
 
+		boost::mutex::scoped_lock lock(_mappingMutex);
+
 		_mapping.shift(util::point<int>(-1, 0));
 		remaining.x--;
 
@@ -97,6 +77,8 @@ TilesCache::shift(const util::point<int>& shift) {
 			markDirty(util::point<int>(x, y), Invalid);
 	}
 	while (remaining.x < 0) {
+
+		boost::mutex::scoped_lock lock(_mappingMutex);
 
 		_mapping.shift(util::point<int>(1, 0));
 		remaining.x++;
@@ -109,6 +91,8 @@ TilesCache::shift(const util::point<int>& shift) {
 	}
 	while (remaining.y > 0) {
 
+		boost::mutex::scoped_lock lock(_mappingMutex);
+
 		_mapping.shift(util::point<int>(0, -1));
 		remaining.y--;
 
@@ -119,6 +103,8 @@ TilesCache::shift(const util::point<int>& shift) {
 			markDirty(util::point<int>(x, y), Invalid);
 	}
 	while (remaining.y < 0) {
+
+		boost::mutex::scoped_lock lock(_mappingMutex);
 
 		_mapping.shift(util::point<int>(0, 1));
 		remaining.y++;
@@ -136,7 +122,7 @@ TilesCache::shift(const util::point<int>& shift) {
 void
 TilesCache::markDirty(const util::point<int>& tile, TileState state) {
 
-	LOG_ALL(tilescachelog) << "marking tile " << tile << " as " << (state == NeedsUpdate ? "needs update" : "needs redraw");
+	LOG_ALL(tilescachelog) << "marking tile " << tile << " as " << (state == NeedsUpdate ? "needs update" : "needs redraw") << std::endl;;
 
 	if (!_mapping.get_region().contains(tile)) {
 
@@ -146,6 +132,12 @@ TilesCache::markDirty(const util::point<int>& tile, TileState state) {
 
 	util::point<int> physicalTile = _mapping.map(tile);
 
+	markDirtyPhysical(physicalTile, state);
+}
+
+void
+TilesCache::markDirtyPhysical(const util::point<int>& physicalTile, TileState state) {
+
 	// without a background clean-up thread, allow no invalid flags
 	if (!_backgroundRasterizer && state == Invalid)
 		state = NeedsRedraw;
@@ -153,28 +145,6 @@ TilesCache::markDirty(const util::point<int>& tile, TileState state) {
 	// set the flag, but make sure we are not overwriting previous dirty flags 
 	// of higher precedence
 	_tileStates[physicalTile.x][physicalTile.y] = std::max(_tileStates[physicalTile.x][physicalTile.y], state);
-
-	// pass only invalid-tile requests to the background thread
-	if (state == Invalid) {
-
-		// get the region covered by the tile in pixels
-		util::rect<int> tileRegion(tile.x, tile.y, tile.x + 1, tile.y + 1);
-		tileRegion *= static_cast<int>(TileSize);
-
-		LOG_ALL(tilescachelog) << ", queuing it with region " << tileRegion << std::endl;
-
-		// queue a clean-up request
-		CleanUpRequest request(physicalTile, tileRegion);
-
-		{
-			boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
-			_cleanUpRequests.push_back(request);
-		}
-
-	} else {
-
-		LOG_ALL(tilescachelog) << ", just set a flag" << std::endl;
-	}
 }
 
 gui::skia_pixel_t*
@@ -318,51 +288,79 @@ TilesCache::cleanUp() {
 unsigned int
 TilesCache::cleanDirtyTiles(unsigned int  maxNumRequests) {
 
-	unsigned int numRequests;
-	
-	{
-		boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
-		numRequests = _cleanUpRequests.size();
+	unsigned int cleaned = 0;
+
+	for (cleaned = 0; cleaned < maxNumRequests; cleaned++) {
+
+		util::point<int> physicalTile;
+		util::rect<int> tileRegion(0, 0, 0, 0);
+
+		// for every radius around center
+		for (int radius = 0; radius < std::max((int)Width, (int)Height)/2; radius++) {
+
+			boost::mutex::scoped_lock lock(_mappingMutex);
+
+			util::point<int> center = _mapping.get_region().center();
+
+			LOG_ALL(tilescachelog) << "looking for dirty tiles around " << center << " with radius " << radius << std::endl;
+
+			// TODO: check center tile only once
+
+			// top
+			for (int x = -radius + 1; x < radius; x++)
+				if (isInvalid(util::point<int>(center.x - x, center.y - radius), physicalTile, tileRegion))
+					goto A;
+
+			// right
+			for (int y = -radius; y <= radius; y++)
+				if (isInvalid(util::point<int>(center.x - radius, center.y + y), physicalTile, tileRegion))
+					goto A;
+
+			// bottom
+			for (int x = -radius + 1; x < radius; x++)
+				if (isInvalid(util::point<int>(center.x + x, center.y + radius), physicalTile, tileRegion))
+					goto A;
+
+			// left
+			for (int y = -radius; y <= radius; y++)
+				if (isInvalid(util::point<int>(center.x + radius, center.y - y), physicalTile, tileRegion))
+					goto A;
+		}
+
+		// couldn't find an invalid tile
+A:		if (tileRegion.isZero())
+			return cleaned;
+
+		LOG_DEBUG(tilescachelog) << "cleaning physical tile " << physicalTile << std::endl;
+
+		// update it
+		updateTile(physicalTile, tileRegion, *_backgroundRasterizer);
+
+		_tileChanged[physicalTile.x][physicalTile.y] = true;
 	}
 
-	if (maxNumRequests != 0)
-		numRequests = std::min(numRequests, maxNumRequests);
-
-	CleanUpRequest request;
-
-	unsigned int i = 0;
-	for (; i < numRequests; i++) {
-
-		// the number of requests might have decreased while we were working on 
-		// them, in this case abort and come back later
-		if (!getNextCleanUpRequest(request))
-			return i;
-
-		//boost::mutex::scoped_lock lock(_tileMutexes[request.tile.x][request.tile.y]);
-
-		// make sure tile gets updated, even if there was an update before 
-		// already, that marked it as clean
-		_tileStates[request.tile.x][request.tile.y] = Invalid;
-
-		updateTile(request.tile, request.tileRegion, *_backgroundRasterizer);
-
-		// indicate that the tile changed
-		_tileChanged[request.tile.x][request.tile.y] = true;
-	}
-
-	return i;
+	return cleaned;
 }
 
 bool
-TilesCache::getNextCleanUpRequest(CleanUpRequest& request) {
+TilesCache::isInvalid(const util::point<int>& tile, util::point<int>& physicalTile, util::rect<int>& tileRegion) {
 
-	boost::mutex::scoped_lock lock(_cleanUpRequestsMutex);
+	// get physical tile
+	physicalTile = _mapping.map(tile);
 
-	if (_cleanUpRequests.size() == 0)
-		return false;
+	LOG_ALL(tilescachelog) << "probing tile " << tile << std::endl;
 
-	request = _cleanUpRequests.front();
-	_cleanUpRequests.pop_front();
+	if (_tileStates[physicalTile.x][physicalTile.y] == Invalid) {
 
-	return true;
+		LOG_ALL(tilescachelog) << "tile " << tile << " is invalid" << std::endl;
+
+		// get the region covered by the tile in pixels
+		tileRegion = util::rect<int>(tile.x, tile.y, tile.x + 1, tile.y + 1);
+		tileRegion *= static_cast<int>(TileSize);
+
+		return true;
+	}
+
+	return false;
 }
+

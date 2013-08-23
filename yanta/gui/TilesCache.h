@@ -105,25 +105,9 @@ public:
 private:
 
 	/**
-	 * A clean-up request for the background thread. Informs the thread about 
-	 * which tile has to be redrawn with which content.
+	 * Set the dirty flag of a physical tile.
 	 */
-	struct CleanUpRequest {
-
-		CleanUpRequest() {};
-
-		CleanUpRequest(
-				const util::point<int>& tile_,
-				const util::rect<int>& tileRegion_) :
-				tile(tile_),
-				tileRegion(tileRegion_) {}
-
-		// physical coordinates of the tile to update
-		util::point<int> tile;
-
-		// region of the tile in pixels
-		util::rect<int>  tileRegion;
-	};
+	inline void markDirtyPhysical(const util::point<int>& physicalTile, TileState state);
 
 	/**
 	 * Update a tile.
@@ -148,10 +132,10 @@ private:
 	unsigned int cleanDirtyTiles(unsigned int maxNumRequests);
 
 	/**
-	 * Get the next clean-up request from the queue. Returns false, if there are 
-	 * none.
+	 * Check whether a logical tile is marked as invalid, get the physical tile 
+	 * and the region covered by it on-the-fly.
 	 */
-	bool getNextCleanUpRequest(CleanUpRequest& request);
+	bool isInvalid(const util::point<int>& tile, util::point<int>& physicalTile, util::rect<int>& tileRegion);
 
 	// 2D array of tiles
 	typedef boost::multi_array<gui::skia_pixel_t, 3> tiles_type;
@@ -171,11 +155,8 @@ private:
 	// mapping from logical tile coordinates to physical coordinates in 2D array
 	torus_mapping<int, Width, Height> _mapping;
 
-	// queue of clean-up requests for the background thread
-	std::deque<CleanUpRequest> _cleanUpRequests;
-
-	// mutex to protect concurrent access to the clean-up queue
-	boost::mutex _cleanUpRequestsMutex;
+	// mutex to protect the mapping
+	boost::mutex _mappingMutex;
 
 	// the rasterizer to be used by the background thread
 	boost::shared_ptr<Rasterizer> _backgroundRasterizer;
