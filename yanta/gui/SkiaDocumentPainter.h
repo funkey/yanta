@@ -8,6 +8,7 @@
 #include <gui/Rasterizer.h>
 #include "SkiaDocumentVisitor.h"
 #include "SkiaStrokeBallPainter.h"
+#include "SkiaStrokeLinePainter.h"
 
 class SkiaDocumentPainter : public SkiaDocumentVisitor, public Rasterizer {
 
@@ -120,7 +121,8 @@ private:
 	// shall we draw incrementally?
 	bool _incremental;
 
-	SkiaStrokeBallPainter _strokePainter;
+	SkiaStrokeBallPainter _bestStrokePainter;
+	SkiaStrokeLinePainter _worseStrokePainter;
 };
 
 #endif // YANTA_SKIA_CANVAS_PAINTER_H__

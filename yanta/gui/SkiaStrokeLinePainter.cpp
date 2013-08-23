@@ -5,12 +5,10 @@
 #include "SkiaStrokeLinePainter.h"
 #include "util/Logger.h"
 
-SkiaStrokeLinePainter::SkiaStrokeLinePainter(SkCanvas& canvas, const StrokePoints& strokePoints) :
-	_canvas(canvas),
-	_strokePoints(strokePoints) {}
-
 void
 SkiaStrokeLinePainter::draw(
+		SkCanvas& canvas,
+		const StrokePoints& strokePoints,
 		const Stroke& stroke,
 		const util::rect<double>& /*roi*/,
 		unsigned long beginStroke,
@@ -36,17 +34,26 @@ SkiaStrokeLinePainter::draw(
 	paint.setColor(SkColorSetRGB(penColorRed, penColorGreen, penColorBlue));
 	paint.setAntiAlias(true);
 
+	unsigned int step = 1;
+
+	if (getQuality() <= Worst)
+		step = 9;
+	else if (getQuality() <= Medium)
+		step = 3;
+
 	// for each line in the stroke
-	for (unsigned long i = beginStroke; i < endStroke - 1; i++) {
+	for (unsigned long i = beginStroke; i < endStroke - 1; i += step) {
 
 		//double alpha = alphaPressureCurve(stroke[i].pressure);
-		double width = widthPressureCurve(_strokePoints[i].pressure);
+		double width = widthPressureCurve(strokePoints[i].pressure);
 
 		paint.setStrokeWidth(width*penWidth);
 
-		_canvas.drawLine(
-				_strokePoints[i  ].position.x, _strokePoints[i  ].position.y,
-				_strokePoints[i+1].position.x, _strokePoints[i+1].position.y,
+		unsigned int next = std::min(i + step, endStroke - 1);
+
+		canvas.drawLine(
+				strokePoints[i   ].position.x, strokePoints[i   ].position.y,
+				strokePoints[next].position.x, strokePoints[next].position.y,
 				paint);
 	}
 

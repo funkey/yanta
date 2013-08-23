@@ -29,6 +29,19 @@ SkiaDocumentPainter::draw(SkCanvas& canvas, const util::rect<DocumentPrecision>&
 	// prepare the visitor to draw only within roi
 	prepare(roi);
 
+	// get the number of pixels that correspond to one skia unit, which is one 
+	// millimeter in our case
+	double scale = canvas.getTotalMatrix().getScaleX();
+
+	LOG_DEBUG(skiadocumentpainterlog) << "pixel scale is " << scale << std::endl;
+
+	if (scale < 1)
+		setQuality(Worst);
+	else if (scale < 5)
+		setQuality(Medium);
+	else
+		setQuality(Best);
+
 	{
 		// make sure reading access to the stroke points are safe
 		boost::shared_lock<boost::shared_mutex> lock(getDocument().getStrokePoints().getMutex());
@@ -183,33 +196,15 @@ SkiaDocumentPainter::visit(Stroke& stroke) {
 			<< "drawing stroke (" << stroke.begin() << " - " << stroke.end()
 			<< ") , starting from point " << begin << " until " << end << std::endl;
 
-	_strokePainter.draw(getCanvas(), getDocument().getStrokePoints(), stroke, getRoi(), begin, end);
+	if (getQuality() < Best) {
+
+		_worseStrokePainter.setQuality(getQuality());
+		_worseStrokePainter.draw(getCanvas(), getDocument().getStrokePoints(), stroke, getRoi(), begin, end);
+
+	} else
+		_bestStrokePainter.draw(getCanvas(), getDocument().getStrokePoints(), stroke, getRoi(), begin, end);
 
 	// remember until which point we drew already in our temporary memory
 	_drawnUntilStrokePointTmp = std::max(_drawnUntilStrokePointTmp, end);
 }
 
-
-#if 0
-util::point<double>
-SkiaDocumentPainter::getLineNormal(const Stroke& stroke, const StrokePoints& points, long i, double& length) {
-
-	// i is the line number, i.e., the line (i,i+1). Now, if i or i+1 is not 
-	// part of the stroke, the normal will be zero
-	if (i < (long)stroke.begin() || i + 1 >= (long)stroke.end())
-		return util::point<double>(0, 0);
-
-	util::point<double> begin = points[i].position;
-	util::point<double> end   = points[i+1].position;
-
-	util::point<double> diff = end - begin;
-
-	length = sqrt(diff.x*diff.x + diff.y*diff.y);
-
-	util::point<double> normal;
-	normal.x = -diff.y/length;
-	normal.y =  diff.x/length;
-
-	return normal;
-}
-#endif
