@@ -7,6 +7,7 @@
 #include <gui/Skia.h>
 
 #include <util/torus_mapping.hpp>
+#include <util/version_tag.h>
 #include "Rasterizer.h"
 
 /**
@@ -156,7 +157,7 @@ private:
 	torus_mapping<int, Width, Height> _mapping;
 
 	// mutex to protect the mapping
-	boost::mutex _mappingMutex;
+	version_tag  _mappingVersionTag;
 
 	// the rasterizer to be used by the background thread
 	boost::shared_ptr<Rasterizer> _backgroundRasterizer;

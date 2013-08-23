@@ -37,11 +37,13 @@ TilesCache::~TilesCache() {
 void
 TilesCache::reset(const util::point<int>& center) {
 
-	boost::mutex::scoped_lock lock(_mappingMutex);
+	_mappingVersionTag.lock();
 
 	// reset the tile mapping, such that all tiles around center map to 
 	// [0,w)x[0,h)
 	_mapping.reset(center - util::point<int>(Width/2, Height/2));
+
+	_mappingVersionTag.unlock();
 
 	// TODO:
 	// • this doesn't need to follow a spiral anymore
@@ -65,10 +67,12 @@ TilesCache::shift(const util::point<int>& shift) {
 
 	while (remaining.x > 0) {
 
-		boost::mutex::scoped_lock lock(_mappingMutex);
+		_mappingVersionTag.lock();
 
 		_mapping.shift(util::point<int>(-1, 0));
 		remaining.x--;
+
+		_mappingVersionTag.unlock();
 
 		// the new tiles are in the left column
 		util::rect<int> tilesRegion = _mapping.get_region();
@@ -78,10 +82,12 @@ TilesCache::shift(const util::point<int>& shift) {
 	}
 	while (remaining.x < 0) {
 
-		boost::mutex::scoped_lock lock(_mappingMutex);
+		_mappingVersionTag.lock();
 
 		_mapping.shift(util::point<int>(1, 0));
 		remaining.x++;
+
+		_mappingVersionTag.unlock();
 
 		// the new tiles are in the right column
 		util::rect<int> tilesRegion = _mapping.get_region();
@@ -91,10 +97,12 @@ TilesCache::shift(const util::point<int>& shift) {
 	}
 	while (remaining.y > 0) {
 
-		boost::mutex::scoped_lock lock(_mappingMutex);
+		_mappingVersionTag.lock();
 
 		_mapping.shift(util::point<int>(0, -1));
 		remaining.y--;
+
+		_mappingVersionTag.unlock();
 
 		// the new tiles are in the top column
 		util::rect<int> tilesRegion = _mapping.get_region();
@@ -104,10 +112,12 @@ TilesCache::shift(const util::point<int>& shift) {
 	}
 	while (remaining.y < 0) {
 
-		boost::mutex::scoped_lock lock(_mappingMutex);
+		_mappingVersionTag.lock();
 
 		_mapping.shift(util::point<int>(0, 1));
 		remaining.y++;
+
+		_mappingVersionTag.unlock();
 
 		// the new tiles are in the bottom column
 		util::rect<int> tilesRegion = _mapping.get_region();
@@ -290,6 +300,8 @@ TilesCache::cleanDirtyTiles(unsigned int  maxNumRequests) {
 
 	unsigned int cleaned = 0;
 
+	version_tag::version_type mappingVersion;
+
 	for (cleaned = 0; cleaned < maxNumRequests; cleaned++) {
 
 		util::point<int> physicalTile;
@@ -298,7 +310,11 @@ TilesCache::cleanDirtyTiles(unsigned int  maxNumRequests) {
 		// for every radius around center
 		for (int radius = 0; radius < std::max((int)Width, (int)Height)/2; radius++) {
 
-			boost::mutex::scoped_lock lock(_mappingMutex);
+			mappingVersion = _mappingVersionTag.get_version();
+
+			// someone is currently updating the mapping
+			if (version_tag::is_locked(mappingVersion))
+				goto A;
 
 			util::point<int> center = _mapping.get_region().center();
 
@@ -329,6 +345,11 @@ TilesCache::cleanDirtyTiles(unsigned int  maxNumRequests) {
 
 		// couldn't find an invalid tile
 A:		if (tileRegion.isZero())
+			return cleaned;
+
+		// the mapping changed while we were computing the physical tile and 
+		// region
+		if (_mappingVersionTag.changed(mappingVersion))
 			return cleaned;
 
 		LOG_DEBUG(tilescachelog) << "cleaning physical tile " << physicalTile << std::endl;
