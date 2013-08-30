@@ -7,7 +7,8 @@ TorusTexture::TorusTexture(const util::rect<int>& region) :
 	_height(region.height()/TileSize + 10),
 	_outOfDates(boost::extents[_width][_height]),
 	_mapping(_width, _height),
-	_texture(0) {
+	_texture(0),
+	_contentChanged(0) {
 
 	LOG_DEBUG(torustexturelog) << "creating new torus texture with " << _width << "x" << _height << " tiles to cover " << region << std::endl;
 
@@ -23,6 +24,8 @@ TorusTexture::TorusTexture(const util::rect<int>& region) :
 
 	for (unsigned int i = 0; i < TileSize*TileSize; i++)
 		_notDoneImage[i] = gui::skia_pixel_t(255, 0, 0, 255);
+
+	_cache.setTileChangedCallback(boost::bind(&TorusTexture::onTileChacheChanged, this, _1));
 }
 
 TorusTexture::~TorusTexture() {
@@ -329,5 +332,18 @@ TorusTexture::reloadTile(const util::point<int>& tile, const util::point<int>& p
 		_outOfDates[physicalTile.x][physicalTile.y] = false;
 
 		return true;
+	}
+}
+
+void
+TorusTexture::onTileChacheChanged(const util::point<int>& tile) {
+
+	if (_contentChanged) {
+
+		if (_mapping.get_region().contains(tile)) {
+
+			LOG_ALL(torustexturelog) << "signalling content change" << std::endl;
+			(*_contentChanged)();
+		}
 	}
 }

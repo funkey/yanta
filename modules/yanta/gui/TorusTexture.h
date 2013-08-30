@@ -1,6 +1,8 @@
 #ifndef YANTA_GUI_TORUS_TEXTURE_H__
 #define YANTA_GUI_TORUS_TEXTURE_H__
 
+#include <signals/Slot.h>
+#include <gui/GuiSignals.h>
 #include <gui/Texture.h>
 
 #include <util/torus_mapping.hpp>
@@ -65,6 +67,12 @@ public:
 	 */
 	void setBackgroundRasterizer(boost::shared_ptr<Rasterizer> rasterizer);
 
+	/**
+	 * Set a slot to send a content changed signal to whenever the texture 
+	 * changed content.
+	 */
+	void setContentChangedSlot(signals::Slot<const gui::ContentChanged>* slot) { _contentChanged = slot; }
+
 private:
 
 	/**
@@ -87,6 +95,11 @@ private:
 	 * cache, yet.
 	 */
 	bool reloadTile(const util::point<int>& tile, const util::point<int>& physicalTile, Rasterizer& rasterizer);
+
+	/**
+	 * Callback for the tiles cache.
+	 */
+	void onTileChacheChanged(const util::point<int>& tile);
 
 	// accumulated shift in pixels
 	util::point<int> _shift;
@@ -117,6 +130,9 @@ private:
 
 	// the image to show for tiles that haven't been rendered, yet
 	gui::skia_pixel_t _notDoneImage[TileSize*TileSize];
+
+	// slot to send content changed signal to
+	signals::Slot<const gui::ContentChanged>* _contentChanged;
 };
 
 #endif // YANTA_GUI_TORUS_TEXTURE_H__

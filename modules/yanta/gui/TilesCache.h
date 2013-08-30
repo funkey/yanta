@@ -103,6 +103,15 @@ public:
 	 */
 	void setBackgroundRasterizer(boost::shared_ptr<Rasterizer> rasterizer);
 
+	/**
+	 * Register a callback to call whenever a tile in the cache was updated by 
+	 * the background thread.
+	 */
+	void setTileChangedCallback(boost::function<void(const util::point<int>&)> callback) {
+
+		_tileChangedCallback = callback;
+	}
+
 private:
 
 	/**
@@ -126,6 +135,11 @@ private:
 	 * Entry point of the background thread.
 	 */
 	void cleanUp();
+
+	/**
+	 * Find the next dirty tile to clean up.
+	 */
+	bool findInvalidTile(version_tag::version_type& mappingVersion, util::point<int>& tile, util::point<int>& physicalTile, util::rect<int>& tileRegion);
 
 	/**
 	 * Clean at most maxNumRequests dirty tiles.
@@ -167,6 +181,9 @@ private:
 
 	// the background rendering thread keeping dirty tiles clean
 	boost::thread _backgroundThread;
+
+	// callback to call whenever a tile was updated
+	boost::function<void(const util::point<int>&)> _tileChangedCallback;
 };
 
 #endif // YANTA_GUI_TILES_CACHE_H__

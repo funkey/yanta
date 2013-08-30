@@ -1,6 +1,8 @@
 #ifndef CANVAS_PAINTER_H__
 #define CANVAS_PAINTER_H__
 
+#include <signals/Slot.h>
+#include <gui/GuiSignals.h>
 #include <gui/Skia.h>
 #include <gui/Painter.h>
 #include <gui/Texture.h>
@@ -97,6 +99,12 @@ public:
 	 */
 	void markOverlayDirty(const util::rect<DocumentPrecision>& area);
 
+	/**
+	 * Set a slot to send a content changed signal to whenever the backend 
+	 * painter changed content.
+	 */
+	void setContentChangedSlot(signals::Slot<const gui::ContentChanged>* slot) { _contentChanged = slot; }
+
 private:
 
 	/**
@@ -174,6 +182,9 @@ private:
 
 	// the position of the cursor to draw in screen pixels
 	util::point<double> _cursorPosition;
+
+	// slot to send content changed signal to
+	signals::Slot<const gui::ContentChanged>* _contentChanged;
 };
 
 #endif // CANVAS_PAINTER_H__

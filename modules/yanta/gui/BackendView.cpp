@@ -16,6 +16,7 @@ util::ProgramOption optionPenOffsetY(
 logger::LogChannel backendviewlog("backendviewlog", "[BackendView] ");
 
 BackendView::BackendView() :
+	_painter(boost::make_shared<BackendPainter>()),
 	_penClose(false),
 	_lastPen(0, 0),
 	_gestureStartCenter(0, 0),
@@ -45,6 +46,8 @@ BackendView::BackendView() :
 	_painter.registerForwardCallback(&BackendView::onFingerDown, this);
 	_painter.registerForwardCallback(&BackendView::onFingerMove, this);
 	_painter.registerForwardCallback(&BackendView::onFingerUp, this);
+
+	_painter->setContentChangedSlot(&_contentChanged);
 }
 
 void

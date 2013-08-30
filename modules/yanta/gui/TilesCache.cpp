@@ -295,6 +295,68 @@ TilesCache::cleanUp() {
 	LOG_ALL(tilescachelog) << "background clean-up thread stopped" << std::endl;
 }
 
+bool
+TilesCache::findInvalidTile(version_tag::version_type& mappingVersion, util::point<int>& tile, util::point<int>& physicalTile, util::rect<int>& tileRegion) {
+
+	// for every radius around center
+	for (int radius = 0; radius < std::max((int)Width, (int)Height)/2; radius++) {
+
+		mappingVersion = _mappingVersionTag.get_version();
+
+		// someone is currently updating the mapping
+		if (version_tag::is_locked(mappingVersion))
+			return false;
+
+		util::point<int> center = _mapping.get_region().center();
+
+		LOG_ALL(tilescachelog) << "looking for dirty tiles around " << center << " with radius " << radius << std::endl;
+
+		// TODO: check center tile only once
+
+		// top
+		for (int x = -radius + 1; x < radius; x++) {
+
+			tile.x = center.x - x;
+			tile.y = center.y - radius;
+
+			if (isInvalid(tile, physicalTile, tileRegion))
+				return true;
+		}
+
+		// right
+		for (int y = -radius; y <= radius; y++) {
+
+			tile.x = center.x - radius;
+			tile.y = center.y + y;
+
+			if (isInvalid(tile, physicalTile, tileRegion))
+				return true;
+		}
+
+		// bottom
+		for (int x = -radius + 1; x < radius; x++) {
+
+			tile.x = center.x + x;
+			tile.y = center.y + radius;
+
+			if (isInvalid(tile, physicalTile, tileRegion))
+				return true;
+		}
+
+		// left
+		for (int y = -radius; y <= radius; y++) {
+
+			tile.x = center.x + radius;
+			tile.y = center.y - y;
+
+			if (isInvalid(tile, physicalTile, tileRegion))
+				return true;
+		}
+	}
+
+	return false;
+}
+
 unsigned int
 TilesCache::cleanDirtyTiles(unsigned int  maxNumRequests) {
 
@@ -304,47 +366,11 @@ TilesCache::cleanDirtyTiles(unsigned int  maxNumRequests) {
 
 	for (cleaned = 0; cleaned < maxNumRequests; cleaned++) {
 
+		util::point<int> tile;
 		util::point<int> physicalTile;
-		util::rect<int> tileRegion(0, 0, 0, 0);
+		util::rect<int>  tileRegion(0, 0, 0, 0);
 
-		// for every radius around center
-		for (int radius = 0; radius < std::max((int)Width, (int)Height)/2; radius++) {
-
-			mappingVersion = _mappingVersionTag.get_version();
-
-			// someone is currently updating the mapping
-			if (version_tag::is_locked(mappingVersion))
-				goto A;
-
-			util::point<int> center = _mapping.get_region().center();
-
-			LOG_ALL(tilescachelog) << "looking for dirty tiles around " << center << " with radius " << radius << std::endl;
-
-			// TODO: check center tile only once
-
-			// top
-			for (int x = -radius + 1; x < radius; x++)
-				if (isInvalid(util::point<int>(center.x - x, center.y - radius), physicalTile, tileRegion))
-					goto A;
-
-			// right
-			for (int y = -radius; y <= radius; y++)
-				if (isInvalid(util::point<int>(center.x - radius, center.y + y), physicalTile, tileRegion))
-					goto A;
-
-			// bottom
-			for (int x = -radius + 1; x < radius; x++)
-				if (isInvalid(util::point<int>(center.x + x, center.y + radius), physicalTile, tileRegion))
-					goto A;
-
-			// left
-			for (int y = -radius; y <= radius; y++)
-				if (isInvalid(util::point<int>(center.x + radius, center.y - y), physicalTile, tileRegion))
-					goto A;
-		}
-
-		// couldn't find an invalid tile
-A:		if (tileRegion.isZero())
+		if (!findInvalidTile(mappingVersion, tile, physicalTile, tileRegion))
 			return cleaned;
 
 		// the mapping changed while we were computing the physical tile and 
@@ -358,6 +384,13 @@ A:		if (tileRegion.isZero())
 		updateTile(physicalTile, tileRegion, *_backgroundRasterizer);
 
 		_tileChanged[physicalTile.x][physicalTile.y] = true;
+
+		// inform ohers
+		if (_tileChangedCallback) {
+
+			LOG_ALL(tilescachelog) << "invoking tile changed callback" << std::endl;
+			_tileChangedCallback(tile);
+		}
 	}
 
 	return cleaned;

@@ -131,8 +131,7 @@ BackendPainter::draw(
 	if (_mode != Zooming)
 		_previousScale = _scale;
 
-	// request another redraw
-	return true;
+	return false;
 }
 
 void
@@ -282,6 +281,9 @@ BackendPainter::prepareTextures(const util::rect<int>& pixelRoi) {
 		_documentTexture->setBackgroundRasterizer(_documentCleanUpPainter);
 
 		_overlayTexture = boost::make_shared<TorusTexture>(pixelRoi);
+
+		_documentTexture->setContentChangedSlot(_contentChanged);
+		_overlayTexture->setContentChangedSlot(_contentChanged);
 
 		return true;
 	}
