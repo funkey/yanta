@@ -231,6 +231,8 @@ Backend::onPenMove(const gui::PenMove& signal) {
 	} else if (_mode == Erase) {
 
 		Erasor erasor(*_document);
+		erasor.setMode(_penMode->getErasorMode());
+		erasor.setRadius(2*_penMode->getStyle().width());
 		util::rect<DocumentPrecision> dirtyArea = erasor.erase(_previousPosition, signal.position);
 
 		if (!dirtyArea.isZero()) {

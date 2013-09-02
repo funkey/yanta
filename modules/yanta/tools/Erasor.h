@@ -8,7 +8,7 @@ class Erasor : public DocumentTreeRoiVisitor {
 
 public:
 
-	enum ErasorMode {
+	enum Mode {
 
 		/**
 		 * Erases elements entirely that intersect the path of the erasor tool.
@@ -21,7 +21,7 @@ public:
 		SphereErasor
 	};
 
-	Erasor(Document& document, ErasorMode mode = ElementErasor);
+	Erasor(Document& document, Mode mode = SphereErasor);
 
 	/**
 	 * Erase elements in the given document between start and end. What exactly 
@@ -44,7 +44,7 @@ public:
 	/**
 	 * Set the ersor mode.
 	 */
-	void setMode(ErasorMode mode) { _mode = mode; }
+	void setMode(Mode mode) { _mode = mode; }
 
 	/**
 	 * Set the radius of the erasor.
@@ -54,14 +54,19 @@ public:
 	/**
 	 * Visitor callback for stokes.
 	 */
+	void visit(Page& page) { _currentPage = &page; }
+
+	/**
+	 * Visitor callback for stokes.
+	 */
 	void visit(Stroke& stroke);
+
 
 	// default for other elements
 	using DocumentTreeRoiVisitor::visit;
 
 private:
 
-#if 0
 	/**
 	 * Erase points from a stroke by splitting. Reports the changed area.
 	 */
@@ -69,7 +74,6 @@ private:
 			Stroke* stroke,
 			const util::point<PagePrecision>& position,
 			PagePrecision radius);
-#endif
 
 	/**
 	 * Erase the given stroke if it intersects the line. Reports changed area.
@@ -100,9 +104,11 @@ private:
 
 	Document& _document;
 
+	Page* _currentPage;
+
 	StrokePoints& _strokePoints;
 
-	ErasorMode _mode;
+	Mode _mode;
 
 	DocumentPrecision _radius;
 

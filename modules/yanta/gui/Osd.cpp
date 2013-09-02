@@ -7,6 +7,8 @@ Osd::Osd() :
 	_previousWidth(Osd::Normal),
 	_widthTapTime(0),
 	_previousMode(PenMode::Drawing),
+	_modeTapTime(0),
+	_erasorTapTime(0),
 	_penAway(false) {
 
 	registerOutput(_penMode, "pen mode");
@@ -76,7 +78,7 @@ Osd::onFingerDown(gui::FingerDown& signal) {
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
 		_currentMode.getStyle().setWidth(Large);
-	
+
 	} else if (signal.position.y < 800) {
 
 		toggleLasso();
@@ -84,6 +86,12 @@ Osd::onFingerDown(gui::FingerDown& signal) {
 		_modeTapTime  = signal.timestamp;
 
 	} else if (signal.position.y < 900) {
+
+		toggleErasorMode();
+
+		_erasorTapTime  = signal.timestamp;
+
+	} else if (signal.position.y < 1000) {
 
 		_addPage();
 	}
@@ -125,6 +133,11 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 		if (signal.timestamp - _modeTapTime > maxTapTime)
 			toggleLasso();
 
+	} else if (signal.position.y < 900) {
+
+		if (signal.timestamp - _erasorTapTime > maxTapTime)
+			toggleErasorMode();
+
 	} else {
 
 		return;
@@ -160,4 +173,19 @@ Osd::toggleLasso() {
 	}
 
 	_previousMode = current;
+}
+
+void
+Osd::toggleErasorMode() {
+
+	Erasor::Mode current = _currentMode.getErasorMode();
+
+	if (current == Erasor::SphereErasor) {
+
+		_currentMode.setErasorMode(Erasor::ElementErasor);
+
+	} else {
+
+		_currentMode.setErasorMode(Erasor::SphereErasor);
+	}
 }

@@ -109,9 +109,21 @@ OsdPainter::draw(
 	glVertex2f(x - 7, y - 10);
 	glEnd();
 
-	glColor3f(0.0, 0.0, 0.0);
+	glColor4f(0, 0, 0, _penMode.getErasorMode() == Erasor::SphereErasor ? 1.0 : 0.1);
 	x = 50;
 	y = 850;
+	glBegin(GL_TRIANGLE_FAN);
+	for (int i = 0; i <= 10; i++) {
+
+		double dx = sin((double)i*(2*M_PI)/10.0)*10;
+		double dy = cos((double)i*(2*M_PI)/10.0)*10;
+		glVertex2f(x + dx, y + dy);
+	}
+	glEnd();
+
+	glColor3f(0.0, 0.0, 0.0);
+	x = 50;
+	y = 950;
 	glBegin(GL_QUADS);
 	glVertex2f(x - 10, y - 3);
 	glVertex2f(x - 10, y + 3);

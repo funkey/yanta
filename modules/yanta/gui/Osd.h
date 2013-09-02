@@ -31,6 +31,7 @@ private:
 	void onPenAway(const gui::PenAway& signal);
 
 	void toggleLasso();
+	void toggleErasorMode();
 
 	pipeline::Output<PenMode>    _penMode;
 	pipeline::Output<OsdRequest> _osdRequest;
@@ -52,6 +53,7 @@ private:
 
 	PenMode::Mode _previousMode;
 	unsigned long _modeTapTime;
+	unsigned long _erasorTapTime;
 
 	bool _penAway;
 };

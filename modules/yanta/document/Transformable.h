@@ -56,6 +56,14 @@ public:
 	}
 
 	/**
+	 * Set the transformation of this object.
+	 */
+	inline void setTransformation(const Transformation<Precision>& transformation) {
+
+		_transformation = transformation;
+	}
+
+	/**
 	 * Shift this object.
 	 */
 	inline void shift(const util::point<Precision>& shift) {

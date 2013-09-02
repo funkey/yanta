@@ -3,8 +3,9 @@
 
 logger::LogChannel erasorlog("erasorlog", "[Erasor] ");
 
-Erasor::Erasor(Document& document, ErasorMode mode) :
+Erasor::Erasor(Document& document, Mode mode) :
 	_document(document),
+	_currentPage(0),
 	_strokePoints(document.getStrokePoints()),
 	_mode(mode),
 	_radius(1.0) {}
@@ -48,7 +49,12 @@ Erasor::visit(Stroke& stroke) {
 
 	LOG_ALL(erasorlog) << "in stroke stroke coordinates this is " << start << " - " << end << std::endl;
 
-	util::rect<PagePrecision> changed = erase(stroke, start, end);
+	util::rect<PagePrecision> changed;
+	
+	if (_mode == ElementErasor)
+		changed = erase(stroke, start, end);
+	else
+		changed = erase(&stroke, end, _radius*_radius);
 
 	if (changed.isZero())
 		return;
@@ -59,7 +65,6 @@ Erasor::visit(Stroke& stroke) {
 		_changed.fit(getTransformation().applyTo(changed));
 }
 
-#if 0
 util::rect<PagePrecision>
 Erasor::erase(Stroke* stroke, const util::point<PagePrecision>& center, PagePrecision radius2) {
 
@@ -106,6 +111,7 @@ Erasor::erase(Stroke* stroke, const util::point<PagePrecision>& center, PagePrec
 
 				stroke->setEnd(i+1, _strokePoints);
 				stroke->finish();
+				stroke->updateBoundingBox(_strokePoints);
 				wasErasing = true;
 			}
 
@@ -114,11 +120,11 @@ Erasor::erase(Stroke* stroke, const util::point<PagePrecision>& center, PagePrec
 
 			LOG_ALL(erasorlog) << "line " << i << " is the next line not to erase on this stroke" << std::endl;
 
-			// TODO:
-			//   find a way to create a new stroke from here
-			//createNewStroke(i);
-			//stroke = &(currentStroke());
-			stroke->setStyle(style);
+			_currentPage->createNewStroke(i);
+			Stroke* newStroke = &(_currentPage->currentStroke());
+			newStroke->setStyle(style);
+			newStroke->setTransformation(stroke->getTransformation());
+			stroke = newStroke;
 			wasErasing = false;
 		}
 	}
@@ -129,6 +135,7 @@ Erasor::erase(Stroke* stroke, const util::point<PagePrecision>& center, PagePrec
 
 		stroke->setEnd(end+1, _strokePoints);
 		stroke->finish();
+		stroke->updateBoundingBox(_strokePoints);
 	}
 
 	// increase the size of the changedArea (if there is one) by the style width
@@ -144,7 +151,6 @@ Erasor::erase(Stroke* stroke, const util::point<PagePrecision>& center, PagePrec
 
 	return changedArea;
 }
-#endif
 
 util::rect<PagePrecision>
 Erasor::erase(Stroke& stroke, const util::point<PagePrecision>& lineBegin, const util::point<PagePrecision>& lineEnd) {
@@ -180,6 +186,7 @@ Erasor::erase(Stroke& stroke, const util::point<PagePrecision>& lineBegin, const
 			// make this an empty stroke
 			stroke.setEnd(begin, _strokePoints);
 			stroke.finish();
+			stroke.updateBoundingBox(_strokePoints);
 
 			break;
 		}

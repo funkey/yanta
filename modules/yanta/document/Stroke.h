@@ -107,6 +107,25 @@ public:
 		return _finished;
 	}
 
+	/**
+	 * Recompute the bounding box of this stroke.
+	 */
+	inline void updateBoundingBox(const StrokePoints& points) {
+
+		resetBoundingBox();
+
+		for (unsigned int i = _begin; i < _end; i++) {
+
+			const StrokePoint& point = points[i];
+
+			fitBoundingBox(util::rect<DocumentPrecision>(
+					point.position.x - _style.width(),
+					point.position.y - _style.width(),
+					point.position.x + _style.width(),
+					point.position.y + _style.width()));
+		}
+	}
+
 private:
 
 	Style _style;

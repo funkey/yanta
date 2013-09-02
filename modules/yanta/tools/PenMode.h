@@ -2,6 +2,7 @@
 #define PEN_MODE_H__
 
 #include <document/Style.h>
+#include "Erasor.h"
 
 /**
  * A class to represent the current mode of the pen. This mode determines 
@@ -27,10 +28,16 @@ public:
 	inline const Style& getStyle() const { return _style; }
 	inline Style& getStyle() { return _style; }
 
+	inline void setErasorMode(Erasor::Mode mode) { _erasorMode = mode; }
+
+	inline Erasor::Mode getErasorMode() { return _erasorMode; }
+
 private:
 
 	Mode  _mode;
 	Style _style;
+
+	Erasor::Mode _erasorMode;
 };
 
 #endif // PEN_MODE_H__
