@@ -9,9 +9,9 @@
 class OsdSignal : public signals::Signal {};
 
 /**
- * Request the creation of a new page.
+ * Request the handling of an 'add' event.
  */
-class AddPage : public OsdSignal {};
+class Add : public OsdSignal {};
 
 #endif // YANTA_OSD_SIGNALS_H__
 

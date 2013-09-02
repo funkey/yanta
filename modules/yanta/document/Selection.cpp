@@ -67,7 +67,7 @@ Selection::anchor(Document& document) {
 
 	for (unsigned int i = 0; i < numStrokes(); i++) {
 
-		Stroke& stroke = getStroke(i);
+		Stroke stroke = getStroke(i);
 
 		LOG_DEBUG(selectionlog) << "anchoring stroke " << i << " at " << stroke.getShift() << " in selection at " << getShift() << std::endl;
 

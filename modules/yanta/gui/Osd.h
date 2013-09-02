@@ -37,7 +37,7 @@ private:
 	pipeline::Output<OsdRequest> _osdRequest;
 	pipeline::Output<OsdPainter> _painter;
 
-	signals::Slot<AddPage> _addPage;
+	signals::Slot<Add> _add;
 
 	PenMode _currentMode;
 

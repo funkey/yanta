@@ -17,7 +17,7 @@ Backend::Backend() :
 	registerOutput(_tools, "tools");
 
 	_initialDocument.registerBackwardCallback(&Backend::onModified, this);
-	_osdRequest.registerBackwardCallback(&Backend::onAddPage, this);
+	_osdRequest.registerBackwardCallback(&Backend::onAdd, this);
 
 	_document.registerForwardSlot(_documentChangedArea);
 	_document.registerForwardSlot(_strokePointAdded);
@@ -148,6 +148,7 @@ Backend::onPenUp(const gui::PenUp& signal) {
 		} else if (_penMode->getMode() == PenMode::Lasso) {
 
 			anchorSelection();
+			clearSelection();
 
 			Selection selection = Selection::CreateFromPath(_lasso->getPath(), *_document);
 
@@ -260,26 +261,35 @@ Backend::onPenMove(const gui::PenMove& signal) {
 }
 
 void
-Backend::onAddPage(const AddPage& /*signal*/) {
+Backend::onAdd(const Add& /*signal*/) {
 
-	// the number of the new page to add
-	int pageNum = _document->numPages();
+	// if there are no selections, add a page
+	if (_document->size<Selection>() == 0) {
 
-	// let the new page be of the size of the most recent page
-	util::point<PagePrecision> size = _document->getPage(pageNum - 1).getSize();
+		// the number of the new page to add
+		int pageNum = _document->numPages();
 
-	int pageX = pageNum%2;
-	int pageY = pageNum/2;
+		// let the new page be of the size of the most recent page
+		util::point<PagePrecision> size = _document->getPage(pageNum - 1).getSize();
 
-	// simple 2-pages layout
-	// TODO: get layout from current OsdRequest input
-	util::point<DocumentPrecision> position(pageX*(size.x + size.x/10), pageY*(size.y + size.y/8));
+		int pageX = pageNum%2;
+		int pageY = pageNum/2;
 
-	_document->createPage(position, size);
+		// simple 2-pages layout
+		// TODO: get layout from current OsdRequest input
+		util::point<DocumentPrecision> position(pageX*(size.x + size.x/10), pageY*(size.y + size.y/8));
 
-	// inform about dirty area
-	ChangedArea signal(util::rect<DocumentPrecision>(position.x, position.y, position.x + size.x, position.y + size.y));
-	_documentChangedArea(signal);
+		_document->createPage(position, size);
+
+		// inform about dirty area
+		ChangedArea signal(util::rect<DocumentPrecision>(position.x, position.y, position.x + size.x, position.y + size.y));
+		_documentChangedArea(signal);
+
+	// otherwise, anchor the selections where they are
+	} else {
+
+		anchorSelection();
+	}
 }
 
 void
@@ -295,6 +305,10 @@ Backend::anchorSelection() {
 		_documentChangedArea(changedArea);
 		_toolsChangedArea(changedArea);
 	}
+}
+
+void
+Backend::clearSelection() {
 
 	_document->clear<Selection>();
 }

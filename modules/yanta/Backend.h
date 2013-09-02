@@ -42,9 +42,11 @@ private:
 	void onPenUp(const gui::PenUp& signal);
 	void onPenMove(const gui::PenMove& signal);
 
-	void onAddPage(const AddPage& signal);
+	void onAdd(const Add& signal);
 
 	void anchorSelection();
+
+	void clearSelection();
 
 	pipeline::Input<Document>   _initialDocument;
 	pipeline::Input<PenMode>    _penMode;
