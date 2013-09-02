@@ -39,27 +39,9 @@ util::ProgramOption optionExportPdf(
 
 void processEvents(pipeline::Process<gui::Window> window) {
 
-	boost::timer::cpu_timer timer;
-
-	const boost::timer::nanosecond_type NanosBusyWait = 1000000LL;  // 1/1000th of a second
-	const boost::timer::nanosecond_type NanosIdleWait = 10000000LL; // 1/100th of a second
-
 	try {
 
-		while (!window->closed()) {
-
-			bool processedEvents = window->processEvents();
-
-			boost::timer::cpu_times const elapsed(timer.elapsed());
-
-			boost::timer::nanosecond_type waitAtLeast = (processedEvents ? NanosBusyWait : NanosIdleWait);
-
-			if (elapsed.wall <= waitAtLeast)
-				usleep((waitAtLeast - elapsed.wall)/1000);
-
-			timer.stop();
-			timer.start();
-		}
+		window->processEvents();
 
 	} catch (boost::exception& e) {
 
