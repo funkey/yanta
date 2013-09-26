@@ -1,3 +1,1 @@
-file (GLOB_RECURSE yantafiles *.cpp)
-add_library(yantalib OBJECT ${yantafiles})
-add_dependencies(yantalib skia)
+define_module(yantalib LIBRARY LINKS util signals pipeline gui skia freetype)

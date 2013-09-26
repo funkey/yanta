@@ -13,3 +13,6 @@
 [submodule "modules/pipeline"]
 	path = modules/pipeline
 	url = git@github.com:funkey/pipeline.git
+[submodule "cmake"]
+	path = cmake
+	url = git@github.com:funkey/cmake
