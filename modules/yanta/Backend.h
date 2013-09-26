@@ -38,6 +38,8 @@ private:
 
 	void onModified(const pipeline::Modified&);
 
+	void onPenModeChanged(const pipeline::Modified&);
+
 	void onPenDown(const gui::PenDown& signal);
 	void onPenUp(const gui::PenUp& signal);
 	void onPenMove(const gui::PenMove& signal);
@@ -68,6 +70,7 @@ private:
 	signals::Slot<StrokePointAdded> _strokePointAdded;
 	signals::Slot<SelectionMoved>   _selectionMoved;
 	signals::Slot<ChangedArea>      _toolsChangedArea;
+	signals::Slot<PenModeChanged>   _penModeChanged;
 	signals::Slot<LassoPointAdded>  _lassoPointAdded;
 };
 

@@ -10,6 +10,7 @@
 #include <document/Document.h>
 #include <document/DocumentSignals.h>
 #include <tools/Tools.h>
+#include <tools/PenMode.h>
 #include "SkiaDocumentPainter.h"
 #include "SkiaOverlayPainter.h"
 
@@ -42,6 +43,11 @@ public:
 		LOG_ALL(backendpainterlog) << "cursor set to position " << position << std::endl;
 
 		_cursorPosition = position;
+	}
+
+	void setPenMode(const PenMode& penMode) {
+
+		_penMode = penMode;
 	}
 
 	bool draw(
@@ -139,6 +145,11 @@ private:
 	 */
 	void drawTextures(const util::rect<int>& roi);
 
+	/**
+	 * Draw the pen based on the current pen mode.
+	 */
+	void drawPen(const util::rect<int>& roi);
+
 	// indicates that the document was changed entirely
 	bool _documentChanged;
 
@@ -182,6 +193,9 @@ private:
 
 	// the position of the cursor to draw in screen pixels
 	util::point<double> _cursorPosition;
+
+	// the current pen mode
+	PenMode _penMode;
 
 	// slot to send content changed signal to
 	signals::Slot<const gui::ContentChanged>* _contentChanged;

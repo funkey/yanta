@@ -374,6 +374,16 @@ BackendView::onLassoPointAdded(const LassoPointAdded& signal) {
 	_contentChanged();
 }
 
+void
+BackendView::onPenModeChanged(const PenModeChanged& signal) {
+
+	LOG_ALL(backendviewlog) << "the pen mode changed" << std::endl;
+
+	_painter->setPenMode(signal.getNewMode());
+
+	_contentChanged();
+}
+
 DocumentPrecision
 BackendView::getFingerDistance() {
 

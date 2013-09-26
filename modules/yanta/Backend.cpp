@@ -17,6 +17,7 @@ Backend::Backend() :
 	registerOutput(_tools, "tools");
 
 	_initialDocument.registerBackwardCallback(&Backend::onModified, this);
+	_penMode.registerBackwardCallback(&Backend::onPenModeChanged, this);
 	_osdRequest.registerBackwardCallback(&Backend::onAdd, this);
 
 	_document.registerForwardSlot(_documentChangedArea);
@@ -26,6 +27,7 @@ Backend::Backend() :
 	_document.registerForwardCallback(&Backend::onPenUp, this);
 
 	_tools.registerForwardSlot(_toolsChangedArea);
+	_tools.registerForwardSlot(_penModeChanged);
 	_tools.registerForwardSlot(_lassoPointAdded);
 	_tools.registerForwardSlot(_selectionMoved);
 }
@@ -67,6 +69,15 @@ void
 Backend::onModified(const pipeline::Modified&) {
 
 	_initialDocumentModified = true;
+}
+
+void
+Backend::onPenModeChanged(const pipeline::Modified&) {
+
+	LOG_DEBUG(backendlog) << "pen mode changed" << std::endl;
+
+	PenModeChanged signal(*_penMode);
+	_penModeChanged(signal);
 }
 
 void

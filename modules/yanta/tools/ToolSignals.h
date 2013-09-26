@@ -2,6 +2,7 @@
 #define YANTA_TOOL_SIGNALS_H__
 
 #include <Signals.h>
+#include "PenMode.h"
 
 /**
  * Signal to send when just a point was added to the lasso.
@@ -20,6 +21,25 @@ public:
 						std::min(start.y, point.y),
 						std::max(start.x, point.x),
 						std::max(start.y, point.y))) {}
+};
+
+/**
+ * Signal to send when the pen mode changed.
+ */
+class PenModeChanged : public signals::Signal {
+
+public:
+
+	PenModeChanged() {}
+
+	PenModeChanged(const PenMode& newMode) :
+		_newMode(newMode) {}
+
+	const PenMode& getNewMode() const { return _newMode; }
+
+private:
+
+	PenMode _newMode;
 };
 
 #endif // YANTA_TOOL_SIGNALS_H__

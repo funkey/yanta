@@ -1,6 +1,9 @@
 #include <fstream>
 
+#include <util/Logger.h>
 #include "DocumentReader.h"
+
+logger::LogChannel documentreaderlog("documentreaderlog", "[DocumentReader] ");
 
 DocumentReader::DocumentReader(const std::string& filename) :
 	_filename(filename) {
@@ -96,6 +99,12 @@ DocumentReader::readStroke(std::ifstream& in, unsigned int page, unsigned int fi
 
 	if (fileVersion >= 3)
 		in >> scale.x >> scale.y >> shift.x >> shift.y;
+
+	if (end > _document->getStrokePoints().size()) {
+
+		LOG_ERROR(documentreaderlog) << "found a stroke with invalid end point -- will ignore it" << std::endl;
+		return;
+	}
 
 	Style style;
 	style.setWidth(penWidth);

@@ -42,42 +42,49 @@ Osd::onFingerDown(gui::FingerDown& signal) {
 		_previousRed = _currentMode.getStyle().getRed();
 		_redTapTime  = signal.timestamp;
 		_currentMode.getStyle().setRed(_previousRed == RedOn ? RedOff : RedOn);
+		setDirty(_penMode);
 
 	} else if (signal.position.y < 200) {
 
 		_previousGreen = _currentMode.getStyle().getGreen();
 		_greenTapTime  = signal.timestamp;
 		_currentMode.getStyle().setGreen(_previousGreen == GreenOn ? GreenOff : GreenOn);
+		setDirty(_penMode);
 
 	} else if (signal.position.y < 300) {
 
 		_previousBlue = _currentMode.getStyle().getBlue();
 		_blueTapTime  = signal.timestamp;
 		_currentMode.getStyle().setBlue(_previousBlue == BlueOn ? BlueOff : BlueOn);
+		setDirty(_penMode);
 
 	} else if (signal.position.y < 400) {
 
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
 		_currentMode.getStyle().setWidth(Small);
+		setDirty(_penMode);
 
 	} else if (signal.position.y < 500) {
 
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
 		_currentMode.getStyle().setWidth(Normal);
+		setDirty(_penMode);
 
 	} else if (signal.position.y < 600) {
 
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
 		_currentMode.getStyle().setWidth(Big);
+		setDirty(_penMode);
 
 	} else if (signal.position.y < 700) {
 
 		_previousWidth = _currentMode.getStyle().width();
 		_widthTapTime  = signal.timestamp;
 		_currentMode.getStyle().setWidth(Large);
+		setDirty(_penMode);
 
 	} else if (signal.position.y < 800) {
 
@@ -110,23 +117,35 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 
 	if (signal.position.y < 100) {
 
-		if (signal.timestamp - _redTapTime > maxTapTime)
+		if (signal.timestamp - _redTapTime > maxTapTime) {
+
 			_currentMode.getStyle().setRed(_previousRed);
+			setDirty(_penMode);
+		}
 
 	} else if (signal.position.y < 200) {
 
-		if (signal.timestamp - _greenTapTime > maxTapTime)
+		if (signal.timestamp - _greenTapTime > maxTapTime) {
+
 			_currentMode.getStyle().setGreen(_previousGreen);
+			setDirty(_penMode);
+		}
 
 	} else if (signal.position.y < 300) {
 
-		if (signal.timestamp - _blueTapTime > maxTapTime)
+		if (signal.timestamp - _blueTapTime > maxTapTime) {
+
 			_currentMode.getStyle().setBlue(_previousBlue);
+			setDirty(_penMode);
+		}
 
 	} else if (signal.position.y < 700) {
 
-		if (signal.timestamp - _widthTapTime > maxTapTime)
+		if (signal.timestamp - _widthTapTime > maxTapTime) {
+
 			_currentMode.getStyle().setWidth(_previousWidth);
+			setDirty(_penMode);
+		}
 
 	} else if (signal.position.y < 800) {
 
@@ -172,6 +191,8 @@ Osd::toggleLasso() {
 		_currentMode.setMode(PenMode::Lasso);
 	}
 
+	setDirty(_penMode);
+
 	_previousMode = current;
 }
 
@@ -188,4 +209,6 @@ Osd::toggleErasorMode() {
 
 		_currentMode.setErasorMode(Erasor::SphereErasor);
 	}
+
+	setDirty(_penMode);
 }

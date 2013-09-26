@@ -74,6 +74,10 @@ private:
 
 	void onLassoPointAdded(const LassoPointAdded& signal);
 
+	void onPenModeChanged(const PenModeChanged& signal);
+
+
+	// callbacks from gui for painter
 
 	void addFinger(const gui::FingerDown& signal);
 

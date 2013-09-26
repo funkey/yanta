@@ -113,14 +113,8 @@ BackendPainter::draw(
 	// draw the document and its overlay
 	drawTextures(pixelRoi);
 
-	// draw the cursor
-	glColor3f(0, 0, 0);
-	glBegin(GL_QUADS);
-	glVertex2d(_cursorPosition.x - 2, _cursorPosition.y - 2);
-	glVertex2d(_cursorPosition.x - 2, _cursorPosition.y + 2);
-	glVertex2d(_cursorPosition.x + 2, _cursorPosition.y + 2);
-	glVertex2d(_cursorPosition.x + 2, _cursorPosition.y - 2);
-	glEnd();
+	// ...and the pen
+	drawPen(pixelRoi);
 
 	// remember configuration for next draw()
 	_previousShift    = pixelShift;
@@ -316,4 +310,19 @@ BackendPainter::drawTextures(const util::rect<int>& roi) {
 	glPopMatrix();
 
 	_documentPainter.rememberDrawnElements();
+}
+
+void
+BackendPainter::drawPen(const util::rect<int>& /*roi*/) {
+
+	double width = _penMode.getStyle().width();
+
+	// draw the cursor
+	glColor3f(0, 0, 0);
+	glBegin(GL_QUADS);
+	glVertex2d(_cursorPosition.x - width, _cursorPosition.y - width);
+	glVertex2d(_cursorPosition.x - width, _cursorPosition.y + width);
+	glVertex2d(_cursorPosition.x + width, _cursorPosition.y + width);
+	glVertex2d(_cursorPosition.x + width, _cursorPosition.y - width);
+	glEnd();
 }
