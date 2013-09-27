@@ -30,6 +30,11 @@ Backend::Backend() :
 	_tools.registerForwardSlot(_penModeChanged);
 	_tools.registerForwardSlot(_lassoPointAdded);
 	_tools.registerForwardSlot(_selectionMoved);
+
+	// not all outputs should be dirty on input changes
+	setDependency(_initialDocument, _document);
+	setDependency(_penMode, _tools);
+	setDependency(_osdRequest, _tools);
 }
 
 void

@@ -315,14 +315,57 @@ BackendPainter::drawTextures(const util::rect<int>& roi) {
 void
 BackendPainter::drawPen(const util::rect<int>& /*roi*/) {
 
-	double width = _penMode.getStyle().width();
+	double radius = 0.7*_penMode.getStyle().width()*_scale.x;
+
+	if (!_penTexture) {
+
+		unsigned int size = (unsigned int)ceil(2*radius);
+		unsigned char penColorRed   = _penMode.getStyle().getRed();
+		unsigned char penColorGreen = _penMode.getStyle().getGreen();
+		unsigned char penColorBlue  = _penMode.getStyle().getBlue();
+
+		LOG_DEBUG(backendpainterlog)
+				<< "creating new pen texture for size "
+				<< size
+				<< " and color "
+				<< penColorRed << ", "
+				<< penColorGreen << ", "
+				<< penColorBlue << std::endl;
+
+		_penTexture = boost::make_shared<gui::Texture>(size, size, GL_RGBA);
+
+		std::vector<gui::skia_pixel_t> buffer(size*size);
+
+		{
+			SkBitmap bitmap;
+			bitmap.setConfig(SkBitmap::kARGB_8888_Config, size, size);
+			bitmap.setPixels(&buffer[0]);
+
+			SkCanvas canvas(bitmap);
+			canvas.clear(SkColorSetARGB(0, penColorRed, penColorGreen, penColorBlue));
+
+			SkPaint paint;
+			paint.setColor(SkColorSetRGB(penColorRed, penColorGreen, penColorBlue));
+			paint.setAntiAlias(true);
+
+			canvas.drawCircle(radius, radius, radius, paint);
+		}
+
+		_penTexture->loadData(&buffer[0]);
+	}
+
+	glEnable(GL_TEXTURE_2D);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	_penTexture->bind();
 
 	// draw the cursor
-	glColor3f(0, 0, 0);
+	glColor4f(1.0, 1.0, 1.0, 1.0);
 	glBegin(GL_QUADS);
-	glVertex2d(_cursorPosition.x - width, _cursorPosition.y - width);
-	glVertex2d(_cursorPosition.x - width, _cursorPosition.y + width);
-	glVertex2d(_cursorPosition.x + width, _cursorPosition.y + width);
-	glVertex2d(_cursorPosition.x + width, _cursorPosition.y - width);
+	glTexCoord2d(0,0); glVertex2d(_cursorPosition.x - radius, _cursorPosition.y - radius);
+	glTexCoord2d(1,0); glVertex2d(_cursorPosition.x + radius, _cursorPosition.y - radius);
+	glTexCoord2d(1,1); glVertex2d(_cursorPosition.x + radius, _cursorPosition.y + radius);
+	glTexCoord2d(0,1); glVertex2d(_cursorPosition.x - radius, _cursorPosition.y + radius);
 	glEnd();
 }

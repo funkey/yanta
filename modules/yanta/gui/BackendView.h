@@ -63,6 +63,8 @@ private:
 
 	// callbacks from backend for document
 
+	void onDocumentChanged(const pipeline::Modified& signal);
+
 	void onDocumentChangedArea(const ChangedArea& signal);
 
 	void onStrokePointAdded(const StrokePointAdded& signal);
@@ -142,6 +144,9 @@ private:
 	// a small offset for the virtual pen tip to not be occluded by the pyhsical 
 	// pen
 	util::point<int> _penOffset;
+
+	// indicates that the document should be reloaded
+	bool _documentChanged;
 };
 
 #endif // YANTA_CANVAS_VIEW_H__

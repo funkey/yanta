@@ -4,6 +4,7 @@
 logger::LogChannel osdlog("osdlog", "[Osd] ");
 
 Osd::Osd() :
+	_penMode(PenMode()),
 	_previousWidth(Osd::Normal),
 	_widthTapTime(0),
 	_previousMode(PenMode::Drawing),
@@ -20,8 +21,8 @@ Osd::Osd() :
 	_painter.registerForwardCallback(&Osd::onFingerDown, this);
 	_painter.registerForwardCallback(&Osd::onFingerUp, this);
 
-	_currentMode.getStyle().setWidth(Osd::Normal);
-	_currentMode.setMode(PenMode::Drawing);
+	_penMode->getStyle().setWidth(Osd::Normal);
+	_penMode->setMode(PenMode::Drawing);
 }
 
 void
@@ -39,51 +40,51 @@ Osd::onFingerDown(gui::FingerDown& signal) {
 
 	if (signal.position.y < 100) {
 
-		_previousRed = _currentMode.getStyle().getRed();
+		_previousRed = _penMode->getStyle().getRed();
 		_redTapTime  = signal.timestamp;
-		_currentMode.getStyle().setRed(_previousRed == RedOn ? RedOff : RedOn);
+		_penMode->getStyle().setRed(_previousRed == RedOn ? RedOff : RedOn);
 		setDirty(_penMode);
 
 	} else if (signal.position.y < 200) {
 
-		_previousGreen = _currentMode.getStyle().getGreen();
+		_previousGreen = _penMode->getStyle().getGreen();
 		_greenTapTime  = signal.timestamp;
-		_currentMode.getStyle().setGreen(_previousGreen == GreenOn ? GreenOff : GreenOn);
+		_penMode->getStyle().setGreen(_previousGreen == GreenOn ? GreenOff : GreenOn);
 		setDirty(_penMode);
 
 	} else if (signal.position.y < 300) {
 
-		_previousBlue = _currentMode.getStyle().getBlue();
+		_previousBlue = _penMode->getStyle().getBlue();
 		_blueTapTime  = signal.timestamp;
-		_currentMode.getStyle().setBlue(_previousBlue == BlueOn ? BlueOff : BlueOn);
+		_penMode->getStyle().setBlue(_previousBlue == BlueOn ? BlueOff : BlueOn);
 		setDirty(_penMode);
 
 	} else if (signal.position.y < 400) {
 
-		_previousWidth = _currentMode.getStyle().width();
+		_previousWidth = _penMode->getStyle().width();
 		_widthTapTime  = signal.timestamp;
-		_currentMode.getStyle().setWidth(Small);
+		_penMode->getStyle().setWidth(Small);
 		setDirty(_penMode);
 
 	} else if (signal.position.y < 500) {
 
-		_previousWidth = _currentMode.getStyle().width();
+		_previousWidth = _penMode->getStyle().width();
 		_widthTapTime  = signal.timestamp;
-		_currentMode.getStyle().setWidth(Normal);
+		_penMode->getStyle().setWidth(Normal);
 		setDirty(_penMode);
 
 	} else if (signal.position.y < 600) {
 
-		_previousWidth = _currentMode.getStyle().width();
+		_previousWidth = _penMode->getStyle().width();
 		_widthTapTime  = signal.timestamp;
-		_currentMode.getStyle().setWidth(Big);
+		_penMode->getStyle().setWidth(Big);
 		setDirty(_penMode);
 
 	} else if (signal.position.y < 700) {
 
-		_previousWidth = _currentMode.getStyle().width();
+		_previousWidth = _penMode->getStyle().width();
 		_widthTapTime  = signal.timestamp;
-		_currentMode.getStyle().setWidth(Large);
+		_penMode->getStyle().setWidth(Large);
 		setDirty(_penMode);
 
 	} else if (signal.position.y < 800) {
@@ -119,7 +120,7 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 
 		if (signal.timestamp - _redTapTime > maxTapTime) {
 
-			_currentMode.getStyle().setRed(_previousRed);
+			_penMode->getStyle().setRed(_previousRed);
 			setDirty(_penMode);
 		}
 
@@ -127,7 +128,7 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 
 		if (signal.timestamp - _greenTapTime > maxTapTime) {
 
-			_currentMode.getStyle().setGreen(_previousGreen);
+			_penMode->getStyle().setGreen(_previousGreen);
 			setDirty(_penMode);
 		}
 
@@ -135,7 +136,7 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 
 		if (signal.timestamp - _blueTapTime > maxTapTime) {
 
-			_currentMode.getStyle().setBlue(_previousBlue);
+			_penMode->getStyle().setBlue(_previousBlue);
 			setDirty(_penMode);
 		}
 
@@ -143,7 +144,7 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 
 		if (signal.timestamp - _widthTapTime > maxTapTime) {
 
-			_currentMode.getStyle().setWidth(_previousWidth);
+			_penMode->getStyle().setWidth(_previousWidth);
 			setDirty(_penMode);
 		}
 
@@ -180,15 +181,15 @@ Osd::onPenAway(const gui::PenAway& /*signal*/) {
 void
 Osd::toggleLasso() {
 
-	PenMode::Mode current = _currentMode.getMode();
+	PenMode::Mode current = _penMode->getMode();
 
 	if (current == PenMode::Lasso) {
 
-		_currentMode.setMode(_previousMode);
+		_penMode->setMode(_previousMode);
 
 	} else {
 
-		_currentMode.setMode(PenMode::Lasso);
+		_penMode->setMode(PenMode::Lasso);
 	}
 
 	setDirty(_penMode);
@@ -199,15 +200,15 @@ Osd::toggleLasso() {
 void
 Osd::toggleErasorMode() {
 
-	Erasor::Mode current = _currentMode.getErasorMode();
+	Erasor::Mode current = _penMode->getErasorMode();
 
 	if (current == Erasor::SphereErasor) {
 
-		_currentMode.setErasorMode(Erasor::ElementErasor);
+		_penMode->setErasorMode(Erasor::ElementErasor);
 
 	} else {
 
-		_currentMode.setErasorMode(Erasor::SphereErasor);
+		_penMode->setErasorMode(Erasor::SphereErasor);
 	}
 
 	setDirty(_penMode);

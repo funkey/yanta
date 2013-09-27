@@ -22,7 +22,8 @@ BackendView::BackendView() :
 	_gestureStartCenter(0, 0),
 	_gestureStartDistance(0),
 	_mode(Nothing),
-	_penOffset(optionPenOffsetX.as<int>(), optionPenOffsetY.as<int>()) {
+	_penOffset(optionPenOffsetX.as<int>(), optionPenOffsetY.as<int>()),
+	_documentChanged(true) {
 
 	registerInput(_document, "document");
 	registerInput(_tools, "tools");
@@ -32,6 +33,7 @@ BackendView::BackendView() :
 	_document.registerBackwardCallback(&BackendView::onStrokePointAdded, this);
 	_tools.registerBackwardCallback(&BackendView::onToolsChangedArea, this);
 	_tools.registerBackwardCallback(&BackendView::onLassoPointAdded, this);
+	_tools.registerBackwardCallback(&BackendView::onPenModeChanged, this);
 
 	_painter.registerForwardSlot(_contentChanged);
 	_painter.registerForwardSlot(_fullscreen);
@@ -53,7 +55,14 @@ BackendView::BackendView() :
 void
 BackendView::updateOutputs() {
 
-	_painter->setDocument(_document);
+	LOG_DEBUG(backendviewlog) << "updating outputs" << std::endl;
+
+	if (_documentChanged) {
+
+		_painter->setDocument(_document);
+		_documentChanged = false;
+	}
+
 	_painter->setTools(_tools);
 
 	_contentChanged();
@@ -334,6 +343,12 @@ BackendView::initGesture(unsigned long timestamp) {
 	_gestureStartCenter   = getFingerCenter();
 	_gestureStartDistance = getFingerDistance();
 	_gestureStartTime     = timestamp;
+}
+
+void
+BackendView::onDocumentChanged(const pipeline::Modified&) {
+
+	_documentChanged = true;
 }
 
 void

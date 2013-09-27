@@ -22,7 +22,7 @@ public:
 
 private:
 
-	void updateOutputs() { *_penMode = _currentMode; _painter->setPenMode(_currentMode); }
+	void updateOutputs() { _painter->setPenMode(*_penMode); }
 
 	void onFingerUp(gui::FingerUp& signal);
 	void onFingerDown(gui::FingerDown& signal);
@@ -38,8 +38,6 @@ private:
 	pipeline::Output<OsdPainter> _painter;
 
 	signals::Slot<Add> _add;
-
-	PenMode _currentMode;
 
 	unsigned char _previousRed;
 	unsigned long _redTapTime;

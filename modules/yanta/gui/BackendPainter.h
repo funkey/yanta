@@ -48,6 +48,7 @@ public:
 	void setPenMode(const PenMode& penMode) {
 
 		_penMode = penMode;
+		_penTexture.reset();
 	}
 
 	bool draw(
@@ -196,6 +197,9 @@ private:
 
 	// the current pen mode
 	PenMode _penMode;
+
+	// the pen texture
+	boost::shared_ptr<gui::Texture> _penTexture;
 
 	// slot to send content changed signal to
 	signals::Slot<const gui::ContentChanged>* _contentChanged;
