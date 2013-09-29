@@ -3,6 +3,8 @@
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/make_shared.hpp>
 
+#include <SkDashPathEffect.h>
+
 #include <gui/OpenGl.h>
 #include <util/Logger.h>
 #include <util/ProgramOptions.h>
@@ -315,7 +317,7 @@ BackendPainter::drawTextures(const util::rect<int>& roi) {
 void
 BackendPainter::drawPen(const util::rect<int>& /*roi*/) {
 
-	double radius = 0.7*_penMode.getStyle().width()*_scale.x;
+	double radius = std::max(3.0, 0.5*_penMode.getStyle().width()*_scale.x);
 
 	if (!_penTexture) {
 
@@ -328,9 +330,9 @@ BackendPainter::drawPen(const util::rect<int>& /*roi*/) {
 				<< "creating new pen texture for size "
 				<< size
 				<< " and color "
-				<< penColorRed << ", "
-				<< penColorGreen << ", "
-				<< penColorBlue << std::endl;
+				<< (int)penColorRed << ", "
+				<< (int)penColorGreen << ", "
+				<< (int)penColorBlue << std::endl;
 
 		_penTexture = boost::make_shared<gui::Texture>(size, size, GL_RGBA);
 
@@ -345,10 +347,29 @@ BackendPainter::drawPen(const util::rect<int>& /*roi*/) {
 			canvas.clear(SkColorSetARGB(0, penColorRed, penColorGreen, penColorBlue));
 
 			SkPaint paint;
-			paint.setColor(SkColorSetRGB(penColorRed, penColorGreen, penColorBlue));
-			paint.setAntiAlias(true);
 
-			canvas.drawCircle(radius, radius, radius, paint);
+			if (_penMode.getMode() == PenMode::Erase) {
+
+				paint.setColor(SkColorSetARGB(128, 204, 51, 51));
+				paint.setAntiAlias(true);
+
+				canvas.drawCircle(radius, radius, radius, paint);
+
+				SkScalar interval[2] = {3, 3};
+				SkDashPathEffect dashPath(interval, 2, 0);
+				paint.setPathEffect(&dashPath);
+				paint.setStyle(SkPaint::kStroke_Style);
+
+				canvas.drawCircle(radius, radius, radius, paint);
+
+			} else {
+
+				paint.setColor(SkColorSetRGB(penColorRed, penColorGreen, penColorBlue));
+				paint.setAntiAlias(true);
+
+				canvas.drawCircle(radius, radius, radius, paint);
+			}
+
 		}
 
 		_penTexture->loadData(&buffer[0]);

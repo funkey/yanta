@@ -102,6 +102,7 @@ int main(int optionc, char** optionv) {
 			overlayView->addInput(backendView->getOutput());
 			backendView->setInput("document", backend->getOutput("document"));
 			backendView->setInput("tools", backend->getOutput("tools"));
+			backendView->setInput("pen mode", osd->getOutput("pen mode"));
 			backend->setInput("initial document", reader->getOutput());
 			backend->setInput("pen mode", osd->getOutput("pen mode"));
 			backend->setInput("osd request", osd->getOutput("osd request"));

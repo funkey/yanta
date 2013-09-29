@@ -8,7 +8,8 @@ logger::LogChannel backendlog("backendlog", "[Backend] ");
 Backend::Backend() :
 	_penDown(false),
 	_mode(Draw),
-	_initialDocumentModified(false) {
+	_initialDocumentChanged(false),
+	_penModeChanged(true) {
 
 	registerInput(_initialDocument, "initial document", pipeline::Optional);
 	registerInput(_penMode, "pen mode");
@@ -16,7 +17,7 @@ Backend::Backend() :
 	registerOutput(_document, "document");
 	registerOutput(_tools, "tools");
 
-	_initialDocument.registerBackwardCallback(&Backend::onModified, this);
+	_initialDocument.registerBackwardCallback(&Backend::onInitialDocumentChanged, this);
 	_penMode.registerBackwardCallback(&Backend::onPenModeChanged, this);
 	_osdRequest.registerBackwardCallback(&Backend::onAdd, this);
 
@@ -27,7 +28,6 @@ Backend::Backend() :
 	_document.registerForwardCallback(&Backend::onPenUp, this);
 
 	_tools.registerForwardSlot(_toolsChangedArea);
-	_tools.registerForwardSlot(_penModeChanged);
 	_tools.registerForwardSlot(_lassoPointAdded);
 	_tools.registerForwardSlot(_selectionMoved);
 
@@ -46,34 +46,56 @@ Backend::cleanup() {
 void
 Backend::updateOutputs() {
 
-	if (!_initialDocumentModified)
-		return;
+	if (_initialDocumentChanged) {
 
-	if (_initialDocument && _initialDocument->numPages() > 0) {
+		if (_initialDocument && _initialDocument->numPages() > 0) {
 
-		LOG_DEBUG(backendlog) << "have initial document, loading them" << std::endl;
-		LOG_ALL(backendlog) << "initial document has " << _initialDocument->numStrokes() << " strokes on " << _initialDocument->numPages() << " pages" << std::endl;
+			LOG_DEBUG(backendlog) << "have initial document, loading them" << std::endl;
+			LOG_ALL(backendlog) << "initial document has " << _initialDocument->numStrokes() << " strokes on " << _initialDocument->numPages() << " pages" << std::endl;
 
-		*_document = *_initialDocument;
+			*_document = *_initialDocument;
 
-		LOG_ALL(backendlog) << "copy has " << _document->numStrokes() << " strokes on " << _document->numPages() << " pages" << std::endl;
+			LOG_ALL(backendlog) << "copy has " << _document->numStrokes() << " strokes on " << _document->numPages() << " pages" << std::endl;
 
-	} else {
+		} else {
 
-		LOG_DEBUG(backendlog) << "create new document with two pages" << std::endl;
+			LOG_DEBUG(backendlog) << "create new document with two pages" << std::endl;
 
-		_document->createPage(
-				util::point<DocumentPrecision>(0.0, 0.0),
-				util::point<PagePrecision>(210.0, 297.0) /* DIN A4 */);
+			_document->createPage(
+					util::point<DocumentPrecision>(0.0, 0.0),
+					util::point<PagePrecision>(210.0, 297.0) /* DIN A4 */);
+		}
+
+		_initialDocumentChanged = false;
 	}
 
-	_initialDocumentModified = false;
+	// osd told us to switch to erasing mode
+	if (_penModeChanged && _mode != Erase && _penMode->getMode() == PenMode::Erase) {
+
+		_mode = Erase;
+
+		if (_penDown) {
+
+			_document->finishCurrentStroke();
+
+			double penWidth = _penMode->getStyle().width();
+			util::rect<DocumentPrecision> area(
+					_previousPosition.x - penWidth,
+					_previousPosition.y - penWidth,
+					_previousPosition.x + penWidth,
+					_previousPosition.y + penWidth);
+			StrokePointAdded signal(area);
+			_strokePointAdded(signal);
+		}
+
+		_penModeChanged = false;
+	}
 }
 
 void
-Backend::onModified(const pipeline::Modified&) {
+Backend::onInitialDocumentChanged(const pipeline::Modified&) {
 
-	_initialDocumentModified = true;
+	_initialDocumentChanged = true;
 }
 
 void
@@ -81,8 +103,7 @@ Backend::onPenModeChanged(const pipeline::Modified&) {
 
 	LOG_DEBUG(backendlog) << "pen mode changed" << std::endl;
 
-	PenModeChanged signal(*_penMode);
-	_penModeChanged(signal);
+	_penModeChanged = true;
 }
 
 void
@@ -124,26 +145,6 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 			_document->createNewStroke(signal.position, signal.pressure, signal.timestamp);
 			_document->setCurrentStrokeStyle(_penMode->getStyle());
-		}
-	}
-
-	if (signal.button == gui::buttons::Middle) {
-
-		_mode = Erase;
-
-		if (_penDown) {
-
-			_document->addStrokePoint(signal.position, signal.pressure, signal.timestamp);
-			_document->finishCurrentStroke();
-
-			double penWidth = _penMode->getStyle().width();
-			util::rect<DocumentPrecision> area(
-					signal.position.x - penWidth,
-					signal.position.y - penWidth,
-					signal.position.x + penWidth,
-					signal.position.y + penWidth);
-			StrokePointAdded signal(area);
-			_strokePointAdded(signal);
 		}
 	}
 }
@@ -249,7 +250,7 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 		Erasor erasor(*_document);
 		erasor.setMode(_penMode->getErasorMode());
-		erasor.setRadius(2*_penMode->getStyle().width());
+		erasor.setRadius(0.5*_penMode->getStyle().width());
 		util::rect<DocumentPrecision> dirtyArea = erasor.erase(_previousPosition, signal.position);
 
 		if (!dirtyArea.isZero()) {

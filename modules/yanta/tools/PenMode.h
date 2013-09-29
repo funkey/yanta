@@ -14,8 +14,8 @@ public:
 
 	enum Mode {
 
-		Drawing,
-		Erasing,
+		Draw,
+		Erase,
 		Lasso
 	};
 

@@ -23,17 +23,19 @@ BackendView::BackendView() :
 	_gestureStartDistance(0),
 	_mode(Nothing),
 	_penOffset(optionPenOffsetX.as<int>(), optionPenOffsetY.as<int>()),
-	_documentChanged(true) {
+	_documentChanged(true),
+	_penModeChanged(true) {
 
 	registerInput(_document, "document");
 	registerInput(_tools, "tools");
+	registerInput(_penMode, "pen mode");
 	registerOutput(_painter, "painter");
 
 	_document.registerBackwardCallback(&BackendView::onDocumentChangedArea, this);
 	_document.registerBackwardCallback(&BackendView::onStrokePointAdded, this);
 	_tools.registerBackwardCallback(&BackendView::onToolsChangedArea, this);
 	_tools.registerBackwardCallback(&BackendView::onLassoPointAdded, this);
-	_tools.registerBackwardCallback(&BackendView::onPenModeChanged, this);
+	_penMode.registerBackwardCallback(&BackendView::onPenModeChanged, this);
 
 	_painter.registerForwardSlot(_contentChanged);
 	_painter.registerForwardSlot(_fullscreen);
@@ -61,6 +63,12 @@ BackendView::updateOutputs() {
 
 		_painter->setDocument(_document);
 		_documentChanged = false;
+	}
+
+	if (_penModeChanged) {
+
+		_painter->setPenMode(*_penMode);
+		_penModeChanged = false;
 	}
 
 	_painter->setTools(_tools);
@@ -390,13 +398,11 @@ BackendView::onLassoPointAdded(const LassoPointAdded& signal) {
 }
 
 void
-BackendView::onPenModeChanged(const PenModeChanged& signal) {
+BackendView::onPenModeChanged(const pipeline::Modified&) {
 
 	LOG_ALL(backendviewlog) << "the pen mode changed" << std::endl;
 
-	_painter->setPenMode(signal.getNewMode());
-
-	_contentChanged();
+	_penModeChanged = true;
 }
 
 DocumentPrecision

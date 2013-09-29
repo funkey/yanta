@@ -36,8 +36,7 @@ private:
 
 	void updateOutputs();
 
-	void onModified(const pipeline::Modified&);
-
+	void onInitialDocumentChanged(const pipeline::Modified&);
 	void onPenModeChanged(const pipeline::Modified&);
 
 	void onPenDown(const gui::PenDown& signal);
@@ -58,11 +57,12 @@ private:
 
 	bool _penDown;
 
-	Mode _mode;
+	Mode                           _mode;
 	util::point<DocumentPrecision> _previousPosition;
 	unsigned int                   _currentElement;
 
-	bool _initialDocumentModified;
+	bool _initialDocumentChanged;
+	bool _penModeChanged;
 
 	boost::shared_ptr<Lasso> _lasso;
 
@@ -70,7 +70,6 @@ private:
 	signals::Slot<StrokePointAdded> _strokePointAdded;
 	signals::Slot<SelectionMoved>   _selectionMoved;
 	signals::Slot<ChangedArea>      _toolsChangedArea;
-	signals::Slot<PenModeChanged>   _penModeChanged;
 	signals::Slot<LassoPointAdded>  _lassoPointAdded;
 };
 

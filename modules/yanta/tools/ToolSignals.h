@@ -23,24 +23,5 @@ public:
 						std::max(start.y, point.y))) {}
 };
 
-/**
- * Signal to send when the pen mode changed.
- */
-class PenModeChanged : public signals::Signal {
-
-public:
-
-	PenModeChanged() {}
-
-	PenModeChanged(const PenMode& newMode) :
-		_newMode(newMode) {}
-
-	const PenMode& getNewMode() const { return _newMode; }
-
-private:
-
-	PenMode _newMode;
-};
-
 #endif // YANTA_TOOL_SIGNALS_H__
 

@@ -76,7 +76,10 @@ private:
 
 	void onLassoPointAdded(const LassoPointAdded& signal);
 
-	void onPenModeChanged(const PenModeChanged& signal);
+
+	// callbacks from osd for pen mode
+
+	void onPenModeChanged(const pipeline::Modified& signal);
 
 
 	// callbacks from gui for painter
@@ -119,6 +122,7 @@ private:
 
 	pipeline::Input<Document>        _document;
 	pipeline::Input<Tools>           _tools;
+	pipeline::Input<PenMode>         _penMode;
 	pipeline::Output<BackendPainter> _painter;
 
 	signals::Slot<const gui::ContentChanged>   _contentChanged;
@@ -147,6 +151,9 @@ private:
 
 	// indicates that the document should be reloaded
 	bool _documentChanged;
+
+	// indicates that the pen cursor should be reloaded
+	bool _penModeChanged;
 };
 
 #endif // YANTA_CANVAS_VIEW_H__

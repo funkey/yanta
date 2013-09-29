@@ -27,6 +27,8 @@ private:
 	void onFingerUp(gui::FingerUp& signal);
 	void onFingerDown(gui::FingerDown& signal);
 
+	void onPenDown(const gui::PenDown& signal);
+	void onPenUp(const gui::PenUp& signal);
 	void onPenIn(const gui::PenIn& signal);
 	void onPenAway(const gui::PenAway& signal);
 

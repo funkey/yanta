@@ -7,7 +7,7 @@ Osd::Osd() :
 	_penMode(PenMode()),
 	_previousWidth(Osd::Normal),
 	_widthTapTime(0),
-	_previousMode(PenMode::Drawing),
+	_previousMode(PenMode::Draw),
 	_modeTapTime(0),
 	_erasorTapTime(0),
 	_penAway(false) {
@@ -20,9 +20,11 @@ Osd::Osd() :
 
 	_painter.registerForwardCallback(&Osd::onFingerDown, this);
 	_painter.registerForwardCallback(&Osd::onFingerUp, this);
+	_painter.registerForwardCallback(&Osd::onPenDown, this);
+	_painter.registerForwardCallback(&Osd::onPenUp, this);
 
 	_penMode->getStyle().setWidth(Osd::Normal);
-	_penMode->setMode(PenMode::Drawing);
+	_penMode->setMode(PenMode::Draw);
 }
 
 void
@@ -164,6 +166,31 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 	}
 
 	setDirty(_painter);
+}
+
+void
+Osd::onPenDown(const gui::PenDown& signal) {
+
+	if (signal.button == gui::buttons::Middle) {
+
+		_previousMode = (_penMode->getMode() == PenMode::Erase ? PenMode::Draw : _penMode->getMode());
+		_penMode->setMode(PenMode::Erase);
+		_penMode->getStyle().setWidth(_penMode->getStyle().width()*2);
+
+		setDirty(_penMode);
+	}
+}
+
+void
+Osd::onPenUp(const gui::PenUp& signal) {
+
+	if (signal.button == gui::buttons::Middle) {
+
+		_penMode->setMode(_previousMode);
+		_penMode->getStyle().setWidth(_penMode->getStyle().width()/2);
+
+		setDirty(_penMode);
+	}
 }
 
 void
