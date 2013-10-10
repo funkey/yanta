@@ -45,6 +45,11 @@ public:
 		_cursorPosition = position;
 	}
 
+	void showCursor(bool show) {
+
+		_showCursor = show;
+	}
+
 	void setPenMode(const PenMode& penMode) {
 
 		_penMode = penMode;
@@ -194,6 +199,8 @@ private:
 
 	// the position of the cursor to draw in screen pixels
 	util::point<double> _cursorPosition;
+
+	bool _showCursor;
 
 	// the current pen mode
 	PenMode _penMode;

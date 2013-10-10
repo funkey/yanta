@@ -104,6 +104,8 @@ BackendView::onPenIn(const gui::PenIn& /*signal*/) {
 
 	LOG_ALL(backendviewlog) << "the pen came close to the screen" << std::endl;
 	_penClose = true;
+	_painter->showCursor(true);
+	_contentChanged();
 }
 
 void
@@ -111,6 +113,8 @@ BackendView::onPenOut(const gui::PenOut& /*signal*/) {
 
 	LOG_ALL(backendviewlog) << "the pen moved away from the screen" << std::endl;
 	_penClose = false;
+	_painter->showCursor(false);
+	_contentChanged();
 }
 
 void

@@ -116,7 +116,8 @@ BackendPainter::draw(
 	drawTextures(pixelRoi);
 
 	// ...and the pen
-	drawPen(pixelRoi);
+	if (_showCursor)
+		drawPen(pixelRoi);
 
 	// remember configuration for next draw()
 	_previousShift    = pixelShift;
