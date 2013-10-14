@@ -39,7 +39,8 @@ private:
 	pipeline::Output<OsdRequest> _osdRequest;
 	pipeline::Output<OsdPainter> _painter;
 
-	signals::Slot<Add> _add;
+	signals::Slot<Add>    _add;
+	signals::Slot<Remove> _remove;
 
 	unsigned char _previousRed;
 	unsigned long _redTapTime;

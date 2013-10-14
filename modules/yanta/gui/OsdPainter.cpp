@@ -137,6 +137,16 @@ OsdPainter::draw(
 	glVertex2f(x + 3, y - 10);
 	glEnd();
 
+	glColor3f(0.0, 0.0, 0.0);
+	x = 50;
+	y = 1050;
+	glBegin(GL_QUADS);
+	glVertex2f(x - 10, y - 3);
+	glVertex2f(x - 10, y + 3);
+	glVertex2f(x + 10, y + 3);
+	glVertex2f(x + 10, y - 3);
+	glEnd();
+
 	return false;
 }
 

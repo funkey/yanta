@@ -17,6 +17,7 @@ Osd::Osd() :
 	registerOutput(_painter, "osd painter");
 
 	_osdRequest.registerForwardSlot(_add);
+	_osdRequest.registerForwardSlot(_remove);
 
 	_painter.registerForwardCallback(&Osd::onFingerDown, this);
 	_painter.registerForwardCallback(&Osd::onFingerUp, this);
@@ -104,6 +105,10 @@ Osd::onFingerDown(gui::FingerDown& signal) {
 	} else if (signal.position.y < 1000) {
 
 		_add();
+
+	} else if (signal.position.y < 1100) {
+
+		_remove();
 	}
 
 	signal.processed = true;

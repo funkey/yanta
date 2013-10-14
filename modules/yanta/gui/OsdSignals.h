@@ -13,5 +13,10 @@ class OsdSignal : public signals::Signal {};
  */
 class Add : public OsdSignal {};
 
+/**
+ * Request the handling of a 'remove' event.
+ */
+class Remove : public OsdSignal {};
+
 #endif // YANTA_OSD_SIGNALS_H__
 

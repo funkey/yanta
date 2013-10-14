@@ -20,6 +20,7 @@ Backend::Backend() :
 	_initialDocument.registerBackwardCallback(&Backend::onInitialDocumentChanged, this);
 	_penMode.registerBackwardCallback(&Backend::onPenModeChanged, this);
 	_osdRequest.registerBackwardCallback(&Backend::onAdd, this);
+	_osdRequest.registerBackwardCallback(&Backend::onRemove, this);
 
 	_document.registerForwardSlot(_documentChangedArea);
 	_document.registerForwardSlot(_strokePointAdded);
@@ -307,6 +308,21 @@ Backend::onAdd(const Add& /*signal*/) {
 
 		anchorSelection();
 	}
+}
+
+void
+Backend::onRemove(const Remove& /*signal*/) {
+
+	for (unsigned int i = 0; i < _document->size<Selection>(); i++) {
+
+		Selection& selection = _document->get<Selection>(i);
+
+		ChangedArea changedArea(selection.getBoundingBox());
+		_documentChangedArea(changedArea);
+		_toolsChangedArea(changedArea);
+	}
+
+	clearSelection();
 }
 
 void

@@ -44,6 +44,7 @@ private:
 	void onPenMove(const gui::PenMove& signal);
 
 	void onAdd(const Add& signal);
+	void onRemove(const Remove& signal);
 
 	void anchorSelection();
 
