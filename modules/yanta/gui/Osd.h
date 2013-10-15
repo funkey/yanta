@@ -35,6 +35,8 @@ private:
 	void toggleLasso();
 	void toggleErasorMode();
 
+	void updatePenMode();
+
 	pipeline::Output<PenMode>    _penMode;
 	pipeline::Output<OsdRequest> _osdRequest;
 	pipeline::Output<OsdPainter> _painter;
@@ -52,7 +54,9 @@ private:
 	double        _previousWidth;
 	unsigned long _widthTapTime;
 
-	PenMode::Mode _previousMode;
+	bool _erase;
+	bool _lasso;
+
 	unsigned long _modeTapTime;
 	unsigned long _erasorTapTime;
 

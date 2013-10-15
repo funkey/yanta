@@ -7,7 +7,8 @@ Osd::Osd() :
 	_penMode(PenMode()),
 	_previousWidth(Osd::Normal),
 	_widthTapTime(0),
-	_previousMode(PenMode::Draw),
+	_erase(false),
+	_lasso(false),
 	_modeTapTime(0),
 	_erasorTapTime(0),
 	_penAway(false) {
@@ -178,9 +179,11 @@ Osd::onPenDown(const gui::PenDown& signal) {
 
 	if (signal.button == gui::buttons::Middle) {
 
-		_previousMode = (_penMode->getMode() == PenMode::Erase ? PenMode::Draw : _penMode->getMode());
-		_penMode->setMode(PenMode::Erase);
+		_erase = true;
+
 		_penMode->getStyle().setWidth(_penMode->getStyle().width()*2);
+
+		updatePenMode();
 
 		setDirty(_penMode);
 	}
@@ -189,10 +192,13 @@ Osd::onPenDown(const gui::PenDown& signal) {
 void
 Osd::onPenUp(const gui::PenUp& signal) {
 
-	if (signal.button == gui::buttons::Middle) {
+	if (signal.button == gui::buttons::Middle && _penMode->getMode() == PenMode::Erase) {
 
-		_penMode->setMode(_previousMode);
+		_erase = false;
+
 		_penMode->getStyle().setWidth(_penMode->getStyle().width()/2);
+
+		updatePenMode();
 
 		setDirty(_penMode);
 	}
@@ -213,28 +219,17 @@ Osd::onPenAway(const gui::PenAway& /*signal*/) {
 void
 Osd::toggleLasso() {
 
-	PenMode::Mode current = _penMode->getMode();
+	_lasso = !_lasso;
 
-	if (current == PenMode::Lasso) {
-
-		_penMode->setMode(_previousMode);
-
-	} else {
-
-		_penMode->setMode(PenMode::Lasso);
-	}
+	updatePenMode();
 
 	setDirty(_penMode);
-
-	_previousMode = current;
 }
 
 void
 Osd::toggleErasorMode() {
 
-	Erasor::Mode current = _penMode->getErasorMode();
-
-	if (current == Erasor::SphereErasor) {
+	if (_penMode->getErasorMode() == Erasor::SphereErasor) {
 
 		_penMode->setErasorMode(Erasor::ElementErasor);
 
@@ -244,4 +239,25 @@ Osd::toggleErasorMode() {
 	}
 
 	setDirty(_penMode);
+}
+
+void
+Osd::updatePenMode() {
+
+	// erasing has highest precedence...
+	if (_erase) {
+
+		_penMode->setMode(PenMode::Erase);
+		return;
+	}
+
+	// ...then lasso...
+	if (_lasso) {
+
+		_penMode->setMode(PenMode::Lasso);
+		return;
+	}
+
+	// ...finally, we just draw
+	_penMode->setMode(PenMode::Draw);
 }
