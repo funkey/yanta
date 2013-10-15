@@ -135,6 +135,7 @@ Backend::onPenDown(const gui::PenDown& signal) {
 
 			_lasso = boost::make_shared<Lasso>();
 			_lasso->addPoint(signal.position);
+			_lassoStartPosition = signal.position;
 			_tools->add(_lasso);
 
 			return;
@@ -240,12 +241,16 @@ Backend::onPenMove(const gui::PenMove& signal) {
 
 	} else if (_penMode->getMode() == PenMode::Lasso) {
 
-		_lasso->addPoint(signal.position);
-		LassoPointAdded pointAdded(_previousPosition, signal.position);
-		_lassoPointAdded(pointAdded);
+		if (!_lasso) {
 
-		// we don't want _previousPosition to be set to the current position
-		return;
+			_lasso = boost::make_shared<Lasso>();
+			_lassoStartPosition = signal.position;
+			_tools->add(_lasso);
+		}
+
+		_lasso->addPoint(signal.position);
+		LassoPointAdded pointAdded(_lassoStartPosition, _previousPosition, signal.position);
+		_lassoPointAdded(pointAdded);
 
 	} else if (_mode == Erase) {
 

@@ -65,7 +65,8 @@ private:
 	bool _initialDocumentChanged;
 	bool _penModeChanged;
 
-	boost::shared_ptr<Lasso> _lasso;
+	boost::shared_ptr<Lasso>        _lasso;
+	util::point<DocumentPrecision>  _lassoStartPosition;
 
 	signals::Slot<ChangedArea>      _documentChangedArea;
 	signals::Slot<StrokePointAdded> _strokePointAdded;
