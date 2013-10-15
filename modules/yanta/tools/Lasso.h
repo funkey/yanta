@@ -11,6 +11,11 @@ class Lasso : public Tool {
 
 public:
 
+	Lasso() {
+
+		_path.setFillType(SkPath::kEvenOdd_FillType);
+	}
+
 	void addPoint(const util::point<DocumentPrecision>& point) {
 
 		fitBoundingBox(point);
