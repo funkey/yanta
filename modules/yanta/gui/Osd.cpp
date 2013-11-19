@@ -4,7 +4,7 @@
 logger::LogChannel osdlog("osdlog", "[Osd] ");
 
 Osd::Osd() :
-	_penMode(PenMode()),
+	_penMode(boost::make_shared<PenMode>()),
 	_previousWidth(Osd::Normal),
 	_widthTapTime(0),
 	_erase(false),
