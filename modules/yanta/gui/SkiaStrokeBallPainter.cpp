@@ -91,21 +91,25 @@ SkiaStrokeBallPainter::draw(
 double
 SkiaStrokeBallPainter::widthPressureCurve(double pressure) {
 
-	const double minPressure = 0.5;
-	const double maxPressure = 1;
+	const double minWidth = 0.8;
+	const double maxWidth = 1;
 
 	pressure /= 2048.0;
 
-	return minPressure + pressure*(maxPressure - minPressure);
+	return minWidth + pressure*(maxWidth - minWidth);
 }
 
 double
 SkiaStrokeBallPainter::alphaPressureCurve(double pressure) {
 
-	const double minPressure = 0;
-	const double maxPressure = 1;
+	const double minAlpha = 0;
+	const double maxAlpha = 1;
+	const double pressureThreshold = 0.2;
 
 	pressure /= 2048.0;
 
-	return minPressure + pressure*(maxPressure - minPressure);
+	if (pressure < pressureThreshold)
+		return 0.0;
+
+	return minAlpha + pressure*(maxAlpha - minAlpha);
 }
