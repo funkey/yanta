@@ -29,6 +29,7 @@ TilesCache::~TilesCache() {
 	LOG_ALL(tilescachelog) << "tearing background thread down..." << std::endl;
 
 	_backgroundRasterizerStopped = true;
+	_wakeupBackgroundRasterizer.notify_one();
 	_backgroundThread.join();
 
 	LOG_ALL(tilescachelog) << "background thread stopped" << std::endl;
@@ -155,6 +156,16 @@ TilesCache::markDirtyPhysical(const util::point<int>& physicalTile, TileState st
 	// set the flag, but make sure we are not overwriting previous dirty flags 
 	// of higher precedence
 	_tileStates[physicalTile.x][physicalTile.y] = std::max(_tileStates[physicalTile.x][physicalTile.y], state);
+
+	if (_backgroundRasterizer) {
+
+		{
+			boost::lock_guard<boost::mutex> lock(_haveDirtyTilesMutex);
+			_haveDirtyTiles = true;
+		}
+
+		_wakeupBackgroundRasterizer.notify_one();
+	}
 }
 
 gui::skia_pixel_t*
@@ -266,30 +277,41 @@ TilesCache::cleanUp() {
 
 	LOG_ALL(tilescachelog) << "background clean-up thread started" << std::endl;
 
-	boost::timer::cpu_timer timer;
-
-	const boost::timer::nanosecond_type NanosBusyWait = 100000LL;     // 1/10000th of a second
-	const boost::timer::nanosecond_type NanosIdleWait = 1000000000LL; // 1/1th of a second
-
-	bool isClean = false;
 
 	while (!_backgroundRasterizerStopped) {
 
-		LOG_ALL(tilescachelog) << "checking for dirty tiles" << std::endl;
+		bool haveWork = false;
 
-		// was there something to clean?
-		isClean = (_backgroundRasterizer && cleanDirtyTiles(2) == 0);
+		{
+			// make sure we don't miss this flag
+			boost::unique_lock<boost::mutex> lock(_haveDirtyTilesMutex);
 
-		boost::timer::cpu_times const elapsed(timer.elapsed());
+			if (_haveDirtyTiles) {
 
-		// reduce poll time if everything is clean
-		boost::timer::nanosecond_type waitAtLeast = (isClean ? NanosIdleWait : NanosBusyWait);
+				// there is something to do
+				haveWork = true;
+				_haveDirtyTiles = false;
 
-		if (elapsed.wall <= waitAtLeast)
-			usleep((waitAtLeast - elapsed.wall)/1000);
+			} else {
 
-		timer.stop();
-		timer.start();
+				LOG_ALL(tilescachelog) << "waiting for dirty tiles" << std::endl;
+
+				// Now we know that there is nothing to do at the moment -- we 
+				// can savely wait. This releases the lock on 
+				// _haveDirtyTilesMutex, such that the producer thread can make 
+				// changes to it without having to wait. After that, we will be 
+				// unblocked.
+				_wakeupBackgroundRasterizer.wait(lock);
+			}
+		}
+
+		if (haveWork) {
+
+			LOG_ALL(tilescachelog) << "cleaning dirty tiles" << std::endl;
+
+			while (cleanDirtyTiles(10)) {}
+			haveWork = false;
+		}
 	}
 
 	LOG_ALL(tilescachelog) << "background clean-up thread stopped" << std::endl;

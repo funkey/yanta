@@ -176,6 +176,15 @@ private:
 	// the rasterizer to be used by the background thread
 	boost::shared_ptr<Rasterizer> _backgroundRasterizer;
 
+	// tell the background rasterizer that there is work to be done
+	bool _haveDirtyTiles;
+
+	// prevent race conditions on _haveDirtyTiles
+	boost::mutex _haveDirtyTilesMutex;
+
+	// a condition variable to wake up the background rasterizer
+	boost::condition_variable _wakeupBackgroundRasterizer;
+
 	// used to stop the background rendering thread
 	bool _backgroundRasterizerStopped;
 
