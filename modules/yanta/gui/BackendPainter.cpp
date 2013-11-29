@@ -272,14 +272,19 @@ BackendPainter::initiateFullRedraw(const util::rect<int>& roi) {
 bool
 BackendPainter::prepareTextures(const util::rect<int>& pixelRoi) {
 
-	if (!_documentTexture) {
+	if (
+			!_documentTexture                               ||
+			pixelRoi.width()  != _previousPixelRoi.width()  ||
+			pixelRoi.height() != _previousPixelRoi.height() ) {
+
+		LOG_USER(backendpainterlog) << "roi changed in size -- recreate textures" << std::endl;
 
 		_documentTexture = boost::make_shared<TorusTexture>(pixelRoi);
 		_documentTexture->setBackgroundRasterizer(_documentCleanUpPainter);
+		_documentTexture->setContentChangedSlot(_contentChanged);
+
 
 		_overlayTexture = boost::make_shared<TorusTexture>(pixelRoi);
-
-		_documentTexture->setContentChangedSlot(_contentChanged);
 		_overlayTexture->setContentChangedSlot(_contentChanged);
 
 		return true;
