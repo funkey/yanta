@@ -29,6 +29,7 @@ TilesCache::~TilesCache() {
 	LOG_ALL(tilescachelog) << "tearing background thread down..." << std::endl;
 
 	_backgroundRasterizerStopped = true;
+	_tileChangedCallback = boost::function<void(const util::point<int>&)>();
 	_wakeupBackgroundRasterizer.notify_one();
 	_backgroundThread.join();
 
@@ -277,8 +278,7 @@ TilesCache::cleanUp() {
 
 	LOG_ALL(tilescachelog) << "background clean-up thread started" << std::endl;
 
-
-	while (!_backgroundRasterizerStopped) {
+	while (true) {
 
 		bool haveWork = false;
 
@@ -305,16 +305,20 @@ TilesCache::cleanUp() {
 			}
 		}
 
+		if (_backgroundRasterizerStopped)
+			return;
+
 		if (haveWork) {
 
 			LOG_ALL(tilescachelog) << "cleaning dirty tiles" << std::endl;
 
-			while (cleanDirtyTiles(10)) {}
+			while (cleanDirtyTiles(2))
+				if (_backgroundRasterizerStopped)
+					return;
+
 			haveWork = false;
 		}
 	}
-
-	LOG_ALL(tilescachelog) << "background clean-up thread stopped" << std::endl;
 }
 
 bool
