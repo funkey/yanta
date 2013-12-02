@@ -56,6 +56,23 @@ public:
 		_penTexture.reset();
 	}
 
+	/**
+	 * Enable or disable snapping of the requested scale to discrete grid 
+	 * values.
+	 *
+	 * @param enable
+	 *             Enable or disable snapping.
+	 *
+	 * @param scaleGridSize
+	 *             The amount of scaling between to scale levels on the grid 
+	 *             (multiplicative).
+	 */
+	void enableSnapScaleToGrid(bool enable, double scaleGridSize = 1.0/3) {
+
+		_snapToScaleGrid = enable;
+		_logScaleGridSize = log(scaleGridSize);
+	}
+
 	bool draw(
 			const util::rect<double>&  roi,
 			const util::point<double>& resolution);
@@ -79,7 +96,7 @@ public:
 	 * Initiate a full redraw with the current zoom level. Call this after a 
 	 * sequence of zoom() requests.
 	 */
-	void finishZoom();
+	void finishZoom(const util::point<DocumentPrecision>& anchor);
 
 	/**
 	 * Transform a point from screen pixel units to document units.
@@ -135,6 +152,11 @@ private:
 	};
 
 	/**
+	 * Get the closest grid scale to the requested scale.
+	 */
+	util::point<DocumentPrecision> snapScaleToGrid(const util::point<DocumentPrecision>& scale);
+
+	/**
 	 * Set the current device transformation in all painters.
 	 */
 	void setDeviceTransformation();
@@ -156,6 +178,26 @@ private:
 	 */
 	void drawPen(const util::rect<int>& roi);
 
+	///////////////////////////
+	// PAINTER CONFIGURATION //
+	///////////////////////////
+
+	// the current mode of the backend painter
+	BackendPainterMode _mode;
+
+	// show the current pen position
+	bool _showCursor;
+
+	// don't allow arbitrary scaling
+	bool _snapToScaleGrid;
+
+	// the amount of scaling between two scale levels
+	double _logScaleGridSize;
+
+	//////////////////////
+	// TEXTURE HANDLING //
+	//////////////////////
+
 	// indicates that the document was changed entirely
 	bool _documentChanged;
 
@@ -175,6 +217,13 @@ private:
 	// the transparency of the overlay texture
 	float _overlayAlpha;
 
+	// slot to send content changed signal to
+	signals::Slot<const gui::ContentChanged>* _contentChanged;
+
+	////////////////////
+	// TRANSFORMATION //
+	////////////////////
+
 	// Mapping from document untis to screen pixel units:
 	//
 	//   [x] = _scale*(x) + _shift,
@@ -182,6 +231,7 @@ private:
 	// where (x) is in document untis and [x] is in pixels and [x] = (0, 0) is the 
 	// upper left screen pixel.
 	util::point<double> _shift;
+	util::point<double> _defaultScale; // the initial scale
 	util::point<double> _scale;
 	// the scale change during zooming mode
 	util::point<double> _scaleChange;
@@ -194,22 +244,18 @@ private:
 
 	util::rect<int> _previousPixelRoi;
 
-	// the current mode of the backend painter
-	BackendPainterMode _mode;
+	/////////
+	// PEN //
+	/////////
 
 	// the position of the cursor to draw in screen pixels
 	util::point<double> _cursorPosition;
-
-	bool _showCursor;
 
 	// the current pen mode
 	PenMode _penMode;
 
 	// the pen texture
 	boost::shared_ptr<gui::Texture> _penTexture;
-
-	// slot to send content changed signal to
-	signals::Slot<const gui::ContentChanged>* _contentChanged;
 };
 
 #endif // CANVAS_PAINTER_H__

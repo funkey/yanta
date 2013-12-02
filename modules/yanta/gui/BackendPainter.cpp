@@ -18,19 +18,32 @@ util::ProgramOption optionDpi(
 	util::_description_text = "The dots per inch of the screen.",
 	util::_default_value    = 96);
 
+util::ProgramOption optionSnapToScaleGrid(
+	util::_long_name        = "snapToScaleGrid",
+	util::_description_text = "Don't zoom steplessly, but snap to predefined scale points.",
+	util::_default_value    = true);
+
+util::ProgramOption optionScaleGridSize(
+	util::_long_name        = "scaleGridSize",
+	util::_description_text = "The amount of zooming between two scale points.",
+	util::_default_value    = 1.0/1.5);
+
 BackendPainter::BackendPainter() :
+	_mode(IncrementalDrawing),
+	_snapToScaleGrid(optionSnapToScaleGrid.as<bool>()),
+	_logScaleGridSize(log(optionScaleGridSize)),
 	_documentChanged(true),
 	_documentPainter(gui::skia_pixel_t(255, 255, 255)),
 	_documentCleanUpPainter(boost::make_shared<SkiaDocumentPainter>(gui::skia_pixel_t(255, 255, 255))),
 	_overlayAlpha(1.0),
 	_shift(0, 0),
-	_scale(optionDpi.as<double>()*0.0393701, optionDpi.as<double>()*0.0393701), // pixel per millimeter
+	_defaultScale(optionDpi.as<double>()*0.0393701, optionDpi.as<double>()*0.0393701), // pixel per millimeter
+	_scale(_defaultScale), // pixel per millimeter
 	_scaleChange(1, 1),
 	_zoomAnchor(0, 0),
 	_previousShift(0, 0),
 	_previousScale(0, 0),
 	_previousPixelRoi(0, 0, 0, 0),
-	_mode(IncrementalDrawing),
 	_cursorPosition(0, 0) {
 
 	setDeviceTransformation();
@@ -178,12 +191,46 @@ BackendPainter::zoom(double zoomChange, const util::point<DocumentPrecision>& an
 }
 
 void
-BackendPainter::finishZoom() {
+BackendPainter::finishZoom(const util::point<DocumentPrecision>& anchor) {
+
+	if (_snapToScaleGrid) {
+
+		util::point<DocumentPrecision> gridScale = snapScaleToGrid(_scale);
+
+		// zoom to grid scale while keeping anchor where it is
+		zoom(gridScale.x/_scale.x, anchor);
+
+		// prevent scale shifts due to numerical limits
+		_scale = gridScale;
+	}
 
 	setDeviceTransformation();
 	initiateFullRedraw(_previousPixelRoi);
 
 	_mode = IncrementalDrawing;
+}
+
+util::point<DocumentPrecision>
+BackendPainter::snapScaleToGrid(const util::point<DocumentPrecision>& requestedScale) {
+
+	// find the closest grid-zoom to the given one
+
+	// the scale relative to _defaultScale in log coordinates
+	util::point<double> logScale;
+	logScale.x = log(requestedScale.x/_defaultScale.x);
+	logScale.y = log(requestedScale.y/_defaultScale.x);
+
+	// the number of log scale steps (rounded to closest)
+	util::point<double> stepsScale = logScale/_logScaleGridSize;
+	stepsScale.x = round(stepsScale.x);
+	stepsScale.y = round(stepsScale.y);
+
+	// the corrected scale
+	util::point<DocumentPrecision> scale;
+	scale.x = exp(stepsScale.x*_logScaleGridSize)*_defaultScale.x;
+	scale.y = exp(stepsScale.y*_logScaleGridSize)*_defaultScale.y;
+
+	return scale;
 }
 
 util::point<DocumentPrecision>
