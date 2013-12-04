@@ -35,12 +35,17 @@ SkiaDocumentPainter::draw(SkCanvas& canvas, const util::rect<DocumentPrecision>&
 
 	LOG_DEBUG(skiadocumentpainterlog) << "pixel scale is " << scale << std::endl;
 
-	if (scale < 1)
-		setQuality(Worst);
-	else if (scale < 5)
-		setQuality(Medium);
-	else
-		setQuality(Best);
+	bool qualitWasAuto = (getQuality() == Auto);
+
+	if (qualitWasAuto) {
+
+		if (scale < 1)
+			setQuality(Worst);
+		else if (scale < 5)
+			setQuality(Medium);
+		else
+			setQuality(Best);
+	}
 
 	{
 		// make sure reading access to the stroke points are safe
@@ -49,6 +54,9 @@ SkiaDocumentPainter::draw(SkCanvas& canvas, const util::rect<DocumentPrecision>&
 		// go visit the document
 		getDocument().accept(*this);
 	}
+
+	if (qualitWasAuto)
+		setQuality(Auto);
 
 	finish();
 }

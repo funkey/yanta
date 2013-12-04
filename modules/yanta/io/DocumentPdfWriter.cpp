@@ -26,6 +26,9 @@ DocumentPdfWriter::write() {
 
 	SkiaDocumentPainter painter;
 	painter.setDocument(_document);
+	painter.setQuality(Better);
+
+	LOG_DEBUG(documentpdfwriterlog) << "rendering document with " << _document->numPages() << " pages" << std::endl;
 
 	for (unsigned int i = 0; i < _document->numPages(); i++) {
 

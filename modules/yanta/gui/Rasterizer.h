@@ -12,7 +12,7 @@ class Rasterizer {
 
 public:
 
-	Rasterizer() : _quality(Best) {}
+	Rasterizer() : _quality(Auto) {}
 
 	/**
 	 * Draw on the given canvas within the given roi.

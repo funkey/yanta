@@ -7,7 +7,11 @@ enum Quality {
 
 	Medium,
 
-	Best
+	Better,
+
+	Best,
+
+	Auto
 };
 
 #endif // YANTA_GUI_QUALITY_H__
