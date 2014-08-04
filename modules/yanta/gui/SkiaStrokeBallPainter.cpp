@@ -102,9 +102,9 @@ SkiaStrokeBallPainter::widthPressureCurve(double pressure) {
 double
 SkiaStrokeBallPainter::alphaPressureCurve(double pressure) {
 
-	const double minAlpha = 0;
+	const double minAlpha = 0.2;
 	const double maxAlpha = 1;
-	const double pressureThreshold = 0.2;
+	const double pressureThreshold = 0.0;
 
 	pressure /= 2048.0;
 
