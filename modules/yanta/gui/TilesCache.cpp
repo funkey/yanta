@@ -256,7 +256,7 @@ TilesCache::updateTile(const util::point<int>& physicalTile, const util::rect<in
 
 	// wrap the buffer in a skia bitmap
 	SkBitmap bitmap;
-	bitmap.setConfig(SkBitmap::kARGB_8888_Config, TileSize, TileSize);
+	bitmap.setInfo(SkImageInfo::MakeN32Premul(TileSize, TileSize));
 	bitmap.setPixels(buffer);
 
 	SkCanvas canvas(bitmap);

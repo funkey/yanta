@@ -29,6 +29,11 @@ Build Instructions
 
     • gyp
     • libgif-dev
+    • libpng-dev
+    • libglu-mesa-dev
+    • mesa-common-dev
+    • libpoppler-cpp-dev
+
 
     To use the version provided by yanta, you don't have to do anything. It
     will be checked out and compiled automatically.
@@ -36,7 +41,7 @@ Build Instructions
     You can, however, compile skia on your own. In this case, set the
     SKIA_BUILD_DIR cmake variable to the directory you compiled skia in. Run
 
-      $ ./tools/merge_static_libs.py out/Release/libskia.a out/Release/obj.target/**/*.a
+      $ ./tools/merge_static_libs.py out/Release/lib/libskia.a out/Release/*.a
 
     in the skia build directory to generate a single static library for yanta
     to use.

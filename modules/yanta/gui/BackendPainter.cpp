@@ -394,7 +394,7 @@ BackendPainter::drawPen(const util::rect<int>& /*roi*/) {
 
 		{
 			SkBitmap bitmap;
-			bitmap.setConfig(SkBitmap::kARGB_8888_Config, size, size);
+			bitmap.setInfo(SkImageInfo::MakeN32Premul(size, size));
 			bitmap.setPixels(&buffer[0]);
 
 			SkCanvas canvas(bitmap);
@@ -410,8 +410,8 @@ BackendPainter::drawPen(const util::rect<int>& /*roi*/) {
 				canvas.drawCircle(radius, radius, radius, paint);
 
 				SkScalar interval[2] = {3, 3};
-				SkDashPathEffect dashPath(interval, 2, 0);
-				paint.setPathEffect(&dashPath);
+				SkDashPathEffect* dashPath = SkDashPathEffect::Create(interval, 2, 0);
+				paint.setPathEffect(dashPath);
 				paint.setStyle(SkPaint::kStroke_Style);
 
 				canvas.drawCircle(radius, radius, radius, paint);

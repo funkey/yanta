@@ -142,7 +142,7 @@ SkiaDocumentPainter::visit(Page& page) {
 	// we blur the boundary with a "standard deviation" of 1/10 of the border 
 	// size of the paper -- this makes sure that at the end of the border there 
 	// is almost no trace of the blur anymore
-	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(page.getBorderSize()/10.0, SkBlurMaskFilter::kOuter_BlurStyle, SkBlurMaskFilter::kNone_BlurFlag);
+	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(kOuter_SkBlurStyle, page.getBorderSize()/10.0, SkBlurMaskFilter::kNone_BlurFlag);
 	paint.setMaskFilter(maskFilter)->unref();
 	paint.setColor(SkColorSetRGB(0.5*pageRed, 0.5*pageGreen, 0.5*pageBlue));
 	getCanvas().drawPath(outline, paint);

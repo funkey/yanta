@@ -37,7 +37,7 @@ SkiaStrokeBallPainter::draw(
 	paint.setColor(SkColorSetRGB(penColorRed, penColorGreen, penColorBlue));
 	paint.setAntiAlias(true);
 
-	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(0.05*penWidth, SkBlurMaskFilter::kNormal_BlurStyle);
+	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(kNormal_SkBlurStyle, 0.05*penWidth, kNormal_SkBlurStyle);
 	paint.setMaskFilter(maskFilter)->unref();
 
 	util::point<PagePrecision> previousPosition = strokePoints[beginStroke].position;

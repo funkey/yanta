@@ -57,7 +57,7 @@ void mapGlBuffer(gui::Buffer* buffer, gui::skia_pixel_t** data) {
 void wrapBitmap(SkBitmap& bitmap, unsigned int width, unsigned int height, gui::skia_pixel_t* data) {
 
 	// wrap the buffer in a skia bitmap
-	bitmap.setConfig(SkBitmap::kARGB_8888_Config, width, height);
+	bitmap.setInfo(SkImageInfo::MakeN32Premul(width, height));
 	bitmap.setPixels(data);
 }
 

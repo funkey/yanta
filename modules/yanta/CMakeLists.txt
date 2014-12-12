@@ -1,1 +1,1 @@
-define_module(yantalib LIBRARY LINKS util signals pipeline gui skia freetype)
+define_module(yantalib OBJECT LINKS util signals pipeline gui skia freetype)

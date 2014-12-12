@@ -12,7 +12,7 @@ SkiaOverlayPainter::SkiaOverlayPainter() {
 	_selectionPaint.setColor(SkColorSetARGB(25, 0, 0, 0));
 	_selectionPaint.setAntiAlias(true);
 	_selectionPaint.setStyle(SkPaint::kFill_Style);
-	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(0.1, SkBlurMaskFilter::kNormal_BlurStyle);
+	SkMaskFilter* maskFilter = SkBlurMaskFilter::Create(kNormal_SkBlurStyle, 0.1, kNormal_SkBlurStyle);
 	_selectionPaint.setMaskFilter(maskFilter)->unref();
 }
 
