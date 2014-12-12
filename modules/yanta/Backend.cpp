@@ -204,7 +204,7 @@ Backend::onPenUp(const gui::PenUp& signal) {
 			_strokePointAdded(signal);
 		}
 
-	} else if (signal.button == gui::buttons::Middle) {
+	} else {
 
 		_mode = Draw;
 

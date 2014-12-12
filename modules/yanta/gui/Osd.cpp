@@ -177,7 +177,7 @@ Osd::onFingerUp(gui::FingerUp& signal) {
 void
 Osd::onPenDown(const gui::PenDown& signal) {
 
-	if (signal.button == gui::buttons::Middle) {
+	if (signal.button == gui::buttons::Right) {
 
 		_erase = true;
 
@@ -192,7 +192,7 @@ Osd::onPenDown(const gui::PenDown& signal) {
 void
 Osd::onPenUp(const gui::PenUp& signal) {
 
-	if (signal.button == gui::buttons::Middle && _penMode->getMode() == PenMode::Erase) {
+	if (signal.button == gui::buttons::Right && _penMode->getMode() == PenMode::Erase) {
 
 		_erase = false;
 
